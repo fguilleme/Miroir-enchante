@@ -6,6 +6,8 @@
 "control.opacity" = "불투명도";
 "control.gloss" = "광택";
 "control.color" = "색상";
+"control.hair_hue" = "색조";
+"control.hair_strength" = "강도";
 "preset.nude" = "누드";
 "preset.red" = "레드";
 "preset.burgundy" = "버건디";

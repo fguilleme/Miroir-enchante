@@ -6,6 +6,8 @@
 "control.opacity" = "不透明度";
 "control.gloss" = "光泽";
 "control.color" = "颜色";
+"control.hair_hue" = "色相";
+"control.hair_strength" = "强度";
 "preset.nude" = "裸色";
 "preset.red" = "红色";
 "preset.burgundy" = "酒红";

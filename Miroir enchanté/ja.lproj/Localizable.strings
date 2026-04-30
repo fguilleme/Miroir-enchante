@@ -6,6 +6,8 @@
 "control.opacity" = "不透明度";
 "control.gloss" = "ツヤ";
 "control.color" = "色";
+"control.hair_hue" = "色相";
+"control.hair_strength" = "強さ";
 "preset.nude" = "ヌード";
 "preset.red" = "赤";
 "preset.burgundy" = "バーガンディ";

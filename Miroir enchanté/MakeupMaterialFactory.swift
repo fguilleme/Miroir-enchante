@@ -35,8 +35,8 @@ enum MakeupMaterialFactory {
         let material = SCNMaterial()
 
         material.lightingModel = .physicallyBased
-        material.diffuse.contents = UIColor(red: 0.50, green: 0.34, blue: 0.27, alpha: 1.0)
-        material.diffuse.intensity = 0.82
+        material.diffuse.contents = UIColor(red: 0.48, green: 0.32, blue: 0.25, alpha: 1.0)
+        material.diffuse.intensity = 0.66
         material.roughness.contents = 0.88
         material.metalness.contents = 0.0
         material.specular.contents = UIColor.white.withAlphaComponent(0.035)

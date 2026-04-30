@@ -6,6 +6,8 @@
 "control.opacity" = "Opacité";
 "control.gloss" = "Brillance";
 "control.color" = "Couleur";
+"control.hair_hue" = "Teinte";
+"control.hair_strength" = "Force";
 "preset.nude" = "Nude";
 "preset.red" = "Rouge";
 "preset.burgundy" = "Bordeaux";

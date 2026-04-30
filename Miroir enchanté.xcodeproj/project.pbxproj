@@ -10,25 +10,9 @@
 		0FDDF3082FA2566A00BFEEB2 /* Miroir enchanté.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Miroir enchanté.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		0FDDF3142FA262A100BFEEB2 /* Exceptions for "Miroir enchanté" folder in "Miroir enchanté" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				"ModelAssets/hairs/Female Hair DL/textures/hair acss.png",
-				"ModelAssets/hairs/Female Hair DL/textures/Hair_C04.png",
-				"ModelAssets/hairs/Female Hair DL/textures/Hair_C6.png",
-				"ModelAssets/hairs/Female Hair DL/textures/Hair_C8.png",
-			);
-			target = 0FDDF3072FA2566A00BFEEB2 /* Miroir enchanté */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0FDDF30A2FA2566A00BFEEB2 /* Miroir enchanté */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				0FDDF3142FA262A100BFEEB2 /* Exceptions for "Miroir enchanté" folder in "Miroir enchanté" target */,
-			);
 			path = "Miroir enchanté";
 			sourceTree = "<group>";
 		};

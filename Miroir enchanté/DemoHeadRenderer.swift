@@ -24,7 +24,7 @@ enum DemoHairStyle: CaseIterable {
         case .none:
             return nil
         case .femaleHair:
-            return "ModelAssets/hairs/Female Hair.glb"
+            return "Female hair.obj"
         }
     }
 
@@ -33,18 +33,9 @@ enum DemoHairStyle: CaseIterable {
         case .none:
             return nil
         case .femaleHair:
-            // Blender reference for Hair.02 placed with female_head:
-            // location (0, 0, -24.231), rotation ~0, scale 15.473.
-            // The GLB importer reads mesh vertices directly, then this
-            // normalized calibration fits that asset onto the demo head.
-            return HairFitCalibration(
-                width: 1.45,
-                height: 0.88,
-                depth: 1.35,
-                verticalCenter: 0.54,
-                depthCenter: 0.28,
-                fixedScale: 15.473
-            )
+            // The separated OBJ exports share the same Blender origin as the
+            // head, so no procedural fitting is needed.
+            return nil
         }
     }
 }
@@ -70,13 +61,18 @@ final class DemoHeadRenderer {
     /// obvious "lip" or "mouth" terms.
     let lipNodeNameHints = ["UpperLip", "LowerLip", "Upper Lip", "Lower Lip", "Upper_lip", "Lower_lip", "Lips", "Mouth"]
     let companionLipAssetFilenames = ["Upper Lip.obj", "Lower Lip.obj"]
+    let eyeAssetFilename = "eyes.obj"
 
     private let modelContainerNode = SCNNode()
     private let fallbackLipRootNode = SCNNode()
+    private let eyeRootNode = SCNNode()
     private let hairRootNode = SCNNode()
     private var lipNodes: [SCNNode] = []
     private var lipstickSettings = LipstickSettings.default
     private var currentHairStyle: DemoHairStyle = .none
+    private var hairHueValue: CGFloat = 0.24
+    private var hairStrengthValue: CGFloat = 0.84
+    private var hairMaterials: [SCNMaterial] = []
     private let frontFacingYaw: Float = 0
     private let demoRotationLimit: Float = 40 * .pi / 180
     private let fallbackLipVerticalRatio: Float = 0.235
@@ -96,6 +92,12 @@ final class DemoHeadRenderer {
         applyLipstickMaterial(settings: settings)
     }
 
+    func updateHairColor(hue: CGFloat, strength: CGFloat) {
+        hairHueValue = hue.clamped(to: 0...1)
+        hairStrengthValue = strength.clamped(to: 0...1)
+        applyHairColorToCachedMaterials()
+    }
+
     @discardableResult
     func cycleHairStyle() -> DemoHairStyle {
         let styles = DemoHairStyle.allCases
@@ -108,13 +110,15 @@ final class DemoHeadRenderer {
     func setHairStyle(_ style: DemoHairStyle) {
         currentHairStyle = style
         hairRootNode.childNodes.forEach { $0.removeFromParentNode() }
+        hairMaterials.removeAll()
 
         guard let filename = style.assetFilename else {
             return
         }
 
         let usdzFilename = Self.usdzFilename(for: filename)
-        let loadedHairAsset = loadBundledScene(filename: usdzFilename, logsMissingAsset: false).map { (usdzFilename, $0) }
+        let loadedHairAsset = loadBundledScene(filename: filename, logsMissingAsset: false).map { (filename, $0) }
+            ?? loadBundledScene(filename: usdzFilename, logsMissingAsset: false).map { (usdzFilename, $0) }
             ?? loadBundledGLBScene(filename: filename).map { (filename, $0) }
 
         guard let (loadedFilename, loadedScene) = loadedHairAsset else {
@@ -156,6 +160,7 @@ final class DemoHeadRenderer {
     private func configureScene() {
         scene.background.contents = UIColor.black
         scene.rootNode.addChildNode(modelContainerNode)
+        modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
         let camera = SCNCamera()
@@ -164,7 +169,7 @@ final class DemoHeadRenderer {
         camera.zFar = 100
         camera.wantsHDR = false
         camera.wantsExposureAdaptation = false
-        camera.exposureOffset = -1.35
+        camera.exposureOffset = -2.15
 
         cameraNode.camera = camera
         cameraNode.position = SCNVector3(0, 0, 4.0)
@@ -173,14 +178,14 @@ final class DemoHeadRenderer {
         let keyLight = SCNNode()
         keyLight.light = SCNLight()
         keyLight.light?.type = .omni
-        keyLight.light?.intensity = 240
+        keyLight.light?.intensity = 145
         keyLight.position = SCNVector3(0.6, 1.4, 3.0)
         scene.rootNode.addChildNode(keyLight)
 
         let fillLight = SCNNode()
         fillLight.light = SCNLight()
         fillLight.light?.type = .ambient
-        fillLight.light?.intensity = 95
+        fillLight.light?.intensity = 42
         scene.rootNode.addChildNode(fillLight)
     }
 
@@ -202,6 +207,7 @@ final class DemoHeadRenderer {
         }
 
         centerAndScaleModel()
+        setHairStyle(.femaleHair)
         startSlowRotation()
         resolveLipNodes()
     }
@@ -295,6 +301,7 @@ final class DemoHeadRenderer {
     private func installModel(from loadedScene: SCNScene) {
         modelContainerNode.childNodes.forEach { $0.removeFromParentNode() }
         modelContainerNode.addChildNode(fallbackLipRootNode)
+        modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
         for child in loadedScene.rootNode.childNodes {
@@ -302,7 +309,33 @@ final class DemoHeadRenderer {
         }
 
         installCompanionLipAssets()
+        // eyes.obj currently includes face geometry in the export. Loading it
+        // as-is can draw those extra triangles over the skin in SceneKit, so
+        // keep it disabled until the asset contains only eyes.
+        // installEyeAsset()
         applySkinMaterialToModel()
+    }
+
+    private func installEyeAsset() {
+        eyeRootNode.childNodes.forEach { $0.removeFromParentNode() }
+
+        guard let eyeScene = loadBundledScene(filename: eyeAssetFilename, logsMissingAsset: false) else {
+            print("Demo eye asset \(eyeAssetFilename) was not found in the app bundle.")
+            return
+        }
+
+        let assetRoot = SCNNode()
+        assetRoot.name = "DemoEyes"
+
+        for child in eyeScene.rootNode.childNodes {
+            let clone = child.clone()
+            assetRoot.addChildNode(clone)
+        }
+
+        pruneNonEyeGeometry(in: assetRoot)
+        prepareEyeMaterials(in: assetRoot)
+        eyeRootNode.addChildNode(assetRoot)
+        print("Loaded demo eye asset: \(eyeAssetFilename)")
     }
 
     private func installCompanionLipAssets() {
@@ -329,6 +362,7 @@ final class DemoHeadRenderer {
 
     private func installFallbackPrimitiveHead() {
         modelContainerNode.childNodes.forEach { $0.removeFromParentNode() }
+        modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
         let skinMaterial = MakeupMaterialFactory.makeSkinMaterial()
@@ -369,7 +403,10 @@ final class DemoHeadRenderer {
     }
 
     private func centerAndScaleModel() {
-        let bounds = modelContainerNode.hierarchyBoundingBox
+        // Frame the head/face, not the whole combined asset. Long hair and
+        // ponytails can extend far outside the head and would otherwise make
+        // the demo camera scale the face down or shift it off center.
+        let bounds = modelFramingBounds()
         let center = SCNVector3(
             (bounds.min.x + bounds.max.x) * 0.5,
             (bounds.min.y + bounds.max.y) * 0.5,
@@ -388,6 +425,13 @@ final class DemoHeadRenderer {
         modelContainerNode.scale = SCNVector3(scale, scale, scale)
         modelContainerNode.position = SCNVector3(-center.x * scale, -center.y * scale, -center.z * scale)
         modelContainerNode.eulerAngles.y = frontFacingYaw
+    }
+
+    private func modelFramingBounds() -> (min: SCNVector3, max: SCNVector3) {
+        return modelContainerNode.hierarchyBoundingBox { [weak self] node in
+            guard let self else { return true }
+            return !self.isLikelyHairGeometry(node)
+        }
     }
 
     private func startSlowRotation() {
@@ -437,52 +481,235 @@ final class DemoHeadRenderer {
 
     private func applySkinMaterialToModel() {
         let skinMaterial = MakeupMaterialFactory.makeSkinMaterial()
-        for node in modelContainerNode.childNodesRecursive where node.geometry != nil && !node.isDescendant(of: hairRootNode) {
-            apply(material: skinMaterial, to: node)
+        for node in modelContainerNode.childNodesRecursive where node.geometry != nil && !node.isDescendant(of: hairRootNode) && !node.isDescendant(of: eyeRootNode) {
+            guard let geometry = node.geometry else { continue }
+
+            if geometry.materials.contains(where: materialNameMatchesHair) {
+                node.renderingOrder = 30
+                geometry.materials = geometry.materials.map { existingMaterial in
+                    if materialNameMatchesHair(existingMaterial) {
+                        return preparedHairMaterial(from: existingMaterial)
+                    }
+
+                    return skinMaterial.copy() as? SCNMaterial ?? skinMaterial
+                }
+            } else {
+                apply(material: skinMaterial, to: node)
+            }
         }
     }
 
     private func prepareHairMaterials(in rootNode: SCNNode) {
+        for node in rootNode.childNodesRecursive where node.geometry != nil {
+            prepareHairMaterial(on: node)
+        }
+    }
+
+    private func prepareHairMaterial(on node: SCNNode) {
         let fallbackHairMaterial = MakeupMaterialFactory.makeHairMaterial()
 
+        guard let geometry = node.geometry else { return }
+        node.renderingOrder = 30
+
+        if geometry.materials.isEmpty {
+            let material = preparedHairMaterial(from: fallbackHairMaterial)
+            geometry.firstMaterial = material
+            registerHairMaterial(material)
+            return
+        }
+
+        geometry.materials = geometry.materials.map { existingMaterial in
+            let material = preparedHairMaterial(from: existingMaterial)
+            registerHairMaterial(material)
+            return material
+        }
+    }
+
+    private func preparedHairMaterial(from existingMaterial: SCNMaterial) -> SCNMaterial {
+        let fallbackHairMaterial = MakeupMaterialFactory.makeHairMaterial()
+        let material = existingMaterial.copy() as? SCNMaterial ?? fallbackHairMaterial
+
+        material.lightingModel = .physicallyBased
+        material.roughness.contents = 0.72
+        material.metalness.contents = 0.0
+        material.specular.contents = UIColor.white.withAlphaComponent(0.06)
+        material.shininess = 0.04
+        material.isDoubleSided = true
+        material.blendMode = .replace
+        material.transparencyMode = .aOne
+        material.transparency = 1.0
+        material.writesToDepthBuffer = true
+        material.readsFromDepthBuffer = true
+
+        if let hairTexture = bundledImage(named: "hair_d7", fileExtension: "png", subdirectory: "textures hair") {
+            material.diffuse.contents = hairTexture
+            material.transparent.contents = nil
+        } else {
+            material.multiply.contents = nil
+        }
+
+        if let hairNormal = bundledImage(named: "hair_n", fileExtension: "png", subdirectory: "textures hair") {
+            material.normal.contents = hairNormal
+            material.normal.intensity = 0.35
+        }
+
+        if let hairSpecular = bundledImage(named: "flatspec.tga", fileExtension: "png", subdirectory: "textures hair") {
+            material.specular.contents = hairSpecular
+            material.specular.intensity = 0.18
+        }
+
+        applyHairColor(to: material)
+        return material
+    }
+
+    private func registerHairMaterial(_ material: SCNMaterial) {
+        guard !hairMaterials.contains(where: { $0 === material }) else {
+            return
+        }
+
+        hairMaterials.append(material)
+    }
+
+    private func applyHairColorToCachedMaterials() {
+        for material in hairMaterials {
+            applyHairColor(to: material)
+        }
+    }
+
+    private func applyHairColor(to material: SCNMaterial) {
+        let tint = hairTintColor()
+
+        if material.diffuse.contents is UIImage {
+            material.diffuse.intensity = 0.48 + (1.0 - hairStrengthValue) * 0.18
+            material.multiply.contents = tint
+            material.multiply.intensity = 0.50 + hairStrengthValue * 0.48
+        } else {
+            material.diffuse.contents = tint
+            material.diffuse.intensity = 0.68 + (1.0 - hairStrengthValue) * 0.18
+            material.multiply.contents = nil
+        }
+
+        material.transparent.contents = nil
+    }
+
+    private func hairTintColor() -> UIColor {
+        let hue = hairHueValue.clamped(to: 0...1)
+        let strength = hairStrengthValue.clamped(to: 0...1)
+        let stops: [(position: CGFloat, color: UIColor)] = [
+            (0.00, UIColor(red: 0.030, green: 0.028, blue: 0.026, alpha: 1.0)),
+            (0.22, UIColor(red: 0.095, green: 0.060, blue: 0.038, alpha: 1.0)),
+            (0.48, UIColor(red: 0.34, green: 0.15, blue: 0.055, alpha: 1.0)),
+            (0.72, UIColor(red: 0.55, green: 0.40, blue: 0.20, alpha: 1.0)),
+            (1.00, UIColor(red: 0.45, green: 0.45, blue: 0.42, alpha: 1.0))
+        ]
+
+        let tint = interpolatedColor(in: stops, value: hue)
+        let neutral = UIColor(red: 0.22, green: 0.22, blue: 0.21, alpha: 1.0)
+
+        return interpolatedColor(from: neutral, to: tint, fraction: 0.35 + strength * 0.65)
+    }
+
+    private func interpolatedColor(in stops: [(position: CGFloat, color: UIColor)], value: CGFloat) -> UIColor {
+        guard let upperIndex = stops.firstIndex(where: { value <= $0.position }) else {
+            return stops[stops.count - 1].color
+        }
+
+        if upperIndex == 0 {
+            return stops[0].color
+        }
+
+        let lower = stops[upperIndex - 1]
+        let upper = stops[upperIndex]
+        let span = upper.position - lower.position
+        let fraction = span > 0 ? (value - lower.position) / span : 0
+        return interpolatedColor(from: lower.color, to: upper.color, fraction: fraction)
+    }
+
+    private func interpolatedColor(from startColor: UIColor, to endColor: UIColor, fraction: CGFloat) -> UIColor {
+        let t = fraction.clamped(to: 0...1)
+        var startRed: CGFloat = 0
+        var startGreen: CGFloat = 0
+        var startBlue: CGFloat = 0
+        var startAlpha: CGFloat = 0
+        var endRed: CGFloat = 0
+        var endGreen: CGFloat = 0
+        var endBlue: CGFloat = 0
+        var endAlpha: CGFloat = 0
+
+        guard startColor.getRed(&startRed, green: &startGreen, blue: &startBlue, alpha: &startAlpha),
+              endColor.getRed(&endRed, green: &endGreen, blue: &endBlue, alpha: &endAlpha) else {
+            return startColor
+        }
+
+        return UIColor(
+            red: startRed + (endRed - startRed) * t,
+            green: startGreen + (endGreen - startGreen) * t,
+            blue: startBlue + (endBlue - startBlue) * t,
+            alpha: startAlpha + (endAlpha - startAlpha) * t
+        )
+    }
+
+    private func prepareEyeMaterials(in rootNode: SCNNode) {
         for node in rootNode.childNodesRecursive where node.geometry != nil {
             guard let geometry = node.geometry else { continue }
-            node.renderingOrder = 30
+            node.renderingOrder = 25
 
             if geometry.materials.isEmpty {
-                geometry.firstMaterial = fallbackHairMaterial.copy() as? SCNMaterial
-                continue
+                geometry.firstMaterial = makeEyeMaterial(named: nil)
+            } else {
+                geometry.materials = geometry.materials.map { makeEyeMaterial(named: $0.name) }
             }
+        }
+    }
 
-            geometry.materials = geometry.materials.map { existingMaterial in
-                let material = existingMaterial.copy() as? SCNMaterial ?? fallbackHairMaterial
-                let hasDiffuseTexture = material.diffuse.contents != nil && !(material.diffuse.contents is UIColor)
+    private func makeEyeMaterial(named name: String?) -> SCNMaterial {
+        let material = SCNMaterial()
+        let normalizedName = normalizeNodeName(name ?? "")
+        let isCornea = normalizedName.contains("aistandard3")
 
-                material.lightingModel = .physicallyBased
-                material.roughness.contents = 0.72
-                material.metalness.contents = 0.0
-                material.specular.contents = UIColor.white.withAlphaComponent(0.06)
-                material.shininess = 0.04
-                material.isDoubleSided = true
-                material.blendMode = .alpha
-                material.transparencyMode = .aOne
-                material.transparency = 1.0
-                material.writesToDepthBuffer = false
-                material.readsFromDepthBuffer = true
+        material.lightingModel = .physicallyBased
+        material.isDoubleSided = true
+        material.metalness.contents = 0.0
+        material.roughness.contents = isCornea ? 0.08 : 0.36
+        material.specular.contents = UIColor.white.withAlphaComponent(isCornea ? 0.65 : 0.32)
+        material.shininess = isCornea ? 0.9 : 0.35
 
-                // Hair cards rely on PNG alpha in their diffuse/base-color
-                // texture. Preserve that texture and only fall back to a flat
-                // dark material when the converted asset did not carry one.
-                if !hasDiffuseTexture {
-                    material.diffuse.contents = UIColor(red: 0.09, green: 0.065, blue: 0.05, alpha: 1.0)
-                } else {
-                    material.diffuse.intensity = 0.58
-                    material.multiply.contents = UIColor(red: 0.50, green: 0.41, blue: 0.28, alpha: 1.0)
-                    material.multiply.intensity = 0.85
-                }
+        if isCornea {
+            material.diffuse.contents = UIColor.white.withAlphaComponent(0.12)
+            material.transparency = 0.18
+            material.transparencyMode = .aOne
+            material.blendMode = .alpha
+            material.writesToDepthBuffer = false
+            material.readsFromDepthBuffer = true
+        } else {
+            material.diffuse.contents = bundledImage(named: "eyeColor", fileExtension: "jpg", subdirectory: "textures eyes")
+                ?? UIColor(red: 0.42, green: 0.30, blue: 0.20, alpha: 1.0)
+            material.diffuse.intensity = 0.95
+            material.specular.contents = bundledImage(named: "eyeSpecular", fileExtension: "jpg", subdirectory: "textures eyes")
+                ?? UIColor.white.withAlphaComponent(0.28)
+            material.normal.contents = bundledImage(named: "eyeBump", fileExtension: "jpg", subdirectory: "textures eyes")
+            material.normal.intensity = 0.25
+        }
 
-                return material
-            }
+        return material
+    }
+
+    private func pruneNonEyeGeometry(in rootNode: SCNNode) {
+        for node in rootNode.childNodesRecursive where node.geometry != nil && !isLikelyEyeGeometry(node) {
+            node.isHidden = true
+        }
+    }
+
+    private func isLikelyEyeGeometry(_ node: SCNNode) -> Bool {
+        let nodeName = normalizeNodeName(node.name ?? "")
+        if nodeName.contains("eye") {
+            return true
+        }
+
+        guard let geometry = node.geometry else { return false }
+        return geometry.materials.contains { material in
+            let materialName = normalizeNodeName(material.name ?? "")
+            return materialName.contains("eye") || materialName.contains("aistandard3")
         }
     }
 
@@ -495,7 +722,7 @@ final class DemoHeadRenderer {
         }
 
         for node in geometryNodes where !hairNodes.contains(where: { $0 === node }) {
-            node.isHidden = true
+            node.removeFromParentNode()
         }
     }
 
@@ -504,9 +731,8 @@ final class DemoHeadRenderer {
             return false
         }
 
-        // Converted hair assets often keep a rig/armature above the renderable
-        // mesh. Prefer the mesh material name first so a "Hair" material is not
-        // discarded just because a parent node is called RootJoint.
+        // The separated hair OBJ can still contain eyes and head geometry.
+        // Only an explicit hair material is trustworthy enough to render.
         if geometry.materials.contains(where: materialNameMatchesHair) {
             return true
         }
@@ -517,8 +743,14 @@ final class DemoHeadRenderer {
             return false
         }
 
-        let nodeNames = node.lineageNames.map(normalizeNodeName)
-        return nodeNames.contains(where: { $0.contains("hair") || $0.contains("bang") || $0.contains("xpsnewmeshhair") })
+        if nodeName.contains("head") || nodeName.contains("face") {
+            return false
+        }
+
+        // Do not inspect parent names here: the combined demo OBJ is named
+        // "Female head with hair", and using lineage names would classify the
+        // whole head as hair. Only the renderable object/material should decide.
+        return nodeName.contains("hair") || nodeName.contains("bang") || nodeName.contains("xpsnewmeshhair")
     }
 
     private func materialNameMatchesHair(_ material: SCNMaterial) -> Bool {
@@ -799,6 +1031,17 @@ final class DemoHeadRenderer {
         }
     }
 
+    private func bundledImage(named name: String, fileExtension: String, subdirectory: String) -> UIImage? {
+        let url = Bundle.main.url(forResource: name, withExtension: fileExtension, subdirectory: subdirectory)
+            ?? Bundle.main.url(forResource: name, withExtension: fileExtension)
+
+        guard let url else {
+            return nil
+        }
+
+        return UIImage(contentsOfFile: url.path)
+    }
+
     private static func usdzFilename(for filename: String) -> String {
         let parts = splitFilename(filename)
         if let subdirectory = parts.subdirectory {
@@ -861,7 +1104,11 @@ private extension SCNNode {
         hierarchyBoundingBox(excluding: nil, visibleOnly: false)
     }
 
-    func hierarchyBoundingBox(excluding excludedNode: SCNNode? = nil, visibleOnly: Bool = false) -> (min: SCNVector3, max: SCNVector3) {
+    func hierarchyBoundingBox(
+        excluding excludedNode: SCNNode? = nil,
+        visibleOnly: Bool = false,
+        shouldInclude: ((SCNNode) -> Bool)? = nil
+    ) -> (min: SCNVector3, max: SCNVector3) {
         var hasBounds = false
         var minVector = SCNVector3Zero
         var maxVector = SCNVector3Zero
@@ -876,6 +1123,9 @@ private extension SCNNode {
             }
 
             guard node.geometry != nil else { return }
+            if let shouldInclude, !shouldInclude(node) {
+                return
+            }
 
             let bounds = node.boundingBox
             let corners = [
@@ -912,5 +1162,11 @@ private extension SCNNode {
         }
 
         return hasBounds ? (minVector, maxVector) : (SCNVector3Zero, SCNVector3(1, 1, 1))
+    }
+}
+
+private extension CGFloat {
+    func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }

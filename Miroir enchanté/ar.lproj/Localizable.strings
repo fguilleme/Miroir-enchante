@@ -6,6 +6,8 @@
 "control.opacity" = "الشفافية";
 "control.gloss" = "اللمعان";
 "control.color" = "اللون";
+"control.hair_hue" = "الصبغة";
+"control.hair_strength" = "القوة";
 "preset.nude" = "طبيعي";
 "preset.red" = "أحمر";
 "preset.burgundy" = "عنابي";

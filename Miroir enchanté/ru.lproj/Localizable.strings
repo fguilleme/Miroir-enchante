@@ -6,6 +6,8 @@
 "control.opacity" = "Непрозрачность";
 "control.gloss" = "Блеск";
 "control.color" = "Цвет";
+"control.hair_hue" = "Тон";
+"control.hair_strength" = "Сила";
 "preset.nude" = "Нюд";
 "preset.red" = "Красный";
 "preset.burgundy" = "Бордовый";

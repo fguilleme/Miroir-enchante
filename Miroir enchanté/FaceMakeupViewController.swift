@@ -18,7 +18,7 @@ final class FaceMakeupViewController: UIViewController {
     private let sceneView = ARSCNView(frame: .zero)
     private let demoSceneView = SCNView(frame: .zero)
     private let faceRenderer = FaceRenderer()
-    private let demoHeadRenderer = DemoHeadRenderer(assetFilename: "female_head.obj")
+    private let demoHeadRenderer = DemoHeadRenderer(assetFilename: "Female head.obj")
     private let modeButton = UIButton(type: .system)
     private let experienceModeButton = UIButton(type: .system)
     private let hairStyleButton = UIButton(type: .system)
@@ -26,10 +26,15 @@ final class FaceMakeupViewController: UIViewController {
     private let opacitySlider = UISlider()
     private let roughnessSlider = UISlider()
     private let colorIntensitySlider = UISlider()
+    private let hairHueSlider = UISlider()
+    private let hairStrengthSlider = UISlider()
+    private weak var hairControlsRow: UIStackView?
 
     private var unsupportedDeviceLabel: UILabel?
     private var experienceMode: ExperienceMode = ARFaceTrackingConfiguration.isSupported ? .ar : .demo
     private var lipstickSettings = LipstickSettings.default
+    private var hairHueValue: CGFloat = 0.24
+    private var hairStrengthValue: CGFloat = 0.84
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -159,10 +164,29 @@ final class FaceMakeupViewController: UIViewController {
         colorIntensitySlider.value = Float(lipstickSettings.colorIntensity)
         colorIntensitySlider.addTarget(self, action: #selector(makeupSliderChanged), for: .valueChanged)
 
+        hairHueSlider.minimumValue = 0.0
+        hairHueSlider.maximumValue = 1.0
+        hairHueSlider.value = Float(hairHueValue)
+        hairHueSlider.isContinuous = false
+        hairHueSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
+
+        hairStrengthSlider.minimumValue = 0.0
+        hairStrengthSlider.maximumValue = 1.0
+        hairStrengthSlider.value = Float(hairStrengthValue)
+        hairStrengthSlider.isContinuous = false
+        hairStrengthSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
+
         let opacityRow = makeSliderRow(title: L10n.text("control.opacity"), slider: opacitySlider)
         let roughnessRow = makeSliderRow(title: L10n.text("control.gloss"), slider: roughnessSlider)
         let colorRow = makeSliderRow(title: L10n.text("control.color"), slider: colorIntensitySlider)
         let presetRow = makePresetRow()
+        let hairRow = makeDoubleSliderRow(
+            leftTitle: L10n.text("control.hair_hue"),
+            leftSlider: hairHueSlider,
+            rightTitle: L10n.text("control.hair_strength"),
+            rightSlider: hairStrengthSlider
+        )
+        hairControlsRow = hairRow
 
         controlsStackView.translatesAutoresizingMaskIntoConstraints = false
         controlsStackView.axis = .vertical
@@ -177,6 +201,8 @@ final class FaceMakeupViewController: UIViewController {
         controlsStackView.addArrangedSubview(roughnessRow)
         controlsStackView.addArrangedSubview(colorRow)
         controlsStackView.addArrangedSubview(presetRow)
+        controlsStackView.addArrangedSubview(hairRow)
+        hairRow.isHidden = experienceMode != .demo
 
         view.addSubview(controlsStackView)
         NSLayoutConstraint.activate([
@@ -196,6 +222,39 @@ final class FaceMakeupViewController: UIViewController {
         let row = UIStackView(arrangedSubviews: [label, slider])
         row.axis = .horizontal
         row.spacing = 10
+        row.alignment = .center
+        return row
+    }
+
+    private func makeDoubleSliderRow(
+        leftTitle: String,
+        leftSlider: UISlider,
+        rightTitle: String,
+        rightSlider: UISlider
+    ) -> UIStackView {
+        let leftRow = makeCompactSliderRow(title: leftTitle, slider: leftSlider)
+        let rightRow = makeCompactSliderRow(title: rightTitle, slider: rightSlider)
+
+        let row = UIStackView(arrangedSubviews: [leftRow, rightRow])
+        row.axis = .horizontal
+        row.spacing = 10
+        row.distribution = .fillEqually
+        row.alignment = .center
+        return row
+    }
+
+    private func makeCompactSliderRow(title: String, slider: UISlider) -> UIStackView {
+        let label = UILabel()
+        label.text = title
+        label.textColor = .white
+        label.font = .preferredFont(forTextStyle: .caption2)
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.75
+        label.widthAnchor.constraint(equalToConstant: 44).isActive = true
+
+        let row = UIStackView(arrangedSubviews: [label, slider])
+        row.axis = .horizontal
+        row.spacing = 6
         row.alignment = .center
         return row
     }
@@ -252,6 +311,12 @@ final class FaceMakeupViewController: UIViewController {
         applyLipstickSettings()
     }
 
+    @objc private func hairSliderChanged() {
+        hairHueValue = CGFloat(hairHueSlider.value)
+        hairStrengthValue = CGFloat(hairStrengthSlider.value)
+        demoHeadRenderer.updateHairColor(hue: hairHueValue, strength: hairStrengthValue)
+    }
+
     @objc private func selectLipstickPreset(_ sender: UIButton) {
         guard LipstickSettings.presets.indices.contains(sender.tag) else { return }
 
@@ -289,7 +354,8 @@ final class FaceMakeupViewController: UIViewController {
         demoSceneView.isHidden = false
         demoSceneView.isPlaying = true
         modeButton.isHidden = true
-        hairStyleButton.isHidden = false
+        hairStyleButton.isHidden = true
+        hairControlsRow?.isHidden = false
     }
 
     private func startFaceTrackingSessionIfSupported() {
@@ -311,6 +377,7 @@ final class FaceMakeupViewController: UIViewController {
         sceneView.isPlaying = true
         modeButton.isHidden = false
         hairStyleButton.isHidden = true
+        hairControlsRow?.isHidden = true
         faceRenderer.attach(to: sceneView)
         faceRenderer.updateLipstickSettings(lipstickSettings)
 
