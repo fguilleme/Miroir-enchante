@@ -1,0 +1,16 @@
+"mode.ar" = "واقعیت افزوده";
+"mode.demo" = "نمایشی";
+"render.lips" = "لب‌ها";
+"render.full" = "کامل";
+"render.mesh" = "مش";
+"control.opacity" = "شفافیت";
+"control.gloss" = "درخشندگی";
+"control.color" = "رنگ";
+"preset.nude" = "نود";
+"preset.red" = "قرمز";
+"preset.burgundy" = "زرشکی";
+"preset.pink" = "صورتی";
+"hair.none" = "بدون مو";
+"hair.style_1" = "مو ۱";
+"hair.style_2" = "مو ۲";
+"error.truedepth_required" = "ردیابی چهره به آیفون دارای دوربین TrueDepth نیاز دارد.";

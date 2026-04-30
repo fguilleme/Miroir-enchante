@@ -18,11 +18,11 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate {
         var buttonTitle: String {
             switch self {
             case .lipsOnly:
-                return "Lips"
+                return L10n.text("render.lips")
             case .fullFace:
-                return "Full"
+                return L10n.text("render.full")
             case .wireframe:
-                return "Mesh"
+                return L10n.text("render.mesh")
             }
         }
     }

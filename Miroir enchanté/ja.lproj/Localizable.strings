@@ -1,0 +1,16 @@
+"mode.ar" = "AR";
+"mode.demo" = "デモ";
+"render.lips" = "唇";
+"render.full" = "全体";
+"render.mesh" = "メッシュ";
+"control.opacity" = "不透明度";
+"control.gloss" = "ツヤ";
+"control.color" = "色";
+"preset.nude" = "ヌード";
+"preset.red" = "赤";
+"preset.burgundy" = "バーガンディ";
+"preset.pink" = "ピンク";
+"hair.none" = "髪なし";
+"hair.style_1" = "髪 1";
+"hair.style_2" = "髪 2";
+"error.truedepth_required" = "顔トラッキングにはTrueDepthカメラ搭載のiPhoneが必要です。";

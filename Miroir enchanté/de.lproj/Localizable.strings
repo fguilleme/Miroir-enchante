@@ -1,0 +1,16 @@
+"mode.ar" = "AR";
+"mode.demo" = "Demo";
+"render.lips" = "Lippen";
+"render.full" = "Alles";
+"render.mesh" = "Mesh";
+"control.opacity" = "Deckkraft";
+"control.gloss" = "Glanz";
+"control.color" = "Farbe";
+"preset.nude" = "Nude";
+"preset.red" = "Rot";
+"preset.burgundy" = "Bordeaux";
+"preset.pink" = "Rosa";
+"hair.none" = "Ohne Haare";
+"hair.style_1" = "Haare 1";
+"hair.style_2" = "Haare 2";
+"error.truedepth_required" = "Gesichtsverfolgung erfordert ein iPhone mit TrueDepth-Kamera.";

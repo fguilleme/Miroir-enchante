@@ -1,0 +1,16 @@
+"mode.ar" = "AR";
+"mode.demo" = "Demo";
+"render.lips" = "Lábios";
+"render.full" = "Tudo";
+"render.mesh" = "Malha";
+"control.opacity" = "Opacidade";
+"control.gloss" = "Brilho";
+"control.color" = "Cor";
+"preset.nude" = "Nude";
+"preset.red" = "Vermelho";
+"preset.burgundy" = "Bordô";
+"preset.pink" = "Rosa";
+"hair.none" = "Sem cabelo";
+"hair.style_1" = "Cabelo 1";
+"hair.style_2" = "Cabelo 2";
+"error.truedepth_required" = "O rastreamento facial requer um iPhone com câmera TrueDepth.";

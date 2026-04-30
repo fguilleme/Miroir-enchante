@@ -1,0 +1,16 @@
+"mode.ar" = "AR";
+"mode.demo" = "演示";
+"render.lips" = "嘴唇";
+"render.full" = "全部";
+"render.mesh" = "网格";
+"control.opacity" = "不透明度";
+"control.gloss" = "光泽";
+"control.color" = "颜色";
+"preset.nude" = "裸色";
+"preset.red" = "红色";
+"preset.burgundy" = "酒红";
+"preset.pink" = "粉色";
+"hair.none" = "无头发";
+"hair.style_1" = "头发 1";
+"hair.style_2" = "头发 2";
+"error.truedepth_required" = "面部跟踪需要配备 TrueDepth 摄像头的 iPhone。";

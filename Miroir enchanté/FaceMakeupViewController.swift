@@ -21,6 +21,7 @@ final class FaceMakeupViewController: UIViewController {
     private let demoHeadRenderer = DemoHeadRenderer(assetFilename: "female_head.obj")
     private let modeButton = UIButton(type: .system)
     private let experienceModeButton = UIButton(type: .system)
+    private let hairStyleButton = UIButton(type: .system)
     private let controlsStackView = UIStackView()
     private let opacitySlider = UISlider()
     private let roughnessSlider = UISlider()
@@ -36,6 +37,7 @@ final class FaceMakeupViewController: UIViewController {
         configureSceneView()
         configureModeButton()
         configureExperienceModeButton()
+        configureHairStyleButton()
         configureMakeupControls()
         configureUnsupportedDeviceMessageIfNeeded()
         applyLipstickSettings()
@@ -52,6 +54,8 @@ final class FaceMakeupViewController: UIViewController {
         // Pause camera and tracking work when the app is no longer presenting
         // the mirror. ARKit will resume with a clean configuration next time.
         sceneView.session.pause()
+        sceneView.delegate = nil
+        sceneView.session.delegate = nil
     }
 
     private func configureSceneView() {
@@ -80,7 +84,7 @@ final class FaceMakeupViewController: UIViewController {
         demoSceneView.pointOfView = demoHeadRenderer.cameraNode
         demoSceneView.backgroundColor = .black
         demoSceneView.autoenablesDefaultLighting = false
-        demoSceneView.isPlaying = true
+        demoSceneView.isPlaying = false
         demoSceneView.isHidden = true
     }
 
@@ -120,6 +124,25 @@ final class FaceMakeupViewController: UIViewController {
         ])
     }
 
+    private func configureHairStyleButton() {
+        hairStyleButton.translatesAutoresizingMaskIntoConstraints = false
+        hairStyleButton.setTitle(L10n.text(DemoHairStyle.none.titleKey), for: .normal)
+        hairStyleButton.setTitleColor(.white, for: .normal)
+        hairStyleButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
+        hairStyleButton.backgroundColor = UIColor.black.withAlphaComponent(0.55)
+        hairStyleButton.layer.cornerRadius = 8
+        hairStyleButton.addTarget(self, action: #selector(cycleDemoHairStyle), for: .touchUpInside)
+        hairStyleButton.isHidden = true
+
+        view.addSubview(hairStyleButton)
+        NSLayoutConstraint.activate([
+            hairStyleButton.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            hairStyleButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            hairStyleButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 104),
+            hairStyleButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+
     private func configureMakeupControls() {
         opacitySlider.minimumValue = 0.0
         opacitySlider.maximumValue = 1.0
@@ -136,9 +159,9 @@ final class FaceMakeupViewController: UIViewController {
         colorIntensitySlider.value = Float(lipstickSettings.colorIntensity)
         colorIntensitySlider.addTarget(self, action: #selector(makeupSliderChanged), for: .valueChanged)
 
-        let opacityRow = makeSliderRow(title: "Opacity", slider: opacitySlider)
-        let roughnessRow = makeSliderRow(title: "Gloss", slider: roughnessSlider)
-        let colorRow = makeSliderRow(title: "Color", slider: colorIntensitySlider)
+        let opacityRow = makeSliderRow(title: L10n.text("control.opacity"), slider: opacitySlider)
+        let roughnessRow = makeSliderRow(title: L10n.text("control.gloss"), slider: roughnessSlider)
+        let colorRow = makeSliderRow(title: L10n.text("control.color"), slider: colorIntensitySlider)
         let presetRow = makePresetRow()
 
         controlsStackView.translatesAutoresizingMaskIntoConstraints = false
@@ -186,7 +209,7 @@ final class FaceMakeupViewController: UIViewController {
         for (index, preset) in LipstickSettings.presets.enumerated() {
             let button = UIButton(type: .system)
             button.tag = index
-            button.setTitle(preset.name, for: .normal)
+            button.setTitle(L10n.text(preset.titleKey), for: .normal)
             button.setTitleColor(.white, for: .normal)
             button.titleLabel?.font = .preferredFont(forTextStyle: .caption1)
             button.backgroundColor = preset.color
@@ -216,6 +239,11 @@ final class FaceMakeupViewController: UIViewController {
         applyExperienceMode()
     }
 
+    @objc private func cycleDemoHairStyle() {
+        let style = demoHeadRenderer.cycleHairStyle()
+        hairStyleButton.setTitle(L10n.text(style.titleKey), for: .normal)
+    }
+
     @objc private func makeupSliderChanged() {
         lipstickSettings.opacity = CGFloat(opacitySlider.value)
         lipstickSettings.roughness = CGFloat(roughnessSlider.value)
@@ -234,9 +262,9 @@ final class FaceMakeupViewController: UIViewController {
     private var experienceButtonTitle: String {
         switch experienceMode {
         case .ar:
-            return "Demo"
+            return L10n.text("mode.demo")
         case .demo:
-            return "AR"
+            return L10n.text("mode.ar")
         }
     }
 
@@ -254,10 +282,14 @@ final class FaceMakeupViewController: UIViewController {
 
     private func startDemoFaceMode() {
         sceneView.session.pause()
+        sceneView.delegate = nil
+        sceneView.session.delegate = nil
+        sceneView.isPlaying = false
         sceneView.isHidden = true
         demoSceneView.isHidden = false
         demoSceneView.isPlaying = true
         modeButton.isHidden = true
+        hairStyleButton.isHidden = false
     }
 
     private func startFaceTrackingSessionIfSupported() {
@@ -270,6 +302,7 @@ final class FaceMakeupViewController: UIViewController {
         }
 
         demoSceneView.isHidden = true
+        demoSceneView.isPlaying = false
         sceneView.isHidden = false
         sceneView.session.pause()
         sceneView.scene = SCNScene()
@@ -277,6 +310,7 @@ final class FaceMakeupViewController: UIViewController {
         sceneView.automaticallyUpdatesLighting = true
         sceneView.isPlaying = true
         modeButton.isHidden = false
+        hairStyleButton.isHidden = true
         faceRenderer.attach(to: sceneView)
         faceRenderer.updateLipstickSettings(lipstickSettings)
 
@@ -298,7 +332,7 @@ final class FaceMakeupViewController: UIViewController {
 
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Face tracking requires an iPhone with a TrueDepth camera."
+        label.text = L10n.text("error.truedepth_required")
         label.textAlignment = .center
         label.textColor = .white
         label.font = .preferredFont(forTextStyle: .body)

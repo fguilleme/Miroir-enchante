@@ -1,0 +1,16 @@
+"mode.ar" = "AR";
+"mode.demo" = "Демо";
+"render.lips" = "Губы";
+"render.full" = "Все";
+"render.mesh" = "Сетка";
+"control.opacity" = "Непрозрачность";
+"control.gloss" = "Блеск";
+"control.color" = "Цвет";
+"preset.nude" = "Нюд";
+"preset.red" = "Красный";
+"preset.burgundy" = "Бордовый";
+"preset.pink" = "Розовый";
+"hair.none" = "Без волос";
+"hair.style_1" = "Волосы 1";
+"hair.style_2" = "Волосы 2";
+"error.truedepth_required" = "Для отслеживания лица требуется iPhone с камерой TrueDepth.";

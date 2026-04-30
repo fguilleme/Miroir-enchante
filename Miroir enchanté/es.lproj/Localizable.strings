@@ -1,0 +1,16 @@
+"mode.ar" = "AR";
+"mode.demo" = "Demo";
+"render.lips" = "Labios";
+"render.full" = "Todo";
+"render.mesh" = "Malla";
+"control.opacity" = "Opacidad";
+"control.gloss" = "Brillo";
+"control.color" = "Color";
+"preset.nude" = "Nude";
+"preset.red" = "Rojo";
+"preset.burgundy" = "Burdeos";
+"preset.pink" = "Rosa";
+"hair.none" = "Sin pelo";
+"hair.style_1" = "Pelo 1";
+"hair.style_2" = "Pelo 2";
+"error.truedepth_required" = "El seguimiento facial requiere un iPhone con cámara TrueDepth.";

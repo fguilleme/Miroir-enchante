@@ -21,11 +21,11 @@ struct LipstickSettings {
         colorIntensity: 1.0
     )
 
-    static let presets: [(name: String, color: UIColor)] = [
-        ("Nude", UIColor(red: 0.63, green: 0.36, blue: 0.29, alpha: 1.0)),
-        ("Red", UIColor(red: 0.70, green: 0.04, blue: 0.10, alpha: 1.0)),
-        ("Burgundy", UIColor(red: 0.33, green: 0.02, blue: 0.09, alpha: 1.0)),
-        ("Pink", UIColor(red: 0.93, green: 0.26, blue: 0.48, alpha: 1.0))
+    static let presets: [(titleKey: String, color: UIColor)] = [
+        ("preset.nude", UIColor(red: 0.63, green: 0.36, blue: 0.29, alpha: 1.0)),
+        ("preset.red", UIColor(red: 0.70, green: 0.04, blue: 0.10, alpha: 1.0)),
+        ("preset.burgundy", UIColor(red: 0.33, green: 0.02, blue: 0.09, alpha: 1.0)),
+        ("preset.pink", UIColor(red: 0.93, green: 0.26, blue: 0.48, alpha: 1.0))
     ]
 }
 
@@ -41,6 +41,20 @@ enum MakeupMaterialFactory {
         material.metalness.contents = 0.0
         material.specular.contents = UIColor.white.withAlphaComponent(0.035)
         material.shininess = 0.02
+        material.isDoubleSided = true
+
+        return material
+    }
+
+    static func makeHairMaterial() -> SCNMaterial {
+        let material = SCNMaterial()
+
+        material.lightingModel = .physicallyBased
+        material.diffuse.contents = UIColor(red: 0.09, green: 0.065, blue: 0.05, alpha: 1.0)
+        material.roughness.contents = 0.72
+        material.metalness.contents = 0.0
+        material.specular.contents = UIColor.white.withAlphaComponent(0.18)
+        material.shininess = 0.18
         material.isDoubleSided = true
 
         return material

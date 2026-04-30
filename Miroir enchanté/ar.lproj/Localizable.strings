@@ -1,0 +1,16 @@
+"mode.ar" = "الواقع المعزز";
+"mode.demo" = "تجربة";
+"render.lips" = "الشفاه";
+"render.full" = "الكل";
+"render.mesh" = "الشبكة";
+"control.opacity" = "الشفافية";
+"control.gloss" = "اللمعان";
+"control.color" = "اللون";
+"preset.nude" = "طبيعي";
+"preset.red" = "أحمر";
+"preset.burgundy" = "عنابي";
+"preset.pink" = "وردي";
+"hair.none" = "بلا شعر";
+"hair.style_1" = "شعر ١";
+"hair.style_2" = "شعر ٢";
+"error.truedepth_required" = "يتطلب تتبع الوجه جهاز iPhone مزودًا بكاميرا TrueDepth.";
