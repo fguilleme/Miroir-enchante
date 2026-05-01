@@ -83,7 +83,7 @@ final class DemoHeadRenderer {
     // The separated hair OBJ is in the same Blender space as the head, but the
     // visible strands sit a little too far back/high in SceneKit. Keep this as
     // a single local tweak so it is easy to tune after the next device pass.
-    private var hairPlacementOffset = SCNVector3(0, -1, 2.42)
+    private var hairPlacementOffset = SCNVector3(0, 0.40, 0.07)
     private var hairPlacementScale: Float = 1.0
     private let fallbackLipVerticalRatio: Float = 0.235
     private let fallbackLipWidthRatio: Float = 0.155
@@ -217,7 +217,7 @@ final class DemoHeadRenderer {
         camera.exposureOffset = -2.15
 
         cameraNode.camera = camera
-        cameraNode.position = SCNVector3(0, 0, 4.0)
+        cameraNode.position = SCNVector3(0, -0.3, 6.0)
         scene.rootNode.addChildNode(cameraNode)
 
         let keyLight = SCNNode()
@@ -872,20 +872,16 @@ final class DemoHeadRenderer {
 
         if let hairTexture {
             hairBaseTexture = hairTexture
-            material.diffuse.contents = hairTexture
             material.diffuse.wrapS = .repeat
             material.diffuse.wrapT = .repeat
             material.diffuse.magnificationFilter = .linear
             material.diffuse.minificationFilter = .linear
-            // Use the PNG alpha channel for cutout transparency. Earlier
-            // attempts used transparencyMode .rgbZero, but that turns dark
-            // hair pixels transparent, so dark/black hair disappears.
-            material.transparent.contents = hairTexture
-            material.transparent.wrapS = .repeat
-            material.transparent.wrapT = .repeat
-            material.transparent.magnificationFilter = .linear
-            material.transparent.minificationFilter = .linear
-            material.transparencyMode = .aOne
+            // hair_d7.png currently carries alpha/UV data that makes SceneKit
+            // drop visible hair cards when used directly as diffuse or alpha.
+            // Keep it cached for future processing, but render with a solid
+            // tint plus normal/specular maps until a clean color/cutout export
+            // is available.
+            material.transparent.contents = nil
         }
 
         if let hairNormal {
@@ -902,7 +898,7 @@ final class DemoHeadRenderer {
             material.specular.wrapT = .repeat
         }
 
-        print("Demo hair material \(material.name ?? "?"): diffuse=\(hairTexture == nil ? "missing" : "loaded") normal=\(hairNormal == nil ? "missing" : "loaded") spec=\(hairSpecular == nil ? "missing" : "loaded") transparencyMode=aOne")
+        print("Demo hair material \(material.name ?? "?"): colorMap=\(hairTexture == nil ? "missing" : "cached") normal=\(hairNormal == nil ? "missing" : "loaded") spec=\(hairSpecular == nil ? "missing" : "loaded") alphaMask=disabled")
 
         applyHairColor(to: material)
         return material
@@ -945,8 +941,8 @@ final class DemoHeadRenderer {
 
         if material.diffuse.contents is UIImage {
             // Multiplying a very dark hair texture barely changes it. Generate
-            // a tinted diffuse image instead, and keep the original PNG as the
-            // alpha mask via material.transparent.
+            // a tinted diffuse image instead. In normal runtime we avoid this
+            // branch because hair_d7's alpha currently clips hair cards.
             material.diffuse.intensity = 1.0
             material.diffuse.contents = makeTintedHairTexture(tint: tint)
             material.multiply.contents = nil

@@ -54,8 +54,8 @@ final class FaceMakeupViewController: UIViewController {
     private var lipstickSettings = LipstickSettings.default
     private var hairHueValue: CGFloat = 0.24
     private var hairStrengthValue: CGFloat = 0.84
-    private var hairOffsetYValue: Float = -1.0
-    private var hairOffsetZValue: Float = 2.42
+    private var hairOffsetYValue: Float = -0.08
+    private var hairOffsetZValue: Float = 0.15
     private var hairScaleValue: Float = 1.0
     private var selectedControlTab: ControlTab = .lipstick
     private var smoothedInspectionTilt: CGFloat = 0
