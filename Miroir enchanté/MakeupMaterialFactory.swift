@@ -6,6 +6,13 @@
 import SceneKit
 import UIKit
 
+struct LipstickPreset {
+    let titleKey: String
+    let baseColor: UIColor
+    let roughness: Float
+    let opacity: Float
+}
+
 struct LipstickSettings {
     var color: UIColor
     var opacity: CGFloat
@@ -21,11 +28,15 @@ struct LipstickSettings {
         colorIntensity: 1.0
     )
 
-    static let presets: [(titleKey: String, color: UIColor)] = [
-        ("preset.nude", UIColor(red: 0.63, green: 0.36, blue: 0.29, alpha: 1.0)),
-        ("preset.red", UIColor(red: 0.70, green: 0.04, blue: 0.10, alpha: 1.0)),
-        ("preset.burgundy", UIColor(red: 0.33, green: 0.02, blue: 0.09, alpha: 1.0)),
-        ("preset.pink", UIColor(red: 0.93, green: 0.26, blue: 0.48, alpha: 1.0))
+    static let presets: [LipstickPreset] = [
+        LipstickPreset(titleKey: "preset.nude", baseColor: UIColor(red: 0.63, green: 0.36, blue: 0.29, alpha: 1.0), roughness: 0.38, opacity: 0.54),
+        LipstickPreset(titleKey: "preset.rosewood", baseColor: UIColor(red: 0.68, green: 0.28, blue: 0.31, alpha: 1.0), roughness: 0.34, opacity: 0.58),
+        LipstickPreset(titleKey: "preset.coral", baseColor: UIColor(red: 0.89, green: 0.24, blue: 0.20, alpha: 1.0), roughness: 0.30, opacity: 0.60),
+        LipstickPreset(titleKey: "preset.red", baseColor: UIColor(red: 0.70, green: 0.04, blue: 0.10, alpha: 1.0), roughness: 0.24, opacity: 0.66),
+        LipstickPreset(titleKey: "preset.crimson", baseColor: UIColor(red: 0.58, green: 0.00, blue: 0.07, alpha: 1.0), roughness: 0.22, opacity: 0.68),
+        LipstickPreset(titleKey: "preset.pink", baseColor: UIColor(red: 0.93, green: 0.26, blue: 0.48, alpha: 1.0), roughness: 0.30, opacity: 0.60),
+        LipstickPreset(titleKey: "preset.berry", baseColor: UIColor(red: 0.55, green: 0.07, blue: 0.28, alpha: 1.0), roughness: 0.26, opacity: 0.64),
+        LipstickPreset(titleKey: "preset.burgundy", baseColor: UIColor(red: 0.33, green: 0.02, blue: 0.09, alpha: 1.0), roughness: 0.20, opacity: 0.64)
     ]
 }
 

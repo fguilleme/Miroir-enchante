@@ -32,9 +32,20 @@ final class FaceMakeupViewController: UIViewController {
     private let hairStyleButton = UIButton(type: .system)
     private let controlsSegmentedControl = UISegmentedControl(items: ["Lipstick", "Hair", "Debug"])
     private let controlsStackView = UIStackView()
-    private let opacitySlider = UISlider()
-    private let roughnessSlider = UISlider()
-    private let colorIntensitySlider = UISlider()
+    private let lipstickIntensitySlider = UISlider()
+    private let lipstickCollectionView: UICollectionView = {
+        let layout = LipstickSnapFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 12
+        layout.itemSize = CGSize(width: 76, height: 130)
+
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
+        collectionView.showsHorizontalScrollIndicator = false
+        collectionView.decelerationRate = .fast
+        collectionView.clipsToBounds = false
+        return collectionView
+    }()
     private let hairHueSlider = UISlider()
     private let hairStrengthSlider = UISlider()
     private let hairOffsetYSlider = UISlider()
@@ -52,6 +63,8 @@ final class FaceMakeupViewController: UIViewController {
     private var unsupportedDeviceLabel: UILabel?
     private var experienceMode: ExperienceMode = ARFaceTrackingConfiguration.isSupported ? .ar : .demo
     private var lipstickSettings = LipstickSettings.default
+    private var selectedLipstickPresetIndex = 3
+    private var didCenterInitialLipstickPreset = false
     private var hairHueValue: CGFloat = 0.24
     private var hairStrengthValue: CGFloat = 0.84
     private var hairOffsetYValue: Float = -0.08
@@ -86,6 +99,17 @@ final class FaceMakeupViewController: UIViewController {
         sceneView.delegate = nil
         sceneView.session.delegate = nil
         stopDemoTiltControl()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+
+        updateLipstickCollectionLayoutInsets()
+
+        guard !didCenterInitialLipstickPreset, lipstickCollectionView.bounds.width > 0 else { return }
+        didCenterInitialLipstickPreset = true
+        centerSelectedLipstickPreset(animated: false)
+        updateVisibleLipstickCells(animated: false)
     }
 
     private func configureSceneView() {
@@ -174,20 +198,15 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     private func configureMakeupControls() {
-        opacitySlider.minimumValue = 0.0
-        opacitySlider.maximumValue = 1.0
-        opacitySlider.value = Float(lipstickSettings.opacity)
-        opacitySlider.addTarget(self, action: #selector(makeupSliderChanged), for: .valueChanged)
+        lipstickIntensitySlider.minimumValue = 0.4
+        lipstickIntensitySlider.maximumValue = 1.0
+        lipstickIntensitySlider.value = 0.9
+        lipstickIntensitySlider.isContinuous = true
+        lipstickIntensitySlider.addTarget(self, action: #selector(lipstickIntensityChanged), for: .valueChanged)
 
-        roughnessSlider.minimumValue = 0.05
-        roughnessSlider.maximumValue = 0.75
-        roughnessSlider.value = Float(lipstickSettings.roughness)
-        roughnessSlider.addTarget(self, action: #selector(makeupSliderChanged), for: .valueChanged)
-
-        colorIntensitySlider.minimumValue = 0.4
-        colorIntensitySlider.maximumValue = 1.45
-        colorIntensitySlider.value = Float(lipstickSettings.colorIntensity)
-        colorIntensitySlider.addTarget(self, action: #selector(makeupSliderChanged), for: .valueChanged)
+        lipstickCollectionView.dataSource = self
+        lipstickCollectionView.delegate = self
+        lipstickCollectionView.register(LipstickPresetCell.self, forCellWithReuseIdentifier: LipstickPresetCell.reuseIdentifier)
 
         hairHueSlider.minimumValue = 0.0
         hairHueSlider.maximumValue = 1.0
@@ -212,10 +231,8 @@ final class FaceMakeupViewController: UIViewController {
         controlsSegmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
         controlsSegmentedControl.addTarget(self, action: #selector(controlTabChanged), for: .valueChanged)
 
-        let opacityRow = makeSliderRow(title: L10n.text("control.opacity"), slider: opacitySlider)
-        let roughnessRow = makeSliderRow(title: L10n.text("control.gloss"), slider: roughnessSlider)
-        let colorRow = makeSliderRow(title: L10n.text("control.color"), slider: colorIntensitySlider)
-        let presetRow = makePresetRow()
+        let lipstickSelectorRow = makeLipstickSelectorRow()
+        let lipstickIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: lipstickIntensitySlider)
         let visibilityRow = makeDoubleSwitchRow(
             leftTitle: L10n.text("control.hide_head"),
             leftToggle: hideHeadSwitch,
@@ -233,7 +250,7 @@ final class FaceMakeupViewController: UIViewController {
         let hairScaleRow = makeHairOffsetRow(title: "S", slider: hairScaleSlider, valueLabel: hairScaleValueLabel)
         updateHairOffsetValueLabels()
 
-        lipstickControlRows = [opacityRow, roughnessRow, colorRow, presetRow]
+        lipstickControlRows = [lipstickSelectorRow, lipstickIntensityRow]
         hairControlRows = [hairRow]
         debugControlRows = [hairOffsetYRow, hairOffsetZRow, hairScaleRow, visibilityRow]
 
@@ -242,15 +259,13 @@ final class FaceMakeupViewController: UIViewController {
         controlsStackView.spacing = 8
         controlsStackView.alignment = .fill
         controlsStackView.backgroundColor = UIColor.black.withAlphaComponent(0.52)
-        controlsStackView.layer.cornerRadius = 10
+        controlsStackView.layer.cornerRadius = 0
         controlsStackView.isLayoutMarginsRelativeArrangement = true
-        controlsStackView.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 12, leading: 12, bottom: 12, trailing: 12)
+        controlsStackView.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 12, leading: 28, bottom: 0, trailing: 28)
 
         controlsStackView.addArrangedSubview(controlsSegmentedControl)
-        controlsStackView.addArrangedSubview(opacityRow)
-        controlsStackView.addArrangedSubview(roughnessRow)
-        controlsStackView.addArrangedSubview(colorRow)
-        controlsStackView.addArrangedSubview(presetRow)
+        controlsStackView.addArrangedSubview(lipstickIntensityRow)
+        controlsStackView.addArrangedSubview(lipstickSelectorRow)
         controlsStackView.addArrangedSubview(hairRow)
         controlsStackView.addArrangedSubview(hairOffsetYRow)
         controlsStackView.addArrangedSubview(hairOffsetZRow)
@@ -261,10 +276,12 @@ final class FaceMakeupViewController: UIViewController {
 
         view.addSubview(controlsStackView)
         NSLayoutConstraint.activate([
-            controlsStackView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            controlsStackView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            controlsStackView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16)
+            controlsStackView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            controlsStackView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            controlsStackView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
+
+        applySelectedLipstickPreset(animated: false)
     }
 
     private func configureHairOffsetControls() {
@@ -304,6 +321,23 @@ final class FaceMakeupViewController: UIViewController {
         row.spacing = 8
         row.alignment = .center
         return row
+    }
+
+    private func makeLipstickSelectorRow() -> UIView {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        lipstickCollectionView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(lipstickCollectionView)
+
+        NSLayoutConstraint.activate([
+            lipstickCollectionView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            lipstickCollectionView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            lipstickCollectionView.topAnchor.constraint(equalTo: container.topAnchor),
+            lipstickCollectionView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            container.heightAnchor.constraint(equalToConstant: 134)
+        ])
+
+        return container
     }
 
     private func makeSliderRow(title: String, slider: UISlider) -> UIStackView {
@@ -384,29 +418,6 @@ final class FaceMakeupViewController: UIViewController {
         return row
     }
 
-    private func makePresetRow() -> UIStackView {
-        let row = UIStackView()
-        row.axis = .horizontal
-        row.spacing = 8
-        row.distribution = .fillEqually
-
-        for (index, preset) in LipstickSettings.presets.enumerated() {
-            let button = UIButton(type: .system)
-            button.tag = index
-            button.setTitle(L10n.text(preset.titleKey), for: .normal)
-            button.setTitleColor(.white, for: .normal)
-            button.titleLabel?.font = .preferredFont(forTextStyle: .caption1)
-            button.backgroundColor = preset.color
-            button.layer.cornerRadius = 7
-            button.layer.borderColor = UIColor.white.withAlphaComponent(0.5).cgColor
-            button.layer.borderWidth = 1
-            button.addTarget(self, action: #selector(selectLipstickPreset(_:)), for: .touchUpInside)
-            row.addArrangedSubview(button)
-        }
-
-        return row
-    }
-
     @objc private func toggleRenderMode() {
         let mode = faceRenderer.toggleMode()
         modeButton.setTitle(mode.buttonTitle, for: .normal)
@@ -428,12 +439,8 @@ final class FaceMakeupViewController: UIViewController {
         hairStyleButton.setTitle(L10n.text(style.titleKey), for: .normal)
     }
 
-    @objc private func makeupSliderChanged() {
-        lipstickSettings.opacity = CGFloat(opacitySlider.value)
-        lipstickSettings.roughness = CGFloat(roughnessSlider.value)
-        lipstickSettings.glossIntensity = CGFloat(1.0 - roughnessSlider.value)
-        lipstickSettings.colorIntensity = CGFloat(colorIntensitySlider.value)
-        applyLipstickSettings()
+    @objc private func lipstickIntensityChanged() {
+        applySelectedLipstickPreset(animated: false, updatesSelector: false)
     }
 
     @objc private func hairSliderChanged() {
@@ -463,6 +470,7 @@ final class FaceMakeupViewController: UIViewController {
 
     private func updateControlTabAvailability() {
         let demoControlsEnabled = experienceMode == .demo
+        controlsSegmentedControl.isHidden = !demoControlsEnabled
         controlsSegmentedControl.setEnabled(true, forSegmentAt: ControlTab.lipstick.rawValue)
         controlsSegmentedControl.setEnabled(demoControlsEnabled, forSegmentAt: ControlTab.hair.rawValue)
         controlsSegmentedControl.setEnabled(demoControlsEnabled, forSegmentAt: ControlTab.debug.rawValue)
@@ -489,11 +497,112 @@ final class FaceMakeupViewController: UIViewController {
         demoHeadRenderer.setHairHidden(hideHairSwitch.isOn)
     }
 
-    @objc private func selectLipstickPreset(_ sender: UIButton) {
-        guard LipstickSettings.presets.indices.contains(sender.tag) else { return }
+    private func selectLipstickPreset(at index: Int, animated: Bool) {
+        guard LipstickSettings.presets.indices.contains(index),
+              selectedLipstickPresetIndex != index else {
+            centerSelectedLipstickPreset(animated: animated)
+            return
+        }
 
-        lipstickSettings.color = LipstickSettings.presets[sender.tag].color
+        selectedLipstickPresetIndex = index
+        applySelectedLipstickPreset(animated: animated, updatesSelector: true)
+        centerSelectedLipstickPreset(animated: animated)
+    }
+
+    private func applySelectedLipstickPreset(animated: Bool, updatesSelector: Bool = true) {
+        guard LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) else { return }
+
+        let preset = LipstickSettings.presets[selectedLipstickPresetIndex]
+        let intensity = CGFloat(lipstickIntensitySlider.value).clamped(to: 0.2...1.0)
+
+        lipstickSettings.color = preset.baseColor
+        lipstickSettings.opacity = CGFloat(preset.opacity) * intensity
+        lipstickSettings.roughness = CGFloat(preset.roughness)
+        lipstickSettings.glossIntensity = CGFloat(1.0 - preset.roughness).clamped(to: 0...1)
+        lipstickSettings.colorIntensity = 1.0
+
         applyLipstickSettings()
+
+        if updatesSelector {
+            updateVisibleLipstickCells(animated: animated)
+        }
+    }
+
+    private func centerSelectedLipstickPreset(animated: Bool) {
+        guard LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) else { return }
+        guard lipstickCollectionNeedsScrolling else { return }
+        lipstickCollectionView.layoutIfNeeded()
+
+        let indexPath = IndexPath(item: selectedLipstickPresetIndex, section: 0)
+        guard let attributes = lipstickCollectionView.layoutAttributesForItem(at: indexPath) else { return }
+
+        let proposedX = attributes.center.x - lipstickCollectionView.bounds.width * 0.5
+        lipstickCollectionView.setContentOffset(clampedLipstickContentOffset(for: proposedX), animated: animated)
+    }
+
+    private func updateLipstickCollectionLayoutInsets() {
+        let shouldScroll = lipstickCollectionNeedsScrolling
+        lipstickCollectionView.isScrollEnabled = shouldScroll
+        lipstickCollectionView.contentInset = .zero
+    }
+
+    private var lipstickCollectionNeedsScrolling: Bool {
+        guard lipstickCollectionView.bounds.width > 0,
+              let layout = lipstickCollectionView.collectionViewLayout as? UICollectionViewFlowLayout else {
+            return false
+        }
+
+        let itemCount = CGFloat(LipstickSettings.presets.count)
+        let contentWidth = itemCount * layout.itemSize.width + max(0, itemCount - 1) * layout.minimumLineSpacing
+        return contentWidth > lipstickCollectionView.bounds.width
+    }
+
+    private func clampedLipstickContentOffset(for proposedX: CGFloat) -> CGPoint {
+        let maxOffsetX = max(
+            0,
+            lipstickCollectionView.collectionViewLayout.collectionViewContentSize.width - lipstickCollectionView.bounds.width
+        )
+        let offsetX = proposedX.clamped(to: 0...maxOffsetX)
+        return CGPoint(x: offsetX, y: lipstickCollectionView.contentOffset.y)
+    }
+
+    private func updateSelectedLipstickPresetFromCenter(animated: Bool) {
+        let visibleCenter = CGPoint(
+            x: lipstickCollectionView.bounds.midX + lipstickCollectionView.contentOffset.x,
+            y: lipstickCollectionView.bounds.midY
+        )
+
+        guard let indexPath = lipstickCollectionView.indexPathForItem(at: visibleCenter) ?? closestVisibleLipstickIndexPath(to: visibleCenter) else {
+            return
+        }
+
+        selectLipstickPreset(at: indexPath.item, animated: animated)
+    }
+
+    private func closestVisibleLipstickIndexPath(to point: CGPoint) -> IndexPath? {
+        lipstickCollectionView.indexPathsForVisibleItems.min { lhs, rhs in
+            guard let lhsAttributes = lipstickCollectionView.layoutAttributesForItem(at: lhs),
+                  let rhsAttributes = lipstickCollectionView.layoutAttributesForItem(at: rhs) else {
+                return lhs.item < rhs.item
+            }
+
+            return abs(lhsAttributes.center.x - point.x) < abs(rhsAttributes.center.x - point.x)
+        }
+    }
+
+    private func updateVisibleLipstickCells(animated: Bool) {
+        for case let cell as LipstickPresetCell in lipstickCollectionView.visibleCells {
+            guard let indexPath = lipstickCollectionView.indexPath(for: cell),
+                  LipstickSettings.presets.indices.contains(indexPath.item) else {
+                continue
+            }
+
+            cell.configure(
+                preset: LipstickSettings.presets[indexPath.item],
+                isSelected: indexPath.item == selectedLipstickPresetIndex,
+                animated: animated
+            )
+        }
     }
 
     private var experienceButtonTitle: String {
@@ -627,5 +736,240 @@ final class FaceMakeupViewController: UIViewController {
             label.trailingAnchor.constraint(equalTo: view.layoutMarginsGuide.trailingAnchor),
             label.centerYAnchor.constraint(equalTo: view.centerYAnchor)
         ])
+    }
+}
+
+extension FaceMakeupViewController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
+    func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
+        LipstickSettings.presets.count
+    }
+
+    func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        guard let cell = collectionView.dequeueReusableCell(
+            withReuseIdentifier: LipstickPresetCell.reuseIdentifier,
+            for: indexPath
+        ) as? LipstickPresetCell else {
+            return UICollectionViewCell()
+        }
+
+        let isSelected = indexPath.item == selectedLipstickPresetIndex
+        cell.configure(preset: LipstickSettings.presets[indexPath.item], isSelected: isSelected, animated: false)
+        return cell
+    }
+
+    func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        selectLipstickPreset(at: indexPath.item, animated: true)
+    }
+
+    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        updateSelectedLipstickPresetFromCenter(animated: true)
+    }
+
+    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        if !decelerate {
+            updateSelectedLipstickPresetFromCenter(animated: true)
+        }
+    }
+
+    func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        updateVisibleLipstickCells(animated: true)
+    }
+}
+
+private final class LipstickSnapFlowLayout: UICollectionViewFlowLayout {
+    override func targetContentOffset(
+        forProposedContentOffset proposedContentOffset: CGPoint,
+        withScrollingVelocity velocity: CGPoint
+    ) -> CGPoint {
+        guard let collectionView else {
+            return super.targetContentOffset(forProposedContentOffset: proposedContentOffset, withScrollingVelocity: velocity)
+        }
+
+        let visibleRect = CGRect(origin: proposedContentOffset, size: collectionView.bounds.size)
+        let centerX = visibleRect.midX
+        guard let attributes = layoutAttributesForElements(in: visibleRect.insetBy(dx: -itemSize.width, dy: 0)) else {
+            return super.targetContentOffset(forProposedContentOffset: proposedContentOffset, withScrollingVelocity: velocity)
+        }
+
+        let closest = attributes.min { lhs, rhs in
+            abs(lhs.center.x - centerX) < abs(rhs.center.x - centerX)
+        }
+
+        guard let closest else {
+            return super.targetContentOffset(forProposedContentOffset: proposedContentOffset, withScrollingVelocity: velocity)
+        }
+
+        let maxOffsetX = max(0, collectionViewContentSize.width - collectionView.bounds.width)
+        let centeredOffsetX = closest.center.x - collectionView.bounds.width * 0.5
+        let clampedOffsetX = min(max(centeredOffsetX, 0), maxOffsetX)
+
+        return CGPoint(x: clampedOffsetX, y: proposedContentOffset.y)
+    }
+}
+
+private final class LipstickPresetCell: UICollectionViewCell {
+    static let reuseIdentifier = "LipstickPresetCell"
+
+    private let iconView = LipstickIconView()
+    private let titleLabel = UILabel()
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        contentView.layer.cornerRadius = 10
+        contentView.layer.borderWidth = 1
+        contentView.layer.borderColor = UIColor.clear.cgColor
+        contentView.backgroundColor = UIColor.white.withAlphaComponent(0.05)
+
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.isUserInteractionEnabled = false
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.textColor = UIColor.white.withAlphaComponent(0.88)
+        titleLabel.font = .preferredFont(forTextStyle: .caption2)
+        titleLabel.textAlignment = .center
+        titleLabel.adjustsFontSizeToFitWidth = true
+        titleLabel.minimumScaleFactor = 0.72
+        contentView.addSubview(iconView)
+        contentView.addSubview(titleLabel)
+
+        NSLayoutConstraint.activate([
+            iconView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 6),
+            iconView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -6),
+            iconView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 6),
+            iconView.heightAnchor.constraint(equalToConstant: 98),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
+            titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 4),
+            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -5)
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(preset: LipstickPreset, isSelected: Bool, animated: Bool) {
+        iconView.color = preset.baseColor
+        titleLabel.text = L10n.text(preset.titleKey)
+        let updates = {
+            self.contentView.transform = isSelected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
+            self.contentView.layer.borderColor = isSelected ? UIColor.white.withAlphaComponent(0.85).cgColor : UIColor.clear.cgColor
+            self.contentView.backgroundColor = isSelected ? UIColor.white.withAlphaComponent(0.13) : UIColor.white.withAlphaComponent(0.05)
+            self.titleLabel.textColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.78)
+        }
+
+        if animated {
+            UIView.animate(withDuration: 0.18, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
+        } else {
+            updates()
+        }
+    }
+}
+
+private final class LipstickIconView: UIView {
+    var color: UIColor = .systemRed {
+        didSet { setNeedsDisplay() }
+    }
+
+    override func draw(_ rect: CGRect) {
+        guard let context = UIGraphicsGetCurrentContext() else { return }
+
+        let scale = min(rect.width / 62, rect.height / 100)
+        let width: CGFloat = 62 * scale
+        let height: CGFloat = 100 * scale
+        let origin = CGPoint(x: rect.midX - width * 0.5, y: rect.midY - height * 0.5)
+
+        context.saveGState()
+        context.translateBy(x: origin.x, y: origin.y)
+        context.scaleBy(x: scale, y: scale)
+
+        drawShadow()
+        drawBase()
+        drawGoldBand()
+        drawBullet()
+        drawSwatch()
+
+        context.restoreGState()
+    }
+
+    private func drawShadow() {
+        UIColor.black.withAlphaComponent(0.24).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 12, y: 90, width: 38, height: 6)).fill()
+    }
+
+    private func drawBase() {
+        let baseRect = CGRect(x: 16, y: 58, width: 30, height: 32)
+        UIColor.black.withAlphaComponent(0.92).setFill()
+        UIBezierPath(roundedRect: baseRect, cornerRadius: 4).fill()
+
+        UIColor.white.withAlphaComponent(0.10).setFill()
+        UIBezierPath(rect: CGRect(x: 18, y: 60, width: 5, height: 27)).fill()
+    }
+
+    private func drawGoldBand() {
+        let gold = UIColor(red: 0.94, green: 0.70, blue: 0.38, alpha: 1.0)
+        let darkGold = UIColor(red: 0.42, green: 0.25, blue: 0.10, alpha: 1.0)
+
+        for y in [48.0, 53.0] {
+            let rect = CGRect(x: 13, y: y, width: 36, height: 7)
+            gold.setFill()
+            UIBezierPath(roundedRect: rect, cornerRadius: 2).fill()
+            darkGold.withAlphaComponent(0.45).setFill()
+            UIBezierPath(rect: CGRect(x: 36, y: y, width: 4, height: 7)).fill()
+            UIColor.white.withAlphaComponent(0.30).setFill()
+            UIBezierPath(rect: CGRect(x: 18, y: y + 1, width: 4, height: 5)).fill()
+        }
+    }
+
+    private func drawBullet() {
+        let bodyRect = CGRect(x: 20, y: 16, width: 22, height: 38)
+        color.setFill()
+        UIBezierPath(roundedRect: bodyRect, cornerRadius: 9).fill()
+
+        UIColor.white.withAlphaComponent(0.24).setFill()
+        UIBezierPath(roundedRect: CGRect(x: 23, y: 19, width: 5, height: 31), cornerRadius: 3).fill()
+
+        let tipPath = UIBezierPath()
+        tipPath.move(to: CGPoint(x: 20, y: 22))
+        tipPath.addCurve(to: CGPoint(x: 42, y: 16), controlPoint1: CGPoint(x: 25, y: 10), controlPoint2: CGPoint(x: 35, y: 11))
+        tipPath.addLine(to: CGPoint(x: 42, y: 29))
+        tipPath.addCurve(to: CGPoint(x: 20, y: 22), controlPoint1: CGPoint(x: 36, y: 27), controlPoint2: CGPoint(x: 27, y: 25))
+        tipPath.close()
+        color.withBrightnessMultiplier(1.18).setFill()
+        tipPath.fill()
+
+        color.withBrightnessMultiplier(0.78).withAlphaComponent(0.32).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 24, y: 18, width: 17, height: 8)).fill()
+    }
+
+    private func drawSwatch() {
+        color.setFill()
+        UIBezierPath(roundedRect: CGRect(x: 10, y: 95, width: 42, height: 4), cornerRadius: 1).fill()
+    }
+}
+
+private extension UIColor {
+    func withBrightnessMultiplier(_ multiplier: CGFloat) -> UIColor {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        guard getRed(&red, green: &green, blue: &blue, alpha: &alpha) else {
+            return self
+        }
+
+        return UIColor(
+            red: min(max(red * multiplier, 0), 1),
+            green: min(max(green * multiplier, 0), 1),
+            blue: min(max(blue * multiplier, 0), 1),
+            alpha: alpha
+        )
+    }
+}
+
+private extension CGFloat {
+    func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
