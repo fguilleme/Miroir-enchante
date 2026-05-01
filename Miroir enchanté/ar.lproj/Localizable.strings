@@ -8,6 +8,8 @@
 "control.color" = "اللون";
 "control.hair_hue" = "الصبغة";
 "control.hair_strength" = "القوة";
+"control.hide_head" = "إخفاء الرأس";
+"control.hide_hair" = "إخفاء الشعر";
 "preset.nude" = "طبيعي";
 "preset.red" = "أحمر";
 "preset.burgundy" = "عنابي";

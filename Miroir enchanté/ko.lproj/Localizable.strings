@@ -8,6 +8,8 @@
 "control.color" = "색상";
 "control.hair_hue" = "색조";
 "control.hair_strength" = "강도";
+"control.hide_head" = "머리 숨기기";
+"control.hide_hair" = "머리카락 숨기기";
 "preset.nude" = "누드";
 "preset.red" = "레드";
 "preset.burgundy" = "버건디";

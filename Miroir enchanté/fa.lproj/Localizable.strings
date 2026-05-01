@@ -8,6 +8,8 @@
 "control.color" = "رنگ";
 "control.hair_hue" = "فام";
 "control.hair_strength" = "شدت";
+"control.hide_head" = "پنهان کردن سر";
+"control.hide_hair" = "پنهان کردن مو";
 "preset.nude" = "نود";
 "preset.red" = "قرمز";
 "preset.burgundy" = "زرشکی";

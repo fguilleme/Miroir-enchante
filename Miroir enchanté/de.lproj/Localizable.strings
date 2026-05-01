@@ -8,6 +8,8 @@
 "control.color" = "Farbe";
 "control.hair_hue" = "Ton";
 "control.hair_strength" = "Stärke";
+"control.hide_head" = "Kopf ausblenden";
+"control.hide_hair" = "Haare ausblenden";
 "preset.nude" = "Nude";
 "preset.red" = "Rot";
 "preset.burgundy" = "Bordeaux";

@@ -8,6 +8,8 @@
 "control.color" = "色";
 "control.hair_hue" = "色相";
 "control.hair_strength" = "強さ";
+"control.hide_head" = "頭を隠す";
+"control.hide_hair" = "髪を隠す";
 "preset.nude" = "ヌード";
 "preset.red" = "赤";
 "preset.burgundy" = "バーガンディ";

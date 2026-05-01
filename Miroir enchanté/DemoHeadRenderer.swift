@@ -33,8 +33,9 @@ enum DemoHairStyle: CaseIterable {
         case .none:
             return nil
         case .femaleHair:
-            // The separated OBJ exports share the same Blender origin as the
-            // head, so no procedural fitting is needed.
+            // The hair OBJ is exported from Blender in the same coordinate
+            // space as the head. Procedural recentering moves the strands
+            // off the scalp, so we keep the authored transform.
             return nil
         }
     }
@@ -61,7 +62,7 @@ final class DemoHeadRenderer {
     /// obvious "lip" or "mouth" terms.
     let lipNodeNameHints = ["UpperLip", "LowerLip", "Upper Lip", "Lower Lip", "Upper_lip", "Lower_lip", "Lips", "Mouth"]
     let companionLipAssetFilenames = ["Upper Lip.obj", "Lower Lip.obj"]
-    let eyeAssetFilename = "eyes.obj"
+    let eyeAssetFilenames = ["left eyes.obj", "right eyes.obj"]
 
     private let modelContainerNode = SCNNode()
     private let fallbackLipRootNode = SCNNode()
@@ -73,8 +74,17 @@ final class DemoHeadRenderer {
     private var hairHueValue: CGFloat = 0.24
     private var hairStrengthValue: CGFloat = 0.84
     private var hairMaterials: [SCNMaterial] = []
+    private var hairBaseTexture: UIImage?
+    private let hairMaterialNamePrefix = "DemoHairMaterial."
+    private var isHeadHidden = false
+    private var isHairHidden = false
     private let frontFacingYaw: Float = 0
-    private let demoRotationLimit: Float = 40 * .pi / 180
+    private let demoRotationLimit: Float = 135 * .pi / 180
+    // The separated hair OBJ is in the same Blender space as the head, but the
+    // visible strands sit a little too far back/high in SceneKit. Keep this as
+    // a single local tweak so it is easy to tune after the next device pass.
+    private var hairPlacementOffset = SCNVector3(0, -1, 2.42)
+    private var hairPlacementScale: Float = 1.0
     private let fallbackLipVerticalRatio: Float = 0.235
     private let fallbackLipWidthRatio: Float = 0.155
 
@@ -98,6 +108,32 @@ final class DemoHeadRenderer {
         applyHairColorToCachedMaterials()
     }
 
+    func updateHairPlacement(y: Float, z: Float, scale: Float) {
+        hairPlacementOffset = SCNVector3(0, y, z)
+        hairPlacementScale = scale
+        hairRootNode.position = hairPlacementOffset
+        hairRootNode.scale = SCNVector3(scale, scale, scale)
+    }
+
+    func setHeadHidden(_ hidden: Bool) {
+        isHeadHidden = hidden
+        applyHeadAndHairVisibility()
+    }
+
+    func setHairHidden(_ hidden: Bool) {
+        isHairHidden = hidden
+        applyHeadAndHairVisibility()
+    }
+
+    func updateInspectionTilt(horizontal: CGFloat) {
+        let clampedHorizontal = Float(horizontal.clamped(to: -1...1))
+        modelContainerNode.removeAllActions()
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = 0.12
+        modelContainerNode.eulerAngles.y = frontFacingYaw + clampedHorizontal * demoRotationLimit
+        SCNTransaction.commit()
+    }
+
     @discardableResult
     func cycleHairStyle() -> DemoHairStyle {
         let styles = DemoHairStyle.allCases
@@ -116,6 +152,14 @@ final class DemoHeadRenderer {
             return
         }
 
+        if let hairNode = loadHairOBJNode(filename: filename) {
+            fitHairNode(hairNode, style: style)
+            hairRootNode.addChildNode(hairNode)
+            applyHeadAndHairVisibility()
+            print("Loaded demo hair OBJ directly: \(filename)")
+            return
+        }
+
         let usdzFilename = Self.usdzFilename(for: filename)
         let loadedHairAsset = loadBundledScene(filename: filename, logsMissingAsset: false).map { (filename, $0) }
             ?? loadBundledScene(filename: usdzFilename, logsMissingAsset: false).map { (usdzFilename, $0) }
@@ -123,7 +167,6 @@ final class DemoHeadRenderer {
 
         guard let (loadedFilename, loadedScene) = loadedHairAsset else {
             logUnsupportedHairAsset(sourceFilename: filename, usdzFilename: usdzFilename)
-            hairRootNode.addChildNode(makeProceduralHairNode(style: style))
             return
         }
 
@@ -137,14 +180,14 @@ final class DemoHeadRenderer {
         pruneNonHairGeometry(in: assetRoot)
 
         guard assetRoot.containsGeometry else {
-            print("Hair asset \(filename) loaded without renderable geometry; using procedural fallback.")
-            hairRootNode.addChildNode(makeProceduralHairNode(style: style))
+            print("Hair asset \(filename) loaded without renderable hair geometry.")
             return
         }
 
         prepareHairMaterials(in: assetRoot)
         fitHairNode(assetRoot, style: style)
         hairRootNode.addChildNode(assetRoot)
+        applyHeadAndHairVisibility()
         print("Loaded demo hair style: \(loadedFilename)")
     }
 
@@ -161,6 +204,8 @@ final class DemoHeadRenderer {
         scene.background.contents = UIColor.black
         scene.rootNode.addChildNode(modelContainerNode)
         modelContainerNode.addChildNode(eyeRootNode)
+        hairRootNode.position = hairPlacementOffset
+        hairRootNode.scale = SCNVector3(hairPlacementScale, hairPlacementScale, hairPlacementScale)
         modelContainerNode.addChildNode(hairRootNode)
 
         let camera = SCNCamera()
@@ -208,7 +253,7 @@ final class DemoHeadRenderer {
 
         centerAndScaleModel()
         setHairStyle(.femaleHair)
-        startSlowRotation()
+        updateInspectionTilt(horizontal: 0)
         resolveLipNodes()
     }
 
@@ -309,33 +354,48 @@ final class DemoHeadRenderer {
         }
 
         installCompanionLipAssets()
-        // eyes.obj currently includes face geometry in the export. Loading it
-        // as-is can draw those extra triangles over the skin in SceneKit, so
-        // keep it disabled until the asset contains only eyes.
-        // installEyeAsset()
+        // eyes.obj is exported in the same coordinate space as the head. Its
+        // material file does not need texture references because the demo
+        // renderer applies the bundled eye textures explicitly below.
+        installEyeAsset()
         applySkinMaterialToModel()
+        applyHeadAndHairVisibility()
     }
 
     private func installEyeAsset() {
         eyeRootNode.childNodes.forEach { $0.removeFromParentNode() }
 
-        guard let eyeScene = loadBundledScene(filename: eyeAssetFilename, logsMissingAsset: false) else {
-            print("Demo eye asset \(eyeAssetFilename) was not found in the app bundle.")
-            return
+        var loadedAny = false
+        for filename in eyeAssetFilenames {
+            if let eyeNode = loadEyeOBJNode(filename: filename) {
+                eyeRootNode.addChildNode(eyeNode)
+                print("Loaded demo eye OBJ directly: \(filename)")
+                loadedAny = true
+                continue
+            }
+
+            guard let eyeScene = loadBundledScene(filename: filename, logsMissingAsset: false) else {
+                print("Demo eye asset \(filename) was not found in the app bundle.")
+                continue
+            }
+
+            let assetRoot = SCNNode()
+            assetRoot.name = "DemoEyes_\(splitFilename(filename).name)"
+
+            for child in eyeScene.rootNode.childNodes {
+                assetRoot.addChildNode(child.clone())
+            }
+
+            pruneNonEyeGeometry(in: assetRoot)
+            prepareEyeMaterials(in: assetRoot)
+            eyeRootNode.addChildNode(assetRoot)
+            print("Loaded demo eye asset: \(filename)")
+            loadedAny = true
         }
 
-        let assetRoot = SCNNode()
-        assetRoot.name = "DemoEyes"
-
-        for child in eyeScene.rootNode.childNodes {
-            let clone = child.clone()
-            assetRoot.addChildNode(clone)
+        if !loadedAny {
+            print("No eye asset loaded. Expected one or more of \(eyeAssetFilenames.joined(separator: ", ")) in the bundle.")
         }
-
-        pruneNonEyeGeometry(in: assetRoot)
-        prepareEyeMaterials(in: assetRoot)
-        eyeRootNode.addChildNode(assetRoot)
-        print("Loaded demo eye asset: \(eyeAssetFilename)")
     }
 
     private func installCompanionLipAssets() {
@@ -434,23 +494,6 @@ final class DemoHeadRenderer {
         }
     }
 
-    private func startSlowRotation() {
-        modelContainerNode.removeAllActions()
-
-        // Demo inspection should stay face-forward, so sweep only +/- 40 degrees
-        // around the OBJ's corrected front-facing yaw instead of spinning fully.
-        let leftYaw = CGFloat(frontFacingYaw - demoRotationLimit)
-        let rightYaw = CGFloat(frontFacingYaw + demoRotationLimit)
-        modelContainerNode.eulerAngles.y = Float(leftYaw)
-
-        let rotateRight = SCNAction.rotateTo(x: 0, y: rightYaw, z: 0, duration: 5.5, usesShortestUnitArc: true)
-        let rotateLeft = SCNAction.rotateTo(x: 0, y: leftYaw, z: 0, duration: 5.5, usesShortestUnitArc: true)
-        rotateRight.timingMode = .easeInEaseOut
-        rotateLeft.timingMode = .easeInEaseOut
-
-        modelContainerNode.runAction(.repeatForever(.sequence([rotateRight, rotateLeft])))
-    }
-
     private func resolveLipNodes() {
         fallbackLipRootNode.childNodes.forEach { $0.removeFromParentNode() }
 
@@ -499,6 +542,278 @@ final class DemoHeadRenderer {
         }
     }
 
+    private func applyHeadAndHairVisibility() {
+        hairRootNode.isHidden = isHairHidden
+
+        for node in modelContainerNode.childNodesRecursive where node.geometry != nil {
+            guard !node.isDescendant(of: hairRootNode),
+                  !node.isDescendant(of: eyeRootNode),
+                  !lipNodes.contains(where: { $0 === node }) else {
+                continue
+            }
+
+            node.isHidden = isHeadHidden
+        }
+    }
+
+    private func loadHairOBJNode(filename: String) -> SCNNode? {
+        guard splitFilename(filename).extension.lowercased() == "obj" else {
+            return nil
+        }
+
+        let nodes = loadOBJNodes(filename: filename) { [weak self] materialName in
+            guard let self else { return false }
+            return self.materialNameLooksLikeHair(materialName)
+        } materialProvider: { [weak self] materialName in
+            guard let self else { return MakeupMaterialFactory.makeHairMaterial() }
+            let sourceMaterial = MakeupMaterialFactory.makeHairMaterial()
+            sourceMaterial.name = materialName
+            let material = self.preparedHairMaterial(from: sourceMaterial)
+            self.registerHairMaterial(material)
+            return material
+        }
+
+        guard !nodes.isEmpty else {
+            print("Direct OBJ hair loader found no hair material in \(filename). Expected a material name containing 'hair'.")
+            return nil
+        }
+
+        let rootNode = SCNNode()
+        rootNode.name = "DirectDemoHair"
+        nodes.forEach { node in
+            // The hair OBJ is already exported in the head coordinate space.
+            // Keep normal depth testing so back-side cards do not draw over the
+            // face while inspecting the model with device tilt.
+            node.renderingOrder = 30
+            rootNode.addChildNode(node)
+        }
+        let triangleCount = nodes.reduce(0) { partialResult, node in
+            partialResult + ((node.geometry?.elements.first?.primitiveCount) ?? 0)
+        }
+        let bounds = rootNode.hierarchyBoundingBox(visibleOnly: true)
+        let nodeNames = nodes.compactMap(\.name).joined(separator: ", ")
+        print("Direct OBJ hair geometry: \(nodes.count) node(s), \(triangleCount) triangles, nodes: \(nodeNames), bounds min \(bounds.min), max \(bounds.max)")
+        return rootNode
+    }
+
+    private func loadEyeOBJNode(filename: String) -> SCNNode? {
+        guard splitFilename(filename).extension.lowercased() == "obj" else {
+            return nil
+        }
+
+        let nodes = loadOBJNodes(filename: filename) { [weak self] materialName in
+            guard let self else { return false }
+            return self.materialNameLooksLikeTexturedEye(materialName)
+        } materialProvider: { [weak self] materialName in
+            self?.makeTexturedEyeMaterial(named: materialName) ?? SCNMaterial()
+        }
+
+        guard !nodes.isEmpty else {
+            print("Direct OBJ eye loader found no textured eye material in \(filename). Expected Eyes / Eyes.001.")
+            return nil
+        }
+
+        let rootNode = SCNNode()
+        rootNode.name = "DirectDemoEyes"
+        nodes.forEach { node in
+            node.renderingOrder = 45
+            rootNode.addChildNode(node)
+        }
+        for node in nodes {
+            let triangles = node.geometry?.elements.first?.primitiveCount ?? 0
+            let sources = node.geometry?.sources ?? []
+            let vertexCount = sources.first(where: { $0.semantic == .vertex })?.vectorCount ?? 0
+            let uvCount = sources.first(where: { $0.semantic == .texcoord })?.vectorCount ?? 0
+            let materialName = node.geometry?.firstMaterial?.name ?? "?"
+            let hasDiffuseTexture = node.geometry?.firstMaterial?.diffuse.contents is UIImage
+            print("Direct OBJ eye node \(node.name ?? "?"): material=\(materialName), tris=\(triangles), verts=\(vertexCount), uv=\(uvCount), diffuseImage=\(hasDiffuseTexture)")
+        }
+        return rootNode
+    }
+
+    private func loadOBJNodes(
+        filename: String,
+        materialFilter: (String) -> Bool,
+        materialProvider: (String) -> SCNMaterial
+    ) -> [SCNNode] {
+        guard let url = bundledAssetURL(filename: filename),
+              let contents = try? String(contentsOf: url, encoding: .utf8) else {
+            return []
+        }
+
+        struct OBJFaceVertex {
+            let vertexIndex: Int
+            let textureIndex: Int?
+            let normalIndex: Int?
+        }
+
+        final class OBJBuildGroup {
+            let objectName: String
+            let materialName: String
+            var vertices: [SCNVector3] = []
+            var textureCoordinates: [CGPoint] = []
+            var normals: [SCNVector3] = []
+            var indices: [Int32] = []
+
+            init(objectName: String, materialName: String) {
+                self.objectName = objectName
+                self.materialName = materialName
+            }
+        }
+
+        var positions: [SCNVector3] = []
+        var textureCoordinates: [CGPoint] = []
+        var normals: [SCNVector3] = []
+        var groups: [String: OBJBuildGroup] = [:]
+        var materialNames: Set<String> = []
+        var currentObjectName = splitFilename(filename).name
+        var currentMaterialName = ""
+
+        func resolvedIndex(_ rawIndex: Int, count: Int) -> Int? {
+            let index = rawIndex >= 0 ? rawIndex - 1 : count + rawIndex
+            guard index >= 0, index < count else { return nil }
+            return index
+        }
+
+        func parseFaceVertex(_ token: String) -> OBJFaceVertex? {
+            let parts = token.split(separator: "/", omittingEmptySubsequences: false)
+            guard let firstPart = parts.first,
+                  let rawVertexIndex = Int(firstPart) else {
+                return nil
+            }
+
+            let rawTextureIndex = parts.indices.contains(1) && !parts[1].isEmpty ? Int(parts[1]) : nil
+            let rawNormalIndex = parts.indices.contains(2) && !parts[2].isEmpty ? Int(parts[2]) : nil
+            guard let vertexIndex = resolvedIndex(rawVertexIndex, count: positions.count) else {
+                return nil
+            }
+
+            return OBJFaceVertex(
+                vertexIndex: vertexIndex,
+                textureIndex: rawTextureIndex.flatMap { resolvedIndex($0, count: textureCoordinates.count) },
+                normalIndex: rawNormalIndex.flatMap { resolvedIndex($0, count: normals.count) }
+            )
+        }
+
+        func groupForCurrentMaterial() -> OBJBuildGroup? {
+            guard materialFilter(currentMaterialName) else {
+                return nil
+            }
+
+            let key = "\(currentObjectName)|\(currentMaterialName)"
+            if let group = groups[key] {
+                return group
+            }
+
+            let group = OBJBuildGroup(objectName: currentObjectName, materialName: currentMaterialName)
+            groups[key] = group
+            return group
+        }
+
+        func append(_ faceVertex: OBJFaceVertex, to group: OBJBuildGroup) {
+            group.vertices.append(positions[faceVertex.vertexIndex])
+
+            if let textureIndex = faceVertex.textureIndex {
+                group.textureCoordinates.append(textureCoordinates[textureIndex])
+            } else {
+                group.textureCoordinates.append(.zero)
+            }
+
+            if let normalIndex = faceVertex.normalIndex {
+                group.normals.append(normals[normalIndex])
+            } else {
+                group.normals.append(SCNVector3(0, 0, 1))
+            }
+
+            group.indices.append(Int32(group.indices.count))
+        }
+
+        for rawLine in contents.split(whereSeparator: \.isNewline) {
+            let trimmedLine = rawLine.trimmingCharacters(in: .whitespaces)
+            guard !trimmedLine.isEmpty, !trimmedLine.hasPrefix("#") else { continue }
+
+            let parts = trimmedLine.split(separator: " ", omittingEmptySubsequences: true)
+            guard let directive = parts.first else { continue }
+
+            switch directive {
+            case "o", "g":
+                currentObjectName = parts.dropFirst().joined(separator: " ")
+                currentMaterialName = ""
+            case "usemtl":
+                currentMaterialName = parts.dropFirst().joined(separator: " ")
+                materialNames.insert(currentMaterialName)
+            case "v":
+                guard parts.count >= 4,
+                      let x = Float(parts[1]),
+                      let y = Float(parts[2]),
+                      let z = Float(parts[3]) else { continue }
+                positions.append(SCNVector3(x, y, z))
+            case "vt":
+                guard parts.count >= 3,
+                      let rawU = Double(parts[1]),
+                      let rawV = Double(parts[2]) else { continue }
+                let u = CGFloat(rawU)
+                let v = CGFloat(rawV)
+                // Blender OBJ exports use texture coordinates as authored. Do
+                // not flip V here; flipping sends the eye mesh to the wrong
+                // area of eyeColor.jpg and makes the iris disappear.
+                textureCoordinates.append(CGPoint(x: u, y: v))
+            case "vn":
+                guard parts.count >= 4,
+                      let x = Float(parts[1]),
+                      let y = Float(parts[2]),
+                      let z = Float(parts[3]) else { continue }
+                normals.append(SCNVector3(x, y, z))
+            case "f":
+                guard let group = groupForCurrentMaterial() else { continue }
+                let faceVertices = parts.dropFirst().compactMap { parseFaceVertex(String($0)) }
+                guard faceVertices.count >= 3 else { continue }
+
+                for index in 1..<(faceVertices.count - 1) {
+                    append(faceVertices[0], to: group)
+                    append(faceVertices[index], to: group)
+                    append(faceVertices[index + 1], to: group)
+                }
+            default:
+                continue
+            }
+        }
+
+        let nodes = groups.values
+            .filter { !$0.vertices.isEmpty }
+            .sorted { $0.objectName < $1.objectName }
+            .map { group -> SCNNode in
+                var sources = [
+                    SCNGeometrySource(vertices: group.vertices),
+                    SCNGeometrySource(normals: group.normals),
+                    SCNGeometrySource(textureCoordinates: group.textureCoordinates)
+                ]
+                sources = sources.filter { $0.vectorCount > 0 }
+                let element = SCNGeometryElement(indices: group.indices, primitiveType: .triangles)
+                let geometry = SCNGeometry(sources: sources, elements: [element])
+                geometry.firstMaterial = materialProvider(group.materialName)
+
+                let uvXs = group.textureCoordinates.map { Float($0.x) }
+                let uvYs = group.textureCoordinates.map { Float($0.y) }
+                let uvMinX = uvXs.min() ?? 0
+                let uvMaxX = uvXs.max() ?? 0
+                let uvMinY = uvYs.min() ?? 0
+                let uvMaxY = uvYs.max() ?? 0
+                print("OBJ \(filename): group \(group.objectName)|\(group.materialName) tris=\(group.indices.count/3) uvX=[\(uvMinX)..\(uvMaxX)] uvY=[\(uvMinY)..\(uvMaxY)]")
+
+                let node = SCNNode(geometry: geometry)
+                node.name = "\(group.objectName)_\(group.materialName)"
+                node.renderingOrder = 30
+                return node
+            }
+
+        if nodes.isEmpty {
+            print("OBJ loader skipped \(filename). Materials found: \(materialNames.sorted().joined(separator: ", "))")
+        }
+
+        return nodes
+    }
+
     private func prepareHairMaterials(in rootNode: SCNNode) {
         for node in rootNode.childNodesRecursive where node.geometry != nil {
             prepareHairMaterial(on: node)
@@ -510,6 +825,8 @@ final class DemoHeadRenderer {
 
         guard let geometry = node.geometry else { return }
         node.renderingOrder = 30
+        let nodeLooksLikeHair = nodeNameLooksLikeHair(node)
+        let hasExplicitHairMaterial = geometry.materials.contains(where: materialNameMatchesHair)
 
         if geometry.materials.isEmpty {
             let material = preparedHairMaterial(from: fallbackHairMaterial)
@@ -519,6 +836,10 @@ final class DemoHeadRenderer {
         }
 
         geometry.materials = geometry.materials.map { existingMaterial in
+            guard materialNameMatchesHair(existingMaterial) || (!hasExplicitHairMaterial && nodeLooksLikeHair) else {
+                return makeHiddenGeometryMaterial()
+            }
+
             let material = preparedHairMaterial(from: existingMaterial)
             registerHairMaterial(material)
             return material
@@ -528,37 +849,77 @@ final class DemoHeadRenderer {
     private func preparedHairMaterial(from existingMaterial: SCNMaterial) -> SCNMaterial {
         let fallbackHairMaterial = MakeupMaterialFactory.makeHairMaterial()
         let material = existingMaterial.copy() as? SCNMaterial ?? fallbackHairMaterial
+        material.name = hairMaterialNamePrefix + (existingMaterial.name ?? "fallback")
 
-        material.lightingModel = .physicallyBased
-        material.roughness.contents = 0.72
-        material.metalness.contents = 0.0
-        material.specular.contents = UIColor.white.withAlphaComponent(0.06)
-        material.shininess = 0.04
+        // Blinn keeps the texture's apparent color stable. PBR over-lit the
+        // hair to near white because hair_d7.png is a light/neutral base meant
+        // to be tinted, and PBR + ambient + key light pushed it past the tint.
+        material.lightingModel = .blinn
+        material.shininess = 0.18
+        material.specular.contents = UIColor.white.withAlphaComponent(0.10)
         material.isDoubleSided = true
-        material.blendMode = .replace
+        material.blendMode = .alpha
         material.transparencyMode = .aOne
         material.transparency = 1.0
-        material.writesToDepthBuffer = true
+        material.writesToDepthBuffer = false
         material.readsFromDepthBuffer = true
+        material.transparent.contents = nil
+        material.multiply.contents = nil
 
-        if let hairTexture = bundledImage(named: "hair_d7", fileExtension: "png", subdirectory: "textures hair") {
+        let hairTexture = bundledImage(named: "hair_d7", fileExtension: "png", subdirectory: "textures hair")
+        let hairNormal = bundledImage(named: "hair_n", fileExtension: "png", subdirectory: "textures hair")
+        let hairSpecular = bundledImage(named: "flatspec.tga", fileExtension: "png", subdirectory: "textures hair")
+
+        if let hairTexture {
+            hairBaseTexture = hairTexture
             material.diffuse.contents = hairTexture
-            material.transparent.contents = nil
-        } else {
-            material.multiply.contents = nil
+            material.diffuse.wrapS = .repeat
+            material.diffuse.wrapT = .repeat
+            material.diffuse.magnificationFilter = .linear
+            material.diffuse.minificationFilter = .linear
+            // Use the PNG alpha channel for cutout transparency. Earlier
+            // attempts used transparencyMode .rgbZero, but that turns dark
+            // hair pixels transparent, so dark/black hair disappears.
+            material.transparent.contents = hairTexture
+            material.transparent.wrapS = .repeat
+            material.transparent.wrapT = .repeat
+            material.transparent.magnificationFilter = .linear
+            material.transparent.minificationFilter = .linear
+            material.transparencyMode = .aOne
         }
 
-        if let hairNormal = bundledImage(named: "hair_n", fileExtension: "png", subdirectory: "textures hair") {
+        if let hairNormal {
             material.normal.contents = hairNormal
             material.normal.intensity = 0.35
+            material.normal.wrapS = .repeat
+            material.normal.wrapT = .repeat
         }
 
-        if let hairSpecular = bundledImage(named: "flatspec.tga", fileExtension: "png", subdirectory: "textures hair") {
+        if let hairSpecular {
             material.specular.contents = hairSpecular
             material.specular.intensity = 0.18
+            material.specular.wrapS = .repeat
+            material.specular.wrapT = .repeat
         }
 
+        print("Demo hair material \(material.name ?? "?"): diffuse=\(hairTexture == nil ? "missing" : "loaded") normal=\(hairNormal == nil ? "missing" : "loaded") spec=\(hairSpecular == nil ? "missing" : "loaded") transparencyMode=aOne")
+
         applyHairColor(to: material)
+        return material
+    }
+
+    private func makeHiddenGeometryMaterial() -> SCNMaterial {
+        let material = SCNMaterial()
+        material.name = "DemoHiddenGeometryMaterial"
+        material.lightingModel = .constant
+        material.diffuse.contents = UIColor.clear
+        material.transparency = 0.0
+        material.transparencyMode = .aOne
+        material.blendMode = .alpha
+        material.isDoubleSided = true
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        material.colorBufferWriteMask = []
         return material
     }
 
@@ -572,24 +933,57 @@ final class DemoHeadRenderer {
 
     private func applyHairColorToCachedMaterials() {
         for material in hairMaterials {
+            guard isManagedHairMaterial(material) else { continue }
             applyHairColor(to: material)
         }
     }
 
     private func applyHairColor(to material: SCNMaterial) {
+        guard isManagedHairMaterial(material) else { return }
+
         let tint = hairTintColor()
 
         if material.diffuse.contents is UIImage {
-            material.diffuse.intensity = 0.48 + (1.0 - hairStrengthValue) * 0.18
-            material.multiply.contents = tint
-            material.multiply.intensity = 0.50 + hairStrengthValue * 0.48
+            // Multiplying a very dark hair texture barely changes it. Generate
+            // a tinted diffuse image instead, and keep the original PNG as the
+            // alpha mask via material.transparent.
+            material.diffuse.intensity = 1.0
+            material.diffuse.contents = makeTintedHairTexture(tint: tint)
+            material.multiply.contents = nil
         } else {
             material.diffuse.contents = tint
-            material.diffuse.intensity = 0.68 + (1.0 - hairStrengthValue) * 0.18
+            material.diffuse.intensity = 0.82 + (1.0 - hairStrengthValue) * 0.12
             material.multiply.contents = nil
         }
+    }
 
-        material.transparent.contents = nil
+    private func makeTintedHairTexture(tint: UIColor) -> UIImage? {
+        guard let baseTexture = hairBaseTexture else {
+            return nil
+        }
+
+        let rect = CGRect(origin: .zero, size: baseTexture.size)
+        let format = UIGraphicsImageRendererFormat()
+        format.scale = baseTexture.scale
+        format.opaque = false
+
+        let tintAlpha = 0.25 + hairStrengthValue.clamped(to: 0...1) * 0.70
+        return UIGraphicsImageRenderer(size: baseTexture.size, format: format).image { _ in
+            baseTexture.draw(in: rect)
+            tint.withAlphaComponent(tintAlpha).setFill()
+            UIRectFillUsingBlendMode(rect, .sourceAtop)
+            // Bring a little of the original texture back so strand variation
+            // stays visible after the hue overlay.
+            baseTexture.draw(in: rect, blendMode: .multiply, alpha: 0.22)
+        }
+    }
+
+    private func isManagedHairMaterial(_ material: SCNMaterial) -> Bool {
+        guard let materialName = material.name else {
+            return false
+        }
+
+        return materialName.hasPrefix(hairMaterialNamePrefix)
     }
 
     private func hairTintColor() -> UIColor {
@@ -652,13 +1046,15 @@ final class DemoHeadRenderer {
     private func prepareEyeMaterials(in rootNode: SCNNode) {
         for node in rootNode.childNodesRecursive where node.geometry != nil {
             guard let geometry = node.geometry else { continue }
-            node.renderingOrder = 25
 
             if geometry.materials.isEmpty {
                 geometry.firstMaterial = makeEyeMaterial(named: nil)
             } else {
                 geometry.materials = geometry.materials.map { makeEyeMaterial(named: $0.name) }
             }
+
+            let materialNames = geometry.materials.map { normalizeNodeName($0.name ?? "") }
+            node.renderingOrder = materialNames.contains(where: { $0.contains("aistandard3") }) ? 36 : 35
         }
     }
 
@@ -673,6 +1069,7 @@ final class DemoHeadRenderer {
         material.roughness.contents = isCornea ? 0.08 : 0.36
         material.specular.contents = UIColor.white.withAlphaComponent(isCornea ? 0.65 : 0.32)
         material.shininess = isCornea ? 0.9 : 0.35
+        material.readsFromDepthBuffer = true
 
         if isCornea {
             material.diffuse.contents = UIColor.white.withAlphaComponent(0.12)
@@ -680,28 +1077,75 @@ final class DemoHeadRenderer {
             material.transparencyMode = .aOne
             material.blendMode = .alpha
             material.writesToDepthBuffer = false
-            material.readsFromDepthBuffer = true
         } else {
-            material.diffuse.contents = bundledImage(named: "eyeColor", fileExtension: "jpg", subdirectory: "textures eyes")
-                ?? UIColor(red: 0.42, green: 0.30, blue: 0.20, alpha: 1.0)
-            material.diffuse.intensity = 0.95
-            material.specular.contents = bundledImage(named: "eyeSpecular", fileExtension: "jpg", subdirectory: "textures eyes")
-                ?? UIColor.white.withAlphaComponent(0.28)
-            material.normal.contents = bundledImage(named: "eyeBump", fileExtension: "jpg", subdirectory: "textures eyes")
-            material.normal.intensity = 0.25
+            let colorTexture = bundledImage(named: "eyeColor", fileExtension: "jpg", subdirectory: "textures eyes")
+            let specularTexture = bundledImage(named: "eyeSpecular", fileExtension: "jpg", subdirectory: "textures eyes")
+            let bumpTexture = bundledImage(named: ["eyeBump", "eyesBump"], fileExtension: "jpg", subdirectory: "textures eyes")
+            configureEyeTexture(colorTexture, specularTexture: specularTexture, bumpTexture: bumpTexture, on: material)
+            material.diffuse.contents = colorTexture ?? UIColor(red: 0.42, green: 0.30, blue: 0.20, alpha: 1.0)
+            material.diffuse.intensity = 0.82
+            material.writesToDepthBuffer = true
         }
 
         return material
     }
 
+    private func makeTexturedEyeMaterial(named name: String) -> SCNMaterial {
+        let material = SCNMaterial()
+        material.name = "DemoTexturedEye.\(name)"
+        let colorTexture = bundledImage(named: "eyeColor", fileExtension: "jpg", subdirectory: "textures eyes")
+
+        print("Demo eye material \(name): eyeColor.jpg \(colorTexture == nil ? "missing" : "loaded")")
+        material.lightingModel = .constant
+        material.isDoubleSided = true
+        material.diffuse.contents = colorTexture ?? UIColor(red: 0.42, green: 0.30, blue: 0.20, alpha: 1.0)
+        material.diffuse.wrapS = .repeat
+        material.diffuse.wrapT = .repeat
+        material.diffuse.magnificationFilter = .linear
+        material.diffuse.minificationFilter = .linear
+        material.diffuse.intensity = 1.0
+        material.transparency = 1.0
+        material.blendMode = .replace
+        material.writesToDepthBuffer = true
+        material.readsFromDepthBuffer = true
+        return material
+    }
+
+    private func configureEyeTexture(
+        _ colorTexture: UIImage?,
+        specularTexture: UIImage?,
+        bumpTexture: UIImage?,
+        on material: SCNMaterial
+    ) {
+        material.diffuse.contents = colorTexture
+        material.diffuse.wrapS = .clamp
+        material.diffuse.wrapT = .clamp
+        material.diffuse.magnificationFilter = .linear
+        material.diffuse.minificationFilter = .linear
+
+        material.specular.contents = specularTexture ?? UIColor.white.withAlphaComponent(0.18)
+        material.specular.intensity = 0.12
+        material.specular.wrapS = .clamp
+        material.specular.wrapT = .clamp
+
+        material.normal.contents = bumpTexture
+        material.normal.intensity = 0.15
+        material.normal.wrapS = .clamp
+        material.normal.wrapT = .clamp
+    }
+
     private func pruneNonEyeGeometry(in rootNode: SCNNode) {
         for node in rootNode.childNodesRecursive where node.geometry != nil && !isLikelyEyeGeometry(node) {
-            node.isHidden = true
+            node.removeFromParentNode()
         }
     }
 
     private func isLikelyEyeGeometry(_ node: SCNNode) -> Bool {
         let nodeName = normalizeNodeName(node.name ?? "")
+        if nodeName.contains("head") || nodeName.contains("face") || nodeName.contains("defaultmat") {
+            return false
+        }
+
         if nodeName.contains("eye") {
             return true
         }
@@ -718,6 +1162,9 @@ final class DemoHeadRenderer {
         let hairNodes = geometryNodes.filter { isLikelyHairGeometry($0) }
 
         guard !hairNodes.isEmpty else {
+            for node in geometryNodes {
+                node.removeFromParentNode()
+            }
             return
         }
 
@@ -731,10 +1178,20 @@ final class DemoHeadRenderer {
             return false
         }
 
+        if nodeNameLooksLikeEye(node) {
+            return false
+        }
+
         // The separated hair OBJ can still contain eyes and head geometry.
-        // Only an explicit hair material is trustworthy enough to render.
+        // Keep any geometry that has a hair material, then hide the non-hair
+        // material slots in prepareHairMaterial(on:) instead of discarding the
+        // whole node.
         if geometry.materials.contains(where: materialNameMatchesHair) {
             return true
+        }
+
+        if geometry.materials.contains(where: materialNameMatchesEye) {
+            return false
         }
 
         let nodeName = normalizeNodeName(node.name ?? "")
@@ -750,18 +1207,49 @@ final class DemoHeadRenderer {
         // Do not inspect parent names here: the combined demo OBJ is named
         // "Female head with hair", and using lineage names would classify the
         // whole head as hair. Only the renderable object/material should decide.
+        return nodeNameLooksLikeHair(node)
+    }
+
+    private func nodeNameLooksLikeHair(_ node: SCNNode) -> Bool {
+        let nodeName = normalizeNodeName(node.name ?? "")
         return nodeName.contains("hair") || nodeName.contains("bang") || nodeName.contains("xpsnewmeshhair")
+    }
+
+    private func nodeNameLooksLikeEye(_ node: SCNNode) -> Bool {
+        let nodeName = normalizeNodeName(node.name ?? "")
+        return nodeName.contains("eye") || nodeName.contains("iris") || nodeName.contains("cornea")
     }
 
     private func materialNameMatchesHair(_ material: SCNMaterial) -> Bool {
         if let materialName = material.name {
-            let name = normalizeNodeName(materialName)
-            if name.contains("hair") || name.contains("bang") {
+            if materialNameLooksLikeHair(materialName) {
                 return true
             }
         }
 
         return false
+    }
+
+    private func materialNameLooksLikeHair(_ materialName: String) -> Bool {
+        let name = normalizeNodeName(materialName)
+        return name.contains("hair") || name.contains("bang")
+    }
+
+    private func materialNameLooksLikeTexturedEye(_ materialName: String) -> Bool {
+        let name = normalizeNodeName(materialName)
+        // Diagnostic confirmed the iris UVs live on Eyes / Eyes.001. The
+        // aiStandard3* meshes are the cornea sphere and would overlay a
+        // washed-out copy of the iris if they were textured too.
+        return name == "eyes" || name == "eyes001" || (name.contains("eye") && !name.contains("aistandard"))
+    }
+
+    private func materialNameMatchesEye(_ material: SCNMaterial) -> Bool {
+        guard let materialName = material.name else {
+            return false
+        }
+
+        let name = normalizeNodeName(materialName)
+        return name.contains("eye") || name.contains("iris") || name.contains("cornea") || name.contains("aistandard3")
     }
 
     private func fitHairNode(_ hairNode: SCNNode, style: DemoHairStyle) {
@@ -1040,6 +1528,16 @@ final class DemoHeadRenderer {
         }
 
         return UIImage(contentsOfFile: url.path)
+    }
+
+    private func bundledImage(named names: [String], fileExtension: String, subdirectory: String) -> UIImage? {
+        for name in names {
+            if let image = bundledImage(named: name, fileExtension: fileExtension, subdirectory: subdirectory) {
+                return image
+            }
+        }
+
+        return nil
     }
 
     private static func usdzFilename(for filename: String) -> String {

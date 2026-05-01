@@ -8,6 +8,8 @@
 "control.color" = "Цвет";
 "control.hair_hue" = "Тон";
 "control.hair_strength" = "Сила";
+"control.hide_head" = "Скрыть голову";
+"control.hide_hair" = "Скрыть волосы";
 "preset.nude" = "Нюд";
 "preset.red" = "Красный";
 "preset.burgundy" = "Бордовый";

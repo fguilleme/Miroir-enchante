@@ -8,6 +8,8 @@
 "control.color" = "Color";
 "control.hair_hue" = "Hue";
 "control.hair_strength" = "Strength";
+"control.hide_head" = "Hide head";
+"control.hide_hair" = "Hide hair";
 "preset.nude" = "Nude";
 "preset.red" = "Red";
 "preset.burgundy" = "Burgundy";

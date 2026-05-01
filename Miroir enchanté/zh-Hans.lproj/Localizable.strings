@@ -8,6 +8,8 @@
 "control.color" = "颜色";
 "control.hair_hue" = "色相";
 "control.hair_strength" = "强度";
+"control.hide_head" = "隐藏头部";
+"control.hide_hair" = "隐藏头发";
 "preset.nude" = "裸色";
 "preset.red" = "红色";
 "preset.burgundy" = "酒红";
