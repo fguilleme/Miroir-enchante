@@ -43,6 +43,8 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate {
     private let fullFaceMaterial = MakeupMaterialFactory.makeARLipstickMaterial()
 
     private(set) var renderMode: RenderMode = .lipsOnly
+    var faceBoundsDidUpdate: ((CGRect) -> Void)?
+    var faceDetectionStateDidChange: ((Bool) -> Void)?
 
     /// Prototype lip index sets. They are generated once from the first
     /// ARFaceGeometry frame by selecting vertices in the face-local mouth band.
@@ -134,6 +136,9 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate {
         if !hasDetectedFace {
             hasDetectedFace = true
             print("Face detected")
+            DispatchQueue.main.async { [faceDetectionStateDidChange] in
+                faceDetectionStateDidChange?(true)
+            }
         }
     }
 
@@ -148,6 +153,7 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate {
         baseFaceGeometry.update(from: faceAnchor.geometry)
         lipMesh?.update(from: faceAnchor.geometry)
         cheekMesh?.update(from: faceAnchor.geometry)
+        publishProjectedFaceBounds(for: faceAnchor)
 
         // Lip masking currently comes from vertex-index filtering. Later this
         // can be refined with a hand-authored index list, UV-space alpha mask,
@@ -160,6 +166,51 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate {
         if hasDetectedFace {
             hasDetectedFace = false
             print("Face lost")
+            DispatchQueue.main.async { [faceDetectionStateDidChange] in
+                faceDetectionStateDidChange?(false)
+            }
+        }
+    }
+
+    private func publishProjectedFaceBounds(for faceAnchor: ARFaceAnchor) {
+        guard let sceneView,
+              let currentFrame = sceneView.session.currentFrame else {
+            return
+        }
+
+        let viewportSize = sceneView.bounds.size
+        guard viewportSize.width > 1, viewportSize.height > 1 else { return }
+
+        var minX = CGFloat.greatestFiniteMagnitude
+        var minY = CGFloat.greatestFiniteMagnitude
+        var maxX = -CGFloat.greatestFiniteMagnitude
+        var maxY = -CGFloat.greatestFiniteMagnitude
+
+        for vertex in faceAnchor.geometry.vertices {
+            let localPoint = SIMD4<Float>(vertex.x, vertex.y, vertex.z, 1)
+            let worldPoint = faceAnchor.transform * localPoint
+            let projectedPoint = currentFrame.camera.projectPoint(
+                SIMD3<Float>(worldPoint.x, worldPoint.y, worldPoint.z),
+                orientation: .portrait,
+                viewportSize: viewportSize
+            )
+
+            guard projectedPoint.x.isFinite, projectedPoint.y.isFinite else { continue }
+            minX = min(minX, projectedPoint.x)
+            minY = min(minY, projectedPoint.y)
+            maxX = max(maxX, projectedPoint.x)
+            maxY = max(maxY, projectedPoint.y)
+        }
+
+        guard minX.isFinite, minY.isFinite, maxX.isFinite, maxY.isFinite, maxX > minX, maxY > minY else {
+            return
+        }
+
+        let faceRect = CGRect(x: minX, y: minY, width: maxX - minX, height: maxY - minY)
+        let expandedRect = faceRect.insetBy(dx: -faceRect.width * 0.18, dy: -faceRect.height * 0.24)
+
+        DispatchQueue.main.async { [faceBoundsDidUpdate] in
+            faceBoundsDidUpdate?(expandedRect)
         }
     }
 
@@ -303,9 +354,17 @@ private final class CheekMeshGeometry {
         let centerY = Float(0.48 + (CGFloat(position) - 0.5) * 0.12)
 
         for (index, point) in normalizedCoordinates.enumerated() {
+            let x = Float(point.x)
+            let y = Float(point.y)
+            let isMouthBand = abs(x) < 0.20 && y < 0.45
+            guard !isMouthBand, abs(x) > 0.12, y >= 0.34 else {
+                colorPointer[index] = SIMD4<Float>(rgba.x, rgba.y, rgba.z, 0)
+                continue
+            }
+
             let sideCenterX: Float = point.x < 0 ? -0.28 : 0.28
-            let dx = (Float(point.x) - sideCenterX) / (0.19 * size)
-            let dy = (Float(point.y) - centerY) / (0.13 * size)
+            let dx = (x - sideCenterX) / (0.19 * size)
+            let dy = (y - centerY) / (0.13 * size)
             let distance = sqrt(dx * dx + dy * dy)
             let feather = 1.0 - Self.smoothstep(edge0: 0.50, edge1: 1.0, x: distance)
             let alpha = max(0, min(1, feather)) * opacity
@@ -378,7 +437,12 @@ private final class CheekMeshGeometry {
             let dy = (y - 0.48) / 0.26
             let distance = sqrt(dx * dx + dy * dy)
 
-            guard distance <= 1.15, y >= 0.26, y <= 0.68 else { continue }
+            let isMouthBand = abs(x) < 0.20 && y < 0.45
+            guard distance <= 1.15,
+                  abs(x) > 0.12,
+                  !isMouthBand,
+                  y >= 0.34,
+                  y <= 0.68 else { continue }
 
             alphaByIndex[index] = 1.0 - smoothstep(edge0: 0.72, edge1: 1.15, x: distance)
             normalizedCoordinateByIndex[index] = CGPoint(x: CGFloat(x), y: CGFloat(y))
@@ -412,7 +476,9 @@ private final class CheekMeshGeometry {
             let i1 = sourceTriangles[triangleStart + 1]
             let i2 = sourceTriangles[triangleStart + 2]
 
-            guard alphaByIndex[i0] != nil || alphaByIndex[i1] != nil || alphaByIndex[i2] != nil else {
+            guard alphaByIndex[i0] != nil,
+                  alphaByIndex[i1] != nil,
+                  alphaByIndex[i2] != nil else {
                 continue
             }
 

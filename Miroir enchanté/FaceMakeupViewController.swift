@@ -45,6 +45,7 @@ final class FaceMakeupViewController: UIViewController {
     private let modeButton = UIButton(type: .system)
     private let experienceModeButton = UIButton(type: .system)
     private let hairStyleButton = UIButton(type: .system)
+    private let arAutoFramingButton = UIButton(type: .system)
     private let beforeAfterButton = UIButton(type: .system)
     private let controlsSegmentedControl = UISegmentedControl(items: ["Lipstick", "Blush", "Hair", "Debug"])
     private let controlsStackView = UIStackView()
@@ -99,6 +100,9 @@ final class FaceMakeupViewController: UIViewController {
     private var visibleControlTabs: [ControlTab] = [.lipstick, .blush, .hair, .debug]
     private var smoothedInspectionTilt: CGFloat = 0
     private var isBeforePreviewActive = false
+    private var isARAutoFramingEnabled = true
+    private var arFaceFramingScale: CGFloat = 1
+    private var arFaceFramingTranslation: CGPoint = .zero
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -107,6 +111,7 @@ final class FaceMakeupViewController: UIViewController {
         configureModeButton()
         configureExperienceModeButton()
         configureHairStyleButton()
+        configureARAutoFramingButton()
         configureMakeupControls()
         configureBeforeAfterButton()
         configureUnsupportedDeviceMessageIfNeeded()
@@ -169,6 +174,15 @@ final class FaceMakeupViewController: UIViewController {
         demoSceneView.autoenablesDefaultLighting = false
         demoSceneView.isPlaying = false
         demoSceneView.isHidden = true
+
+        faceRenderer.faceBoundsDidUpdate = { [weak self] faceBounds in
+            self?.updateARFaceFraming(faceBounds: faceBounds)
+        }
+        faceRenderer.faceDetectionStateDidChange = { [weak self] isDetected in
+            if !isDetected {
+                self?.resetARFaceFraming(animated: true)
+            }
+        }
     }
 
     private func configureModeButton() {
@@ -217,6 +231,26 @@ final class FaceMakeupViewController: UIViewController {
         ])
     }
 
+    private func configureARAutoFramingButton() {
+        arAutoFramingButton.translatesAutoresizingMaskIntoConstraints = false
+        arAutoFramingButton.setImage(UIImage(systemName: "viewfinder"), for: .normal)
+        arAutoFramingButton.setImage(UIImage(systemName: "viewfinder.circle.fill"), for: .selected)
+        arAutoFramingButton.imageView?.contentMode = .scaleAspectFit
+        arAutoFramingButton.addTarget(self, action: #selector(toggleARAutoFraming), for: .touchUpInside)
+        arAutoFramingButton.accessibilityLabel = "Auto framing"
+        styleIconFloatingButton(arAutoFramingButton)
+        updateARAutoFramingButton()
+        arAutoFramingButton.isHidden = experienceMode != .ar
+
+        view.addSubview(arAutoFramingButton)
+        NSLayoutConstraint.activate([
+            arAutoFramingButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            arAutoFramingButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 68),
+            arAutoFramingButton.widthAnchor.constraint(equalToConstant: 44),
+            arAutoFramingButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+
     private func configureBeforeAfterButton() {
         beforeAfterButton.translatesAutoresizingMaskIntoConstraints = false
         beforeAfterButton.setTitle("Avant / Après", for: .normal)
@@ -243,6 +277,16 @@ final class FaceMakeupViewController: UIViewController {
         button.layer.cornerRadius = 12
         button.layer.borderWidth = 0.8
         button.layer.borderColor = UIColor.white.withAlphaComponent(0.08).cgColor
+    }
+
+    private func styleIconFloatingButton(_ button: UIButton) {
+        button.backgroundColor = CosmeticTheme.controlBackground
+        button.layer.cornerRadius = 12
+        button.layer.borderWidth = 0.8
+        button.setPreferredSymbolConfiguration(
+            UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold),
+            forImageIn: .normal
+        )
     }
 
     private func configureMakeupControls() {
@@ -588,6 +632,24 @@ final class FaceMakeupViewController: UIViewController {
         modeButton.setTitle(mode.buttonTitle, for: .normal)
     }
 
+    @objc private func toggleARAutoFraming() {
+        isARAutoFramingEnabled.toggle()
+        updateARAutoFramingButton()
+
+        if !isARAutoFramingEnabled {
+            resetARFaceFraming(animated: true)
+        }
+    }
+
+    private func updateARAutoFramingButton() {
+        arAutoFramingButton.isSelected = isARAutoFramingEnabled
+        arAutoFramingButton.tintColor = isARAutoFramingEnabled ? CosmeticTheme.softGold : UIColor.white.withAlphaComponent(0.62)
+        arAutoFramingButton.layer.borderColor = (isARAutoFramingEnabled ? CosmeticTheme.gold : UIColor.white.withAlphaComponent(0.08)).cgColor
+        arAutoFramingButton.backgroundColor = isARAutoFramingEnabled
+            ? CosmeticTheme.gold.withAlphaComponent(0.18)
+            : CosmeticTheme.controlBackground
+    }
+
     @objc private func toggleExperienceMode() {
         switch experienceMode {
         case .ar:
@@ -909,9 +971,11 @@ final class FaceMakeupViewController: UIViewController {
         sceneView.session.delegate = nil
         sceneView.isPlaying = false
         sceneView.isHidden = true
+        resetARFaceFraming(animated: false)
         demoSceneView.isHidden = false
         demoSceneView.isPlaying = true
         modeButton.isHidden = true
+        arAutoFramingButton.isHidden = true
         hairStyleButton.isHidden = true
         updateControlTabAvailability()
         updateControlTabVisibility()
@@ -936,12 +1000,15 @@ final class FaceMakeupViewController: UIViewController {
         demoSceneView.isPlaying = false
         stopDemoTiltControl()
         sceneView.isHidden = false
+        resetARFaceFraming(animated: false)
         sceneView.session.pause()
         sceneView.scene = SCNScene()
         sceneView.delegate = faceRenderer
         sceneView.automaticallyUpdatesLighting = true
         sceneView.isPlaying = true
         modeButton.isHidden = false
+        arAutoFramingButton.isHidden = false
+        updateARAutoFramingButton()
         hairStyleButton.isHidden = true
         updateControlTabAvailability()
         updateControlTabVisibility()
@@ -958,6 +1025,85 @@ final class FaceMakeupViewController: UIViewController {
         // Face tracking uses the TrueDepth front camera and streams one
         // ARFaceAnchor per detected face into ARSCNViewDelegate callbacks.
         sceneView.session.run(configuration, options: [.resetTracking, .removeExistingAnchors])
+    }
+
+    private func updateARFaceFraming(faceBounds: CGRect) {
+        guard experienceMode == .ar,
+              isARAutoFramingEnabled,
+              !sceneView.isHidden,
+              faceBounds.width > 1,
+              faceBounds.height > 1,
+              view.bounds.width > 1,
+              view.bounds.height > 1 else {
+            return
+        }
+
+        let targetTop = max(view.safeAreaInsets.top + 118, modeButton.frame.maxY + 12)
+        let panelTop = controlsStackView.frame.minY > 0 ? controlsStackView.frame.minY : view.bounds.maxY
+        let targetHeight = max(180, panelTop - targetTop - 18)
+        let targetRect = CGRect(
+            x: 18,
+            y: targetTop,
+            width: max(1, view.bounds.width - 36),
+            height: targetHeight
+        )
+
+        let scaleToFitWidth = targetRect.width / faceBounds.width
+        let scaleToFitHeight = targetRect.height / faceBounds.height
+        var targetScale = min(1, scaleToFitWidth, scaleToFitHeight)
+
+        if targetScale >= 1, !targetRect.contains(faceBounds) {
+            // Leave a little virtual margin when the face fits but is drifting
+            // toward the panel or top controls. The AR camera image and makeup
+            // overlay are transformed together, so alignment stays intact.
+            targetScale = 0.94
+        }
+
+        targetScale = targetScale.clamped(to: 0.72...1.0)
+
+        let viewCenter = CGPoint(x: view.bounds.midX, y: view.bounds.midY)
+        let faceCenter = CGPoint(x: faceBounds.midX, y: faceBounds.midY)
+        let scaledFaceCenter = CGPoint(
+            x: viewCenter.x + targetScale * (faceCenter.x - viewCenter.x),
+            y: viewCenter.y + targetScale * (faceCenter.y - viewCenter.y)
+        )
+
+        var targetTranslation = CGPoint(
+            x: targetRect.midX - scaledFaceCenter.x,
+            y: targetRect.midY - scaledFaceCenter.y
+        )
+        targetTranslation.x = targetTranslation.x.clamped(to: -180...180)
+        targetTranslation.y = targetTranslation.y.clamped(to: -260...260)
+
+        arFaceFramingScale = arFaceFramingScale * 0.86 + targetScale * 0.14
+        arFaceFramingTranslation = CGPoint(
+            x: arFaceFramingTranslation.x * 0.86 + targetTranslation.x * 0.14,
+            y: arFaceFramingTranslation.y * 0.86 + targetTranslation.y * 0.14
+        )
+
+        sceneView.transform = CGAffineTransform(
+            a: arFaceFramingScale,
+            b: 0,
+            c: 0,
+            d: arFaceFramingScale,
+            tx: arFaceFramingTranslation.x,
+            ty: arFaceFramingTranslation.y
+        )
+    }
+
+    private func resetARFaceFraming(animated: Bool) {
+        arFaceFramingScale = 1
+        arFaceFramingTranslation = .zero
+
+        let updates = {
+            self.sceneView.transform = .identity
+        }
+
+        if animated {
+            UIView.animate(withDuration: 0.18, delay: 0, options: [.beginFromCurrentState, .allowUserInteraction], animations: updates)
+        } else {
+            UIView.performWithoutAnimation(updates)
+        }
     }
 
     private func startDemoTiltControl() {
