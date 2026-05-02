@@ -9,6 +9,17 @@
 "control.intensity" = "强度";
 "control.hair_hue" = "色相";
 "control.hair_strength" = "强度";
+"control.size" = "大小";
+"control.position" = "位置";
+"control.finish" = "妆效";
+"blush.choose" = "选择腮红";
+"blush.nude" = "裸色";
+"blush.peach" = "蜜桃";
+"blush.soft_rose" = "柔玫";
+"blush.coral" = "珊瑚";
+"blush.vintage_rose" = "复古玫瑰";
+"blush.raspberry" = "覆盆子";
+"blush.rosewood" = "玫瑰木";
 "control.hide_head" = "隐藏头部";
 "control.hide_hair" = "隐藏头发";
 "preset.nude" = "裸色";

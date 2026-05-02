@@ -9,6 +9,17 @@
 "control.intensity" = "Intensidad";
 "control.hair_hue" = "Tono";
 "control.hair_strength" = "Fuerza";
+"control.size" = "Tamaño";
+"control.position" = "Posición";
+"control.finish" = "Acabado";
+"blush.choose" = "Elegir rubor";
+"blush.nude" = "Nude";
+"blush.peach" = "Melocotón";
+"blush.soft_rose" = "Rosa suave";
+"blush.coral" = "Coral";
+"blush.vintage_rose" = "Rosa viejo";
+"blush.raspberry" = "Frambuesa";
+"blush.rosewood" = "Palo rosa";
 "control.hide_head" = "Ocultar cabeza";
 "control.hide_hair" = "Ocultar pelo";
 "preset.nude" = "Nude";

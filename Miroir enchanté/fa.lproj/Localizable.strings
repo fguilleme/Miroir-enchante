@@ -9,6 +9,17 @@
 "control.intensity" = "شدت";
 "control.hair_hue" = "فام";
 "control.hair_strength" = "شدت";
+"control.size" = "اندازه";
+"control.position" = "موقعیت";
+"control.finish" = "پرداخت";
+"blush.choose" = "انتخاب رژگونه";
+"blush.nude" = "نود";
+"blush.peach" = "هلویی";
+"blush.soft_rose" = "رز ملایم";
+"blush.coral" = "مرجانی";
+"blush.vintage_rose" = "رز قدیمی";
+"blush.raspberry" = "تمشکی";
+"blush.rosewood" = "رز وود";
 "control.hide_head" = "پنهان کردن سر";
 "control.hide_hair" = "پنهان کردن مو";
 "preset.nude" = "نود";

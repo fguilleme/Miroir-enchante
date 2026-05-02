@@ -8,6 +8,14 @@ import CoreMotion
 import SceneKit
 import UIKit
 
+private enum CosmeticTheme {
+    static let gold = UIColor(red: 0.96, green: 0.73, blue: 0.45, alpha: 1.0)
+    static let softGold = UIColor(red: 1.0, green: 0.84, blue: 0.62, alpha: 1.0)
+    static let panelBackground = UIColor.black.withAlphaComponent(0.74)
+    static let controlBackground = UIColor.black.withAlphaComponent(0.58)
+    static let dimText = UIColor.white.withAlphaComponent(0.66)
+}
+
 /// Owns the camera view and AR session lifecycle.
 /// Rendering decisions live in FaceRenderer so the UI stays small and clear.
 final class FaceMakeupViewController: UIViewController {
@@ -18,8 +26,15 @@ final class FaceMakeupViewController: UIViewController {
 
     private enum ControlTab: Int {
         case lipstick = 0
-        case hair = 1
-        case debug = 2
+        case blush = 1
+        case hair = 2
+        case debug = 3
+    }
+
+    private enum LipstickFinish: Int {
+        case matte = 0
+        case satin = 1
+        case glossy = 2
     }
 
     private let sceneView = ARSCNView(frame: .zero)
@@ -30,9 +45,11 @@ final class FaceMakeupViewController: UIViewController {
     private let modeButton = UIButton(type: .system)
     private let experienceModeButton = UIButton(type: .system)
     private let hairStyleButton = UIButton(type: .system)
-    private let controlsSegmentedControl = UISegmentedControl(items: ["Lipstick", "Hair", "Debug"])
+    private let beforeAfterButton = UIButton(type: .system)
+    private let controlsSegmentedControl = UISegmentedControl(items: ["Lipstick", "Blush", "Hair", "Debug"])
     private let controlsStackView = UIStackView()
     private let lipstickIntensitySlider = UISlider()
+    private let lipstickFinishSegmentedControl = UISegmentedControl(items: ["Mat", "Satiné", "Brillant"])
     private let lipstickCollectionView: UICollectionView = {
         let layout = LipstickSnapFlowLayout()
         layout.scrollDirection = .horizontal
@@ -46,6 +63,9 @@ final class FaceMakeupViewController: UIViewController {
         collectionView.clipsToBounds = false
         return collectionView
     }()
+    private let blushIntensitySlider = UISlider()
+    private let blushSizeSlider = UISlider()
+    private let blushPositionSlider = UISlider()
     private let hairHueSlider = UISlider()
     private let hairStrengthSlider = UISlider()
     private let hairOffsetYSlider = UISlider()
@@ -57,21 +77,28 @@ final class FaceMakeupViewController: UIViewController {
     private let hideHeadSwitch = UISwitch()
     private let hideHairSwitch = UISwitch()
     private var lipstickControlRows: [UIView] = []
+    private var blushControlRows: [UIView] = []
+    private var blushPresetButtons: [UIButton] = []
     private var hairControlRows: [UIView] = []
     private var debugControlRows: [UIView] = []
 
     private var unsupportedDeviceLabel: UILabel?
     private var experienceMode: ExperienceMode = ARFaceTrackingConfiguration.isSupported ? .ar : .demo
     private var lipstickSettings = LipstickSettings.default
+    private var lipstickFinish: LipstickFinish = .satin
     private var selectedLipstickPresetIndex = 3
     private var didCenterInitialLipstickPreset = false
+    private var blushSettings = BlushSettings.default
+    private var selectedBlushPresetIndex = 2
     private var hairHueValue: CGFloat = 0.24
     private var hairStrengthValue: CGFloat = 0.84
     private var hairOffsetYValue: Float = -0.08
     private var hairOffsetZValue: Float = 0.15
     private var hairScaleValue: Float = 1.0
     private var selectedControlTab: ControlTab = .lipstick
+    private var visibleControlTabs: [ControlTab] = [.lipstick, .blush, .hair, .debug]
     private var smoothedInspectionTilt: CGFloat = 0
+    private var isBeforePreviewActive = false
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -81,8 +108,10 @@ final class FaceMakeupViewController: UIViewController {
         configureExperienceModeButton()
         configureHairStyleButton()
         configureMakeupControls()
+        configureBeforeAfterButton()
         configureUnsupportedDeviceMessageIfNeeded()
         applyLipstickSettings()
+        applyBlushSettings()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -145,16 +174,13 @@ final class FaceMakeupViewController: UIViewController {
     private func configureModeButton() {
         modeButton.translatesAutoresizingMaskIntoConstraints = false
         modeButton.setTitle(faceRenderer.renderMode.buttonTitle, for: .normal)
-        modeButton.setTitleColor(.white, for: .normal)
-        modeButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
-        modeButton.backgroundColor = UIColor.black.withAlphaComponent(0.55)
-        modeButton.layer.cornerRadius = 8
+        styleFloatingButton(modeButton)
         modeButton.addTarget(self, action: #selector(toggleRenderMode), for: .touchUpInside)
 
         view.addSubview(modeButton)
         NSLayoutConstraint.activate([
-            modeButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            modeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            modeButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            modeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 68),
             modeButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 84),
             modeButton.heightAnchor.constraint(equalToConstant: 44)
         ])
@@ -163,10 +189,7 @@ final class FaceMakeupViewController: UIViewController {
     private func configureExperienceModeButton() {
         experienceModeButton.translatesAutoresizingMaskIntoConstraints = false
         experienceModeButton.setTitle(experienceButtonTitle, for: .normal)
-        experienceModeButton.setTitleColor(.white, for: .normal)
-        experienceModeButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
-        experienceModeButton.backgroundColor = UIColor.black.withAlphaComponent(0.55)
-        experienceModeButton.layer.cornerRadius = 8
+        styleFloatingButton(experienceModeButton)
         experienceModeButton.addTarget(self, action: #selector(toggleExperienceMode), for: .touchUpInside)
 
         view.addSubview(experienceModeButton)
@@ -181,10 +204,7 @@ final class FaceMakeupViewController: UIViewController {
     private func configureHairStyleButton() {
         hairStyleButton.translatesAutoresizingMaskIntoConstraints = false
         hairStyleButton.setTitle(L10n.text(DemoHairStyle.none.titleKey), for: .normal)
-        hairStyleButton.setTitleColor(.white, for: .normal)
-        hairStyleButton.titleLabel?.font = .preferredFont(forTextStyle: .headline)
-        hairStyleButton.backgroundColor = UIColor.black.withAlphaComponent(0.55)
-        hairStyleButton.layer.cornerRadius = 8
+        styleFloatingButton(hairStyleButton)
         hairStyleButton.addTarget(self, action: #selector(cycleDemoHairStyle), for: .touchUpInside)
         hairStyleButton.isHidden = true
 
@@ -197,6 +217,34 @@ final class FaceMakeupViewController: UIViewController {
         ])
     }
 
+    private func configureBeforeAfterButton() {
+        beforeAfterButton.translatesAutoresizingMaskIntoConstraints = false
+        beforeAfterButton.setTitle("Avant / Après", for: .normal)
+        beforeAfterButton.setImage(UIImage(systemName: "rectangle.split.2x1"), for: .normal)
+        beforeAfterButton.tintColor = CosmeticTheme.softGold
+        beforeAfterButton.semanticContentAttribute = .forceLeftToRight
+        styleFloatingButton(beforeAfterButton)
+        beforeAfterButton.addTarget(self, action: #selector(showBeforePreview), for: .touchDown)
+        beforeAfterButton.addTarget(self, action: #selector(showAfterPreview), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+
+        view.addSubview(beforeAfterButton)
+        NSLayoutConstraint.activate([
+            beforeAfterButton.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            beforeAfterButton.bottomAnchor.constraint(equalTo: controlsStackView.topAnchor, constant: -10),
+            beforeAfterButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 166),
+            beforeAfterButton.heightAnchor.constraint(equalToConstant: 42)
+        ])
+    }
+
+    private func styleFloatingButton(_ button: UIButton) {
+        button.setTitleColor(.white, for: .normal)
+        button.titleLabel?.font = .preferredFont(forTextStyle: .headline)
+        button.backgroundColor = CosmeticTheme.controlBackground
+        button.layer.cornerRadius = 12
+        button.layer.borderWidth = 0.8
+        button.layer.borderColor = UIColor.white.withAlphaComponent(0.08).cgColor
+    }
+
     private func configureMakeupControls() {
         lipstickIntensitySlider.minimumValue = 0.4
         lipstickIntensitySlider.maximumValue = 1.0
@@ -204,9 +252,33 @@ final class FaceMakeupViewController: UIViewController {
         lipstickIntensitySlider.isContinuous = true
         lipstickIntensitySlider.addTarget(self, action: #selector(lipstickIntensityChanged), for: .valueChanged)
 
+        lipstickFinishSegmentedControl.selectedSegmentIndex = lipstickFinish.rawValue
+        lipstickFinishSegmentedControl.selectedSegmentTintColor = CosmeticTheme.gold.withAlphaComponent(0.20)
+        lipstickFinishSegmentedControl.setTitleTextAttributes([.foregroundColor: CosmeticTheme.dimText], for: .normal)
+        lipstickFinishSegmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
+        lipstickFinishSegmentedControl.addTarget(self, action: #selector(lipstickFinishChanged), for: .valueChanged)
+
         lipstickCollectionView.dataSource = self
         lipstickCollectionView.delegate = self
         lipstickCollectionView.register(LipstickPresetCell.self, forCellWithReuseIdentifier: LipstickPresetCell.reuseIdentifier)
+
+        blushIntensitySlider.minimumValue = 0.0
+        blushIntensitySlider.maximumValue = 1.0
+        blushIntensitySlider.value = Float(blushSettings.intensity)
+        blushIntensitySlider.isContinuous = true
+        blushIntensitySlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
+
+        blushSizeSlider.minimumValue = 0.65
+        blushSizeSlider.maximumValue = 1.45
+        blushSizeSlider.value = Float(blushSettings.size)
+        blushSizeSlider.isContinuous = true
+        blushSizeSlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
+
+        blushPositionSlider.minimumValue = 0.0
+        blushPositionSlider.maximumValue = 1.0
+        blushPositionSlider.value = Float(blushSettings.position)
+        blushPositionSlider.isContinuous = true
+        blushPositionSlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
 
         hairHueSlider.minimumValue = 0.0
         hairHueSlider.maximumValue = 1.0
@@ -225,14 +297,31 @@ final class FaceMakeupViewController: UIViewController {
         hideHeadSwitch.addTarget(self, action: #selector(hideHeadSwitchChanged), for: .valueChanged)
         hideHairSwitch.addTarget(self, action: #selector(hideHairSwitchChanged), for: .valueChanged)
 
+        [
+            lipstickIntensitySlider,
+            blushIntensitySlider,
+            blushSizeSlider,
+            blushPositionSlider,
+            hairHueSlider,
+            hairStrengthSlider,
+            hairOffsetYSlider,
+            hairOffsetZSlider,
+            hairScaleSlider
+        ].forEach(styleSlider)
+
         controlsSegmentedControl.selectedSegmentIndex = selectedControlTab.rawValue
-        controlsSegmentedControl.selectedSegmentTintColor = UIColor.white.withAlphaComponent(0.22)
-        controlsSegmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .normal)
+        controlsSegmentedControl.selectedSegmentTintColor = CosmeticTheme.gold.withAlphaComponent(0.22)
+        controlsSegmentedControl.setTitleTextAttributes([.foregroundColor: CosmeticTheme.dimText], for: .normal)
         controlsSegmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
         controlsSegmentedControl.addTarget(self, action: #selector(controlTabChanged), for: .valueChanged)
 
         let lipstickSelectorRow = makeLipstickSelectorRow()
         let lipstickIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: lipstickIntensitySlider)
+        let lipstickFinishRow = makeFinishRow()
+        let blushSelectorRow = makeBlushSelectorRow()
+        let blushIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: blushIntensitySlider)
+        let blushSizeRow = makeSliderRow(title: L10n.text("control.size"), slider: blushSizeSlider)
+        let blushPositionRow = makeSliderRow(title: L10n.text("control.position"), slider: blushPositionSlider)
         let visibilityRow = makeDoubleSwitchRow(
             leftTitle: L10n.text("control.hide_head"),
             leftToggle: hideHeadSwitch,
@@ -250,7 +339,8 @@ final class FaceMakeupViewController: UIViewController {
         let hairScaleRow = makeHairOffsetRow(title: "S", slider: hairScaleSlider, valueLabel: hairScaleValueLabel)
         updateHairOffsetValueLabels()
 
-        lipstickControlRows = [lipstickSelectorRow, lipstickIntensityRow]
+        lipstickControlRows = [lipstickSelectorRow, lipstickIntensityRow, lipstickFinishRow]
+        blushControlRows = [blushSelectorRow, blushIntensityRow, blushSizeRow, blushPositionRow]
         hairControlRows = [hairRow]
         debugControlRows = [hairOffsetYRow, hairOffsetZRow, hairScaleRow, visibilityRow]
 
@@ -258,14 +348,19 @@ final class FaceMakeupViewController: UIViewController {
         controlsStackView.axis = .vertical
         controlsStackView.spacing = 8
         controlsStackView.alignment = .fill
-        controlsStackView.backgroundColor = UIColor.black.withAlphaComponent(0.52)
+        controlsStackView.backgroundColor = CosmeticTheme.panelBackground
         controlsStackView.layer.cornerRadius = 0
         controlsStackView.isLayoutMarginsRelativeArrangement = true
-        controlsStackView.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 12, leading: 28, bottom: 0, trailing: 28)
+        controlsStackView.directionalLayoutMargins = NSDirectionalEdgeInsets(top: 14, leading: 28, bottom: 8, trailing: 28)
 
         controlsStackView.addArrangedSubview(controlsSegmentedControl)
-        controlsStackView.addArrangedSubview(lipstickIntensityRow)
         controlsStackView.addArrangedSubview(lipstickSelectorRow)
+        controlsStackView.addArrangedSubview(lipstickIntensityRow)
+        controlsStackView.addArrangedSubview(lipstickFinishRow)
+        controlsStackView.addArrangedSubview(blushSelectorRow)
+        controlsStackView.addArrangedSubview(blushIntensityRow)
+        controlsStackView.addArrangedSubview(blushSizeRow)
+        controlsStackView.addArrangedSubview(blushPositionRow)
         controlsStackView.addArrangedSubview(hairRow)
         controlsStackView.addArrangedSubview(hairOffsetYRow)
         controlsStackView.addArrangedSubview(hairOffsetZRow)
@@ -282,6 +377,13 @@ final class FaceMakeupViewController: UIViewController {
         ])
 
         applySelectedLipstickPreset(animated: false)
+        applySelectedBlushPreset(animated: false)
+    }
+
+    private func styleSlider(_ slider: UISlider) {
+        slider.minimumTrackTintColor = CosmeticTheme.gold
+        slider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.13)
+        slider.thumbTintColor = UIColor(red: 1.0, green: 0.89, blue: 0.72, alpha: 1.0)
     }
 
     private func configureHairOffsetControls() {
@@ -338,6 +440,69 @@ final class FaceMakeupViewController: UIViewController {
         ])
 
         return container
+    }
+
+    private func makeBlushSelectorRow() -> UIView {
+        let container = UIStackView()
+        container.axis = .vertical
+        container.spacing = 6
+        container.alignment = .fill
+
+        let presetsRow = UIStackView()
+        presetsRow.axis = .horizontal
+        presetsRow.spacing = 10
+        presetsRow.distribution = .fillEqually
+        presetsRow.alignment = .top
+
+        blushPresetButtons = []
+        for (index, preset) in BlushSettings.presets.enumerated() {
+            let item = makeBlushPresetItem(preset: preset, index: index)
+            presetsRow.addArrangedSubview(item)
+        }
+
+        container.addArrangedSubview(presetsRow)
+        return container
+    }
+
+    private func makeBlushPresetItem(preset: BlushPreset, index: Int) -> UIStackView {
+        let button = UIButton(type: .system)
+        button.tag = index
+        button.backgroundColor = preset.baseColor
+        button.layer.cornerRadius = 22
+        button.layer.borderWidth = index == selectedBlushPresetIndex ? 2 : 0
+        button.layer.borderColor = CosmeticTheme.gold.cgColor
+        button.addTarget(self, action: #selector(blushPresetTapped(_:)), for: .touchUpInside)
+        button.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        blushPresetButtons.append(button)
+
+        let label = UILabel()
+        label.text = L10n.text(preset.titleKey)
+        label.textColor = UIColor.white.withAlphaComponent(index == selectedBlushPresetIndex ? 0.95 : 0.66)
+        label.font = .preferredFont(forTextStyle: .caption2)
+        label.textAlignment = .center
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.65
+
+        let item = UIStackView(arrangedSubviews: [button, label])
+        item.axis = .vertical
+        item.spacing = 5
+        item.alignment = .center
+        return item
+    }
+
+    private func makeFinishRow() -> UIStackView {
+        let label = UILabel()
+        label.text = L10n.text("control.finish")
+        label.textColor = .white
+        label.font = .preferredFont(forTextStyle: .caption1)
+        label.widthAnchor.constraint(equalToConstant: 64).isActive = true
+
+        let row = UIStackView(arrangedSubviews: [label, lipstickFinishSegmentedControl])
+        row.axis = .horizontal
+        row.spacing = 10
+        row.alignment = .center
+        return row
     }
 
     private func makeSliderRow(title: String, slider: UISlider) -> UIStackView {
@@ -439,8 +604,43 @@ final class FaceMakeupViewController: UIViewController {
         hairStyleButton.setTitle(L10n.text(style.titleKey), for: .normal)
     }
 
+    @objc private func showBeforePreview() {
+        setBeforePreviewActive(true)
+    }
+
+    @objc private func showAfterPreview() {
+        setBeforePreviewActive(false)
+    }
+
+    private func setBeforePreviewActive(_ active: Bool) {
+        isBeforePreviewActive = active
+        faceRenderer.setMakeupEnabled(!active)
+        demoHeadRenderer.setMakeupEnabled(!active)
+        UIView.animate(withDuration: 0.14) {
+            self.beforeAfterButton.alpha = active ? 0.64 : 1.0
+        }
+    }
+
     @objc private func lipstickIntensityChanged() {
         applySelectedLipstickPreset(animated: false, updatesSelector: false)
+    }
+
+    @objc private func lipstickFinishChanged() {
+        lipstickFinish = LipstickFinish(rawValue: lipstickFinishSegmentedControl.selectedSegmentIndex) ?? .satin
+        applySelectedLipstickPreset(animated: true, updatesSelector: false)
+    }
+
+    @objc private func blushPresetTapped(_ sender: UIButton) {
+        guard BlushSettings.presets.indices.contains(sender.tag) else { return }
+        selectedBlushPresetIndex = sender.tag
+        applySelectedBlushPreset(animated: true)
+    }
+
+    @objc private func blushSliderChanged() {
+        blushSettings.intensity = CGFloat(blushIntensitySlider.value)
+        blushSettings.size = CGFloat(blushSizeSlider.value)
+        blushSettings.position = CGFloat(blushPositionSlider.value)
+        applyBlushSettings()
     }
 
     @objc private func hairSliderChanged() {
@@ -464,20 +664,41 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     @objc private func controlTabChanged() {
-        selectedControlTab = ControlTab(rawValue: controlsSegmentedControl.selectedSegmentIndex) ?? .lipstick
+        let selectedIndex = controlsSegmentedControl.selectedSegmentIndex
+        selectedControlTab = visibleControlTabs.indices.contains(selectedIndex) ? visibleControlTabs[selectedIndex] : .lipstick
         updateControlTabVisibility()
     }
 
     private func updateControlTabAvailability() {
         let demoControlsEnabled = experienceMode == .demo
-        controlsSegmentedControl.isHidden = !demoControlsEnabled
-        controlsSegmentedControl.setEnabled(true, forSegmentAt: ControlTab.lipstick.rawValue)
-        controlsSegmentedControl.setEnabled(demoControlsEnabled, forSegmentAt: ControlTab.hair.rawValue)
-        controlsSegmentedControl.setEnabled(demoControlsEnabled, forSegmentAt: ControlTab.debug.rawValue)
+        let nextTabs: [ControlTab] = demoControlsEnabled ? [.lipstick, .blush, .hair, .debug] : [.lipstick, .blush]
+        controlsSegmentedControl.isHidden = false
 
-        if !demoControlsEnabled && selectedControlTab != .lipstick {
+        if !demoControlsEnabled && (selectedControlTab == .hair || selectedControlTab == .debug) {
             selectedControlTab = .lipstick
-            controlsSegmentedControl.selectedSegmentIndex = selectedControlTab.rawValue
+        }
+
+        if visibleControlTabs != nextTabs {
+            controlsSegmentedControl.removeAllSegments()
+            for (index, tab) in nextTabs.enumerated() {
+                controlsSegmentedControl.insertSegment(withTitle: controlTabTitle(tab), at: index, animated: false)
+            }
+            visibleControlTabs = nextTabs
+        }
+
+        controlsSegmentedControl.selectedSegmentIndex = visibleControlTabs.firstIndex(of: selectedControlTab) ?? 0
+    }
+
+    private func controlTabTitle(_ tab: ControlTab) -> String {
+        switch tab {
+        case .lipstick:
+            return "Lipstick"
+        case .blush:
+            return "Blush"
+        case .hair:
+            return "Hair"
+        case .debug:
+            return "Debug"
         }
     }
 
@@ -485,6 +706,7 @@ final class FaceMakeupViewController: UIViewController {
         lipstickControlRows.forEach { $0.isHidden = selectedControlTab != .lipstick }
 
         let demoControlsEnabled = experienceMode == .demo
+        blushControlRows.forEach { $0.isHidden = selectedControlTab != .blush }
         hairControlRows.forEach { $0.isHidden = selectedControlTab != .hair || !demoControlsEnabled }
         debugControlRows.forEach { $0.isHidden = selectedControlTab != .debug || !demoControlsEnabled }
     }
@@ -517,14 +739,68 @@ final class FaceMakeupViewController: UIViewController {
 
         lipstickSettings.color = preset.baseColor
         lipstickSettings.opacity = CGFloat(preset.opacity) * intensity
-        lipstickSettings.roughness = CGFloat(preset.roughness)
-        lipstickSettings.glossIntensity = CGFloat(1.0 - preset.roughness).clamped(to: 0...1)
+        lipstickSettings.roughness = lipstickRoughness(for: preset)
+        lipstickSettings.glossIntensity = lipstickGlossIntensity(for: preset)
         lipstickSettings.colorIntensity = 1.0
 
         applyLipstickSettings()
 
         if updatesSelector {
             updateVisibleLipstickCells(animated: animated)
+        }
+    }
+
+    private func lipstickRoughness(for preset: LipstickPreset) -> CGFloat {
+        switch lipstickFinish {
+        case .matte:
+            return max(CGFloat(preset.roughness), 0.62)
+        case .satin:
+            return CGFloat(preset.roughness).clamped(to: 0.24...0.44)
+        case .glossy:
+            return min(CGFloat(preset.roughness), 0.18)
+        }
+    }
+
+    private func lipstickGlossIntensity(for preset: LipstickPreset) -> CGFloat {
+        switch lipstickFinish {
+        case .matte:
+            return 0.10
+        case .satin:
+            return CGFloat(1.0 - preset.roughness).clamped(to: 0.30...0.52)
+        case .glossy:
+            return 0.78
+        }
+    }
+
+    private func applySelectedBlushPreset(animated: Bool) {
+        guard BlushSettings.presets.indices.contains(selectedBlushPresetIndex) else { return }
+
+        let preset = BlushSettings.presets[selectedBlushPresetIndex]
+        blushSettings.color = preset.baseColor
+        blushSettings.opacity = CGFloat(preset.opacity)
+        blushSettings.roughness = CGFloat(preset.roughness)
+        blushSettings.intensity = CGFloat(blushIntensitySlider.value)
+        blushSettings.size = CGFloat(blushSizeSlider.value)
+        blushSettings.position = CGFloat(blushPositionSlider.value)
+
+        applyBlushSettings()
+        updateBlushPresetSelection(animated: animated)
+    }
+
+    private func updateBlushPresetSelection(animated: Bool) {
+        for button in blushPresetButtons {
+            let isSelected = button.tag == selectedBlushPresetIndex
+            let updates = {
+                button.transform = isSelected ? CGAffineTransform(scaleX: 1.12, y: 1.12) : .identity
+                button.layer.borderWidth = isSelected ? 2 : 0
+                button.layer.borderColor = CosmeticTheme.gold.cgColor
+            }
+
+            if animated {
+                UIView.animate(withDuration: 0.18, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
+            } else {
+                updates()
+            }
         }
     }
 
@@ -615,6 +891,7 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     private func applyExperienceMode() {
+        setBeforePreviewActive(false)
         experienceModeButton.setTitle(experienceButtonTitle, for: .normal)
         unsupportedDeviceLabel?.isHidden = experienceMode == .demo || ARFaceTrackingConfiguration.isSupported
 
@@ -641,6 +918,8 @@ final class FaceMakeupViewController: UIViewController {
         demoHeadRenderer.updateHairPlacement(y: hairOffsetYValue, z: hairOffsetZValue, scale: hairScaleValue)
         demoHeadRenderer.setHeadHidden(hideHeadSwitch.isOn)
         demoHeadRenderer.setHairHidden(hideHairSwitch.isOn)
+        demoHeadRenderer.setMakeupEnabled(!isBeforePreviewActive)
+        applyBlushSettings()
         startDemoTiltControl()
     }
 
@@ -670,6 +949,8 @@ final class FaceMakeupViewController: UIViewController {
         demoHeadRenderer.setHairHidden(false)
         faceRenderer.attach(to: sceneView)
         faceRenderer.updateLipstickSettings(lipstickSettings)
+        faceRenderer.updateBlushSettings(blushSettings)
+        faceRenderer.setMakeupEnabled(!isBeforePreviewActive)
 
         let configuration = ARFaceTrackingConfiguration()
         configuration.isLightEstimationEnabled = true
@@ -716,6 +997,11 @@ final class FaceMakeupViewController: UIViewController {
     private func applyLipstickSettings() {
         faceRenderer.updateLipstickSettings(lipstickSettings)
         demoHeadRenderer.updateLipstickSettings(lipstickSettings)
+    }
+
+    private func applyBlushSettings() {
+        faceRenderer.updateBlushSettings(blushSettings)
+        demoHeadRenderer.updateBlushSettings(blushSettings)
     }
 
     private func configureUnsupportedDeviceMessageIfNeeded() {
@@ -853,8 +1139,8 @@ private final class LipstickPresetCell: UICollectionViewCell {
         titleLabel.text = L10n.text(preset.titleKey)
         let updates = {
             self.contentView.transform = isSelected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
-            self.contentView.layer.borderColor = isSelected ? UIColor.white.withAlphaComponent(0.85).cgColor : UIColor.clear.cgColor
-            self.contentView.backgroundColor = isSelected ? UIColor.white.withAlphaComponent(0.13) : UIColor.white.withAlphaComponent(0.05)
+            self.contentView.layer.borderColor = isSelected ? CosmeticTheme.gold.cgColor : UIColor.clear.cgColor
+            self.contentView.backgroundColor = isSelected ? CosmeticTheme.gold.withAlphaComponent(0.13) : UIColor.white.withAlphaComponent(0.05)
             self.titleLabel.textColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.78)
         }
 

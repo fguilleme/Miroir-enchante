@@ -9,6 +9,17 @@
 "control.intensity" = "강도";
 "control.hair_hue" = "색조";
 "control.hair_strength" = "강도";
+"control.size" = "크기";
+"control.position" = "위치";
+"control.finish" = "마감";
+"blush.choose" = "블러셔 선택";
+"blush.nude" = "누드";
+"blush.peach" = "피치";
+"blush.soft_rose" = "소프트 로즈";
+"blush.coral" = "코랄";
+"blush.vintage_rose" = "빈티지 로즈";
+"blush.raspberry" = "라즈베리";
+"blush.rosewood" = "로즈우드";
 "control.hide_head" = "머리 숨기기";
 "control.hide_hair" = "머리카락 숨기기";
 "preset.nude" = "누드";

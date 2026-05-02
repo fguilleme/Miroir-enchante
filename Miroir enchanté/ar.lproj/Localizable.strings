@@ -9,6 +9,17 @@
 "control.intensity" = "الكثافة";
 "control.hair_hue" = "الصبغة";
 "control.hair_strength" = "القوة";
+"control.size" = "الحجم";
+"control.position" = "الموضع";
+"control.finish" = "اللمسة";
+"blush.choose" = "اختيار أحمر الخدود";
+"blush.nude" = "طبيعي";
+"blush.peach" = "خوخي";
+"blush.soft_rose" = "وردي ناعم";
+"blush.coral" = "مرجاني";
+"blush.vintage_rose" = "وردي معتق";
+"blush.raspberry" = "توتي";
+"blush.rosewood" = "خشب الورد";
 "control.hide_head" = "إخفاء الرأس";
 "control.hide_hair" = "إخفاء الشعر";
 "preset.nude" = "طبيعي";

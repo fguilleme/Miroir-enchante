@@ -40,6 +40,41 @@ struct LipstickSettings {
     ]
 }
 
+struct BlushPreset {
+    let titleKey: String
+    let baseColor: UIColor
+    let roughness: Float
+    let opacity: Float
+}
+
+struct BlushSettings {
+    var color: UIColor
+    var opacity: CGFloat
+    var roughness: CGFloat
+    var intensity: CGFloat
+    var size: CGFloat
+    var position: CGFloat
+
+    static let `default` = BlushSettings(
+        color: UIColor(red: 0.92, green: 0.36, blue: 0.31, alpha: 1.0),
+        opacity: 0.34,
+        roughness: 0.68,
+        intensity: 0.42,
+        size: 1.0,
+        position: 0.5
+    )
+
+    static let presets: [BlushPreset] = [
+        BlushPreset(titleKey: "blush.nude", baseColor: UIColor(red: 0.78, green: 0.42, blue: 0.35, alpha: 1.0), roughness: 0.76, opacity: 0.24),
+        BlushPreset(titleKey: "blush.peach", baseColor: UIColor(red: 0.98, green: 0.48, blue: 0.36, alpha: 1.0), roughness: 0.70, opacity: 0.30),
+        BlushPreset(titleKey: "blush.soft_rose", baseColor: UIColor(red: 0.96, green: 0.38, blue: 0.54, alpha: 1.0), roughness: 0.68, opacity: 0.34),
+        BlushPreset(titleKey: "blush.coral", baseColor: UIColor(red: 1.00, green: 0.30, blue: 0.31, alpha: 1.0), roughness: 0.66, opacity: 0.32),
+        BlushPreset(titleKey: "blush.vintage_rose", baseColor: UIColor(red: 0.68, green: 0.18, blue: 0.28, alpha: 1.0), roughness: 0.72, opacity: 0.28),
+        BlushPreset(titleKey: "blush.raspberry", baseColor: UIColor(red: 0.74, green: 0.08, blue: 0.32, alpha: 1.0), roughness: 0.66, opacity: 0.30),
+        BlushPreset(titleKey: "blush.rosewood", baseColor: UIColor(red: 0.62, green: 0.24, blue: 0.32, alpha: 1.0), roughness: 0.72, opacity: 0.28)
+    ]
+}
+
 /// Creates reusable SceneKit materials for virtual makeup.
 enum MakeupMaterialFactory {
     static func makeSkinMaterial() -> SCNMaterial {
@@ -87,11 +122,21 @@ enum MakeupMaterialFactory {
 
     static func makeLipstickMaterial(settings: LipstickSettings = .default) -> SCNMaterial {
         let material = SCNMaterial()
+        configureLipstickMaterial(material, settings: settings)
+
+        // Replace diffuse.contents with a texture later for brand shades or
+        // fine-grained lip masks. A mask can isolate upper/lower lips while
+        // this factory keeps finish controls such as gloss and matte roughness.
+        return material
+    }
+
+    static func configureLipstickMaterial(_ material: SCNMaterial, settings: LipstickSettings = .default) {
         let opacity = settings.opacity.clamped(to: 0...1)
         let color = settings.color.withIntensity(settings.colorIntensity)
 
         material.lightingModel = .physicallyBased
-        material.diffuse.contents = color.withAlphaComponent(opacity)
+        material.diffuse.contents = color
+        material.transparent.contents = makeSoftOvalAlphaMask()
         material.transparency = opacity
         material.transparencyMode = .aOne
         material.roughness.contents = settings.roughness
@@ -103,15 +148,75 @@ enum MakeupMaterialFactory {
         material.readsFromDepthBuffer = false
         material.blendMode = .alpha
         material.fillMode = .fill
+    }
 
-        // Replace diffuse.contents with a texture later for brand shades or
-        // fine-grained lip masks. A mask can isolate upper/lower lips while
-        // this factory keeps finish controls such as gloss and matte roughness.
+    private static func makeSoftOvalAlphaMask(size: CGSize = CGSize(width: 128, height: 128)) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: size)
+
+        return renderer.image { context in
+            let cgContext = context.cgContext
+            cgContext.clear(CGRect(origin: .zero, size: size))
+
+            let colors = [
+                UIColor.white.cgColor,
+                UIColor.white.withAlphaComponent(0.72).cgColor,
+                UIColor.clear.cgColor
+            ] as CFArray
+            let locations: [CGFloat] = [0.0, 0.55, 1.0]
+            guard let gradient = CGGradient(
+                colorsSpace: CGColorSpaceCreateDeviceRGB(),
+                colors: colors,
+                locations: locations
+            ) else { return }
+
+            cgContext.saveGState()
+            let ovalRect = CGRect(x: size.width * 0.08, y: size.height * 0.16, width: size.width * 0.84, height: size.height * 0.68)
+            cgContext.addEllipse(in: ovalRect)
+            cgContext.clip()
+            cgContext.drawRadialGradient(
+                gradient,
+                startCenter: CGPoint(x: size.width * 0.5, y: size.height * 0.5),
+                startRadius: 0,
+                endCenter: CGPoint(x: size.width * 0.5, y: size.height * 0.5),
+                endRadius: size.width * 0.46,
+                options: []
+            )
+            cgContext.restoreGState()
+        }
+    }
+
+    static func makeBlushMaterial(settings: BlushSettings = .default) -> SCNMaterial {
+        let material = SCNMaterial()
+        let intensity = settings.intensity.clamped(to: 0...1)
+        let opacity = (settings.opacity * intensity).clamped(to: 0...0.65)
+        let color = settings.color.withIntensity(0.82 + intensity * 0.34)
+
+        material.lightingModel = .physicallyBased
+        material.diffuse.contents = color.withAlphaComponent(opacity)
+        material.transparency = opacity
+        material.transparencyMode = .aOne
+        material.roughness.contents = settings.roughness
+        material.metalness.contents = 0.0
+        material.specular.contents = UIColor.white.withAlphaComponent(0.04 * opacity)
+        material.shininess = 0.04
+        material.isDoubleSided = true
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        material.blendMode = .alpha
+        material.fillMode = .fill
+
+        // Later this can become a texture-driven blush mask, or several
+        // cheek/highlight/contour layers, without changing the renderer API.
         return material
     }
 
     static func makeARLipstickMaterial(settings: LipstickSettings = .default) -> SCNMaterial {
         let material = SCNMaterial()
+        configureARLipstickMaterial(material, settings: settings)
+        return material
+    }
+
+    static func configureARLipstickMaterial(_ material: SCNMaterial, settings: LipstickSettings = .default) {
         let opacity = settings.opacity.clamped(to: 0...1)
         let color = settings.color.withIntensity(settings.colorIntensity)
 
@@ -120,8 +225,30 @@ enum MakeupMaterialFactory {
         // material keeps the overlay cosmetic instead of letting PBR shading
         // turn the selected mouth band black.
         material.lightingModel = .constant
-        material.diffuse.contents = color.withAlphaComponent(opacity)
-        material.emission.contents = color.withAlphaComponent(0.35 * opacity)
+        material.diffuse.contents = color
+        material.emission.contents = color.withAlphaComponent(0.18 * opacity)
+        material.transparency = opacity
+        material.transparencyMode = .aOne
+        material.isDoubleSided = true
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        material.blendMode = .alpha
+        material.fillMode = .fill
+    }
+
+    static func makeARBlushMaterial(settings: BlushSettings = .default) -> SCNMaterial {
+        let material = SCNMaterial()
+        let intensity = settings.intensity.clamped(to: 0...1)
+        let opacity = (settings.opacity * intensity).clamped(to: 0...0.45)
+        let color = settings.color.withIntensity(0.78 + intensity * 0.24)
+
+        // Keep the AR overlay explicitly colored and alpha-blended. Some
+        // devices/SceneKit paths do not reliably apply alpha from vertex color
+        // buffers on ARSCNFaceGeometry-derived meshes; using the material alpha
+        // here avoids the white opaque cheek patches seen during live testing.
+        material.lightingModel = .constant
+        material.diffuse.contents = color
+        material.emission.contents = color.withAlphaComponent(0.08 * opacity)
         material.transparency = opacity
         material.transparencyMode = .aOne
         material.isDoubleSided = true

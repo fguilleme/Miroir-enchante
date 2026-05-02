@@ -9,6 +9,17 @@
 "control.intensity" = "強さ";
 "control.hair_hue" = "色相";
 "control.hair_strength" = "強さ";
+"control.size" = "サイズ";
+"control.position" = "位置";
+"control.finish" = "質感";
+"blush.choose" = "チークを選択";
+"blush.nude" = "ヌード";
+"blush.peach" = "ピーチ";
+"blush.soft_rose" = "ソフトローズ";
+"blush.coral" = "コーラル";
+"blush.vintage_rose" = "ヴィンテージローズ";
+"blush.raspberry" = "ラズベリー";
+"blush.rosewood" = "ローズウッド";
 "control.hide_head" = "頭を隠す";
 "control.hide_hair" = "髪を隠す";
 "preset.nude" = "ヌード";

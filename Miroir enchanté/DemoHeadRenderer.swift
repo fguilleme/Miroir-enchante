@@ -62,14 +62,18 @@ final class DemoHeadRenderer {
     /// obvious "lip" or "mouth" terms.
     let lipNodeNameHints = ["UpperLip", "LowerLip", "Upper Lip", "Lower Lip", "Upper_lip", "Lower_lip", "Lips", "Mouth"]
     let companionLipAssetFilenames = ["Upper Lip.obj", "Lower Lip.obj"]
+    let cheekAssetFilenames = ["left cheek.obj", "right cheek.obj"]
     let eyeAssetFilenames = ["left eyes.obj", "right eyes.obj"]
 
     private let modelContainerNode = SCNNode()
     private let fallbackLipRootNode = SCNNode()
+    private let cheekRootNode = SCNNode()
     private let eyeRootNode = SCNNode()
     private let hairRootNode = SCNNode()
     private var lipNodes: [SCNNode] = []
+    private var cheekNodes: [SCNNode] = []
     private var lipstickSettings = LipstickSettings.default
+    private var blushSettings = BlushSettings.default
     private var currentHairStyle: DemoHairStyle = .none
     private var hairHueValue: CGFloat = 0.24
     private var hairStrengthValue: CGFloat = 0.84
@@ -78,6 +82,7 @@ final class DemoHeadRenderer {
     private let hairMaterialNamePrefix = "DemoHairMaterial."
     private var isHeadHidden = false
     private var isHairHidden = false
+    private var isMakeupEnabled = true
     private let frontFacingYaw: Float = 0
     private let demoRotationLimit: Float = 135 * .pi / 180
     // The separated hair OBJ is in the same Blender space as the head, but the
@@ -85,6 +90,8 @@ final class DemoHeadRenderer {
     // a single local tweak so it is easy to tune after the next device pass.
     private var hairPlacementOffset = SCNVector3(0, 0.40, 0.07)
     private var hairPlacementScale: Float = 1.0
+    private var cheekPlacementOffsetY: Float = 0
+    private var cheekPlacementScale: Float = 1.0
     private let fallbackLipVerticalRatio: Float = 0.235
     private let fallbackLipWidthRatio: Float = 0.155
 
@@ -95,11 +102,18 @@ final class DemoHeadRenderer {
         configureScene()
         loadHeadModel()
         applyLipstickMaterial(settings: lipstickSettings)
+        applyBlushMaterial(settings: blushSettings)
     }
 
     func updateLipstickSettings(_ settings: LipstickSettings) {
         lipstickSettings = settings
         applyLipstickMaterial(settings: settings)
+    }
+
+    func updateBlushSettings(_ settings: BlushSettings) {
+        blushSettings = settings
+        updateCheekPlacement(settings: settings)
+        applyBlushMaterial(settings: settings)
     }
 
     func updateHairColor(hue: CGFloat, strength: CGFloat) {
@@ -122,6 +136,11 @@ final class DemoHeadRenderer {
 
     func setHairHidden(_ hidden: Bool) {
         isHairHidden = hidden
+        applyHeadAndHairVisibility()
+    }
+
+    func setMakeupEnabled(_ enabled: Bool) {
+        isMakeupEnabled = enabled
         applyHeadAndHairVisibility()
     }
 
@@ -192,17 +211,37 @@ final class DemoHeadRenderer {
     }
 
     func applyLipstickMaterial(settings: LipstickSettings) {
-        let material = MakeupMaterialFactory.makeLipstickMaterial(settings: settings)
-
         for node in lipNodes {
             node.renderingOrder = 40
+            applyLipstick(settings: settings, to: node)
+        }
+    }
+
+    func applyBlushMaterial(settings: BlushSettings) {
+        let material = MakeupMaterialFactory.makeBlushMaterial(settings: settings)
+        updateCheekPlacement(settings: settings)
+
+        for node in cheekNodes {
+            node.renderingOrder = 35
             apply(material: material, to: node)
         }
+    }
+
+    private func updateCheekPlacement(settings: BlushSettings) {
+        // Demo cheek meshes are exported in the same Blender coordinate space
+        // as the head. Keep placement conservative here: the real adjustable
+        // blush area is the AR vertex mask, while demo mode is mainly an asset
+        // debug view.
+        cheekPlacementScale = 1.0
+        cheekPlacementOffsetY = 0
+        cheekRootNode.position = SCNVector3(0, cheekPlacementOffsetY, 0)
+        cheekRootNode.scale = SCNVector3(cheekPlacementScale, cheekPlacementScale, cheekPlacementScale)
     }
 
     private func configureScene() {
         scene.background.contents = UIColor.black
         scene.rootNode.addChildNode(modelContainerNode)
+        modelContainerNode.addChildNode(cheekRootNode)
         modelContainerNode.addChildNode(eyeRootNode)
         hairRootNode.position = hairPlacementOffset
         hairRootNode.scale = SCNVector3(hairPlacementScale, hairPlacementScale, hairPlacementScale)
@@ -346,6 +385,7 @@ final class DemoHeadRenderer {
     private func installModel(from loadedScene: SCNScene) {
         modelContainerNode.childNodes.forEach { $0.removeFromParentNode() }
         modelContainerNode.addChildNode(fallbackLipRootNode)
+        modelContainerNode.addChildNode(cheekRootNode)
         modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
@@ -354,6 +394,7 @@ final class DemoHeadRenderer {
         }
 
         installCompanionLipAssets()
+        installCheekAssets()
         // eyes.obj is exported in the same coordinate space as the head. Its
         // material file does not need texture references because the demo
         // renderer applies the bundled eye textures explicitly below.
@@ -420,8 +461,42 @@ final class DemoHeadRenderer {
         }
     }
 
+    private func installCheekAssets() {
+        cheekRootNode.childNodes.forEach { $0.removeFromParentNode() }
+        cheekNodes.removeAll()
+
+        for filename in cheekAssetFilenames {
+            guard let cheekScene = loadBundledScene(filename: filename) else { continue }
+
+            let assetRoot = SCNNode()
+            assetRoot.name = splitFilename(filename).name
+
+            for child in cheekScene.rootNode.childNodes {
+                let clone = child.clone()
+                if clone.name == nil {
+                    clone.name = splitFilename(filename).name
+                }
+                assetRoot.addChildNode(clone)
+            }
+
+            let geometryNodes = assetRoot.childNodesRecursive.filter { $0.geometry != nil }
+            guard !geometryNodes.isEmpty else { continue }
+
+            cheekRootNode.addChildNode(assetRoot)
+            cheekNodes.append(contentsOf: geometryNodes)
+            print("Loaded cheek asset: \(filename)")
+        }
+
+        if cheekNodes.isEmpty {
+            print("No cheek asset loaded. Expected \(cheekAssetFilenames.joined(separator: ", ")) in the app bundle.")
+        }
+
+        applyBlushMaterial(settings: blushSettings)
+    }
+
     private func installFallbackPrimitiveHead() {
         modelContainerNode.childNodes.forEach { $0.removeFromParentNode() }
+        modelContainerNode.addChildNode(cheekRootNode)
         modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
@@ -524,7 +599,7 @@ final class DemoHeadRenderer {
 
     private func applySkinMaterialToModel() {
         let skinMaterial = MakeupMaterialFactory.makeSkinMaterial()
-        for node in modelContainerNode.childNodesRecursive where node.geometry != nil && !node.isDescendant(of: hairRootNode) && !node.isDescendant(of: eyeRootNode) {
+        for node in modelContainerNode.childNodesRecursive where node.geometry != nil && !node.isDescendant(of: hairRootNode) && !node.isDescendant(of: eyeRootNode) && !node.isDescendant(of: cheekRootNode) {
             guard let geometry = node.geometry else { continue }
 
             if geometry.materials.contains(where: materialNameMatchesHair) {
@@ -544,9 +619,15 @@ final class DemoHeadRenderer {
 
     private func applyHeadAndHairVisibility() {
         hairRootNode.isHidden = isHairHidden
+        cheekRootNode.isHidden = isHeadHidden || !isMakeupEnabled
+
+        for node in lipNodes {
+            node.isHidden = !isMakeupEnabled
+        }
 
         for node in modelContainerNode.childNodesRecursive where node.geometry != nil {
             guard !node.isDescendant(of: hairRootNode),
+                  !node.isDescendant(of: cheekRootNode),
                   !node.isDescendant(of: eyeRootNode),
                   !lipNodes.contains(where: { $0 === node }) else {
                 continue
@@ -1512,6 +1593,19 @@ final class DemoHeadRenderer {
             geometry.firstMaterial = material.copy() as? SCNMaterial
         } else {
             geometry.materials = geometry.materials.map { _ in material.copy() as? SCNMaterial ?? material }
+        }
+    }
+
+    private func applyLipstick(settings: LipstickSettings, to node: SCNNode) {
+        guard let geometry = node.geometry else { return }
+
+        if geometry.materials.isEmpty {
+            geometry.firstMaterial = MakeupMaterialFactory.makeLipstickMaterial(settings: settings)
+            return
+        }
+
+        for material in geometry.materials {
+            MakeupMaterialFactory.configureLipstickMaterial(material, settings: settings)
         }
     }
 

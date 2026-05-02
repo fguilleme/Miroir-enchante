@@ -9,6 +9,17 @@
 "control.intensity" = "Интенсивность";
 "control.hair_hue" = "Тон";
 "control.hair_strength" = "Сила";
+"control.size" = "Размер";
+"control.position" = "Позиция";
+"control.finish" = "Финиш";
+"blush.choose" = "Выбрать румяна";
+"blush.nude" = "Нюд";
+"blush.peach" = "Персик";
+"blush.soft_rose" = "Нежная роза";
+"blush.coral" = "Коралл";
+"blush.vintage_rose" = "Пыльная роза";
+"blush.raspberry" = "Малина";
+"blush.rosewood" = "Розовое дерево";
 "control.hide_head" = "Скрыть голову";
 "control.hide_hair" = "Скрыть волосы";
 "preset.nude" = "Нюд";
