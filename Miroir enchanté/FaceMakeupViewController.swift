@@ -37,6 +37,25 @@ final class FaceMakeupViewController: UIViewController {
         case glossy = 2
     }
 
+    private enum SettingsKey {
+        static let prefix = "FaceMakeupViewController."
+        static let arAutoFramingEnabled = prefix + "arAutoFramingEnabled"
+        static let selectedLipstickPresetIndex = prefix + "selectedLipstickPresetIndex"
+        static let lipstickIntensity = prefix + "lipstickIntensity"
+        static let lipstickFinish = prefix + "lipstickFinish"
+        static let selectedBlushPresetIndex = prefix + "selectedBlushPresetIndex"
+        static let blushIntensity = prefix + "blushIntensity"
+        static let blushSize = prefix + "blushSize"
+        static let blushPosition = prefix + "blushPosition"
+        static let hairHue = prefix + "hairHue"
+        static let hairStrength = prefix + "hairStrength"
+        static let hairOffsetY = prefix + "hairOffsetY"
+        static let hairOffsetZ = prefix + "hairOffsetZ"
+        static let hairScale = prefix + "hairScale"
+        static let hideHead = prefix + "hideHead"
+        static let hideHair = prefix + "hideHair"
+    }
+
     private let sceneView = ARSCNView(frame: .zero)
     private let demoSceneView = SCNView(frame: .zero)
     private let faceRenderer = FaceRenderer()
@@ -88,6 +107,7 @@ final class FaceMakeupViewController: UIViewController {
     private var lipstickSettings = LipstickSettings.default
     private var lipstickFinish: LipstickFinish = .satin
     private var selectedLipstickPresetIndex = 3
+    private var lipstickIntensityValue: CGFloat = 0.9
     private var didCenterInitialLipstickPreset = false
     private var blushSettings = BlushSettings.default
     private var selectedBlushPresetIndex = 2
@@ -100,13 +120,14 @@ final class FaceMakeupViewController: UIViewController {
     private var visibleControlTabs: [ControlTab] = [.lipstick, .blush, .hair, .debug]
     private var smoothedInspectionTilt: CGFloat = 0
     private var isBeforePreviewActive = false
-    private var isARAutoFramingEnabled = true
+    private var isARAutoFramingEnabled = false
     private var arFaceFramingScale: CGFloat = 1
     private var arFaceFramingTranslation: CGPoint = .zero
 
     override func viewDidLoad() {
         super.viewDidLoad()
 
+        loadPersistedSettings()
         configureSceneView()
         configureModeButton()
         configureExperienceModeButton()
@@ -144,6 +165,69 @@ final class FaceMakeupViewController: UIViewController {
         didCenterInitialLipstickPreset = true
         centerSelectedLipstickPreset(animated: false)
         updateVisibleLipstickCells(animated: false)
+    }
+
+    private func loadPersistedSettings() {
+        let defaults = UserDefaults.standard
+        defaults.register(defaults: [
+            SettingsKey.arAutoFramingEnabled: false,
+            SettingsKey.selectedLipstickPresetIndex: selectedLipstickPresetIndex,
+            SettingsKey.lipstickIntensity: Double(lipstickIntensityValue),
+            SettingsKey.lipstickFinish: lipstickFinish.rawValue,
+            SettingsKey.selectedBlushPresetIndex: selectedBlushPresetIndex,
+            SettingsKey.blushIntensity: Double(blushSettings.intensity),
+            SettingsKey.blushSize: Double(blushSettings.size),
+            SettingsKey.blushPosition: Double(blushSettings.position),
+            SettingsKey.hairHue: Double(hairHueValue),
+            SettingsKey.hairStrength: Double(hairStrengthValue),
+            SettingsKey.hairOffsetY: Double(hairOffsetYValue),
+            SettingsKey.hairOffsetZ: Double(hairOffsetZValue),
+            SettingsKey.hairScale: Double(hairScaleValue),
+            SettingsKey.hideHead: false,
+            SettingsKey.hideHair: false
+        ])
+
+        isARAutoFramingEnabled = defaults.bool(forKey: SettingsKey.arAutoFramingEnabled)
+        selectedLipstickPresetIndex = defaults.integer(forKey: SettingsKey.selectedLipstickPresetIndex)
+        if !LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) {
+            selectedLipstickPresetIndex = 3
+        }
+
+        lipstickIntensityValue = CGFloat(defaults.double(forKey: SettingsKey.lipstickIntensity)).clamped(to: 0.4...1.0)
+        lipstickFinish = LipstickFinish(rawValue: defaults.integer(forKey: SettingsKey.lipstickFinish)) ?? .satin
+
+        selectedBlushPresetIndex = defaults.integer(forKey: SettingsKey.selectedBlushPresetIndex)
+        if !BlushSettings.presets.indices.contains(selectedBlushPresetIndex) {
+            selectedBlushPresetIndex = 2
+        }
+
+        blushSettings.intensity = CGFloat(defaults.double(forKey: SettingsKey.blushIntensity)).clamped(to: 0...1)
+        blushSettings.size = CGFloat(defaults.double(forKey: SettingsKey.blushSize)).clamped(to: 0.65...1.45)
+        blushSettings.position = CGFloat(defaults.double(forKey: SettingsKey.blushPosition)).clamped(to: 0...1)
+        hairHueValue = CGFloat(defaults.double(forKey: SettingsKey.hairHue)).clamped(to: 0...1)
+        hairStrengthValue = CGFloat(defaults.double(forKey: SettingsKey.hairStrength)).clamped(to: 0...1)
+        hairOffsetYValue = Float(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetY)).clamped(to: -3...1))
+        hairOffsetZValue = Float(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetZ)).clamped(to: -1...5))
+        hairScaleValue = Float(CGFloat(defaults.double(forKey: SettingsKey.hairScale)).clamped(to: 0.15...2.0))
+    }
+
+    private func persistSettings() {
+        let defaults = UserDefaults.standard
+        defaults.set(isARAutoFramingEnabled, forKey: SettingsKey.arAutoFramingEnabled)
+        defaults.set(selectedLipstickPresetIndex, forKey: SettingsKey.selectedLipstickPresetIndex)
+        defaults.set(Double(lipstickIntensityValue), forKey: SettingsKey.lipstickIntensity)
+        defaults.set(lipstickFinish.rawValue, forKey: SettingsKey.lipstickFinish)
+        defaults.set(selectedBlushPresetIndex, forKey: SettingsKey.selectedBlushPresetIndex)
+        defaults.set(Double(blushSettings.intensity), forKey: SettingsKey.blushIntensity)
+        defaults.set(Double(blushSettings.size), forKey: SettingsKey.blushSize)
+        defaults.set(Double(blushSettings.position), forKey: SettingsKey.blushPosition)
+        defaults.set(Double(hairHueValue), forKey: SettingsKey.hairHue)
+        defaults.set(Double(hairStrengthValue), forKey: SettingsKey.hairStrength)
+        defaults.set(Double(hairOffsetYValue), forKey: SettingsKey.hairOffsetY)
+        defaults.set(Double(hairOffsetZValue), forKey: SettingsKey.hairOffsetZ)
+        defaults.set(Double(hairScaleValue), forKey: SettingsKey.hairScale)
+        defaults.set(hideHeadSwitch.isOn, forKey: SettingsKey.hideHead)
+        defaults.set(hideHairSwitch.isOn, forKey: SettingsKey.hideHair)
     }
 
     private func configureSceneView() {
@@ -292,7 +376,7 @@ final class FaceMakeupViewController: UIViewController {
     private func configureMakeupControls() {
         lipstickIntensitySlider.minimumValue = 0.4
         lipstickIntensitySlider.maximumValue = 1.0
-        lipstickIntensitySlider.value = 0.9
+        lipstickIntensitySlider.value = Float(lipstickIntensityValue.clamped(to: 0.4...1.0))
         lipstickIntensitySlider.isContinuous = true
         lipstickIntensitySlider.addTarget(self, action: #selector(lipstickIntensityChanged), for: .valueChanged)
 
@@ -340,6 +424,8 @@ final class FaceMakeupViewController: UIViewController {
 
         hideHeadSwitch.addTarget(self, action: #selector(hideHeadSwitchChanged), for: .valueChanged)
         hideHairSwitch.addTarget(self, action: #selector(hideHairSwitchChanged), for: .valueChanged)
+        hideHeadSwitch.isOn = UserDefaults.standard.bool(forKey: SettingsKey.hideHead)
+        hideHairSwitch.isOn = UserDefaults.standard.bool(forKey: SettingsKey.hideHair)
 
         [
             lipstickIntensitySlider,
@@ -635,6 +721,7 @@ final class FaceMakeupViewController: UIViewController {
     @objc private func toggleARAutoFraming() {
         isARAutoFramingEnabled.toggle()
         updateARAutoFramingButton()
+        persistSettings()
 
         if !isARAutoFramingEnabled {
             resetARFaceFraming(animated: true)
@@ -703,12 +790,14 @@ final class FaceMakeupViewController: UIViewController {
         blushSettings.size = CGFloat(blushSizeSlider.value)
         blushSettings.position = CGFloat(blushPositionSlider.value)
         applyBlushSettings()
+        persistSettings()
     }
 
     @objc private func hairSliderChanged() {
         hairHueValue = CGFloat(hairHueSlider.value)
         hairStrengthValue = CGFloat(hairStrengthSlider.value)
         demoHeadRenderer.updateHairColor(hue: hairHueValue, strength: hairStrengthValue)
+        persistSettings()
     }
 
     @objc private func hairOffsetSliderChanged() {
@@ -717,6 +806,7 @@ final class FaceMakeupViewController: UIViewController {
         hairScaleValue = hairScaleSlider.value
         updateHairOffsetValueLabels()
         demoHeadRenderer.updateHairPlacement(y: hairOffsetYValue, z: hairOffsetZValue, scale: hairScaleValue)
+        persistSettings()
     }
 
     private func updateHairOffsetValueLabels() {
@@ -775,10 +865,12 @@ final class FaceMakeupViewController: UIViewController {
 
     @objc private func hideHeadSwitchChanged() {
         demoHeadRenderer.setHeadHidden(hideHeadSwitch.isOn)
+        persistSettings()
     }
 
     @objc private func hideHairSwitchChanged() {
         demoHeadRenderer.setHairHidden(hideHairSwitch.isOn)
+        persistSettings()
     }
 
     private func selectLipstickPreset(at index: Int, animated: Bool) {
@@ -798,6 +890,7 @@ final class FaceMakeupViewController: UIViewController {
 
         let preset = LipstickSettings.presets[selectedLipstickPresetIndex]
         let intensity = CGFloat(lipstickIntensitySlider.value).clamped(to: 0.2...1.0)
+        lipstickIntensityValue = intensity
 
         lipstickSettings.color = preset.baseColor
         lipstickSettings.opacity = CGFloat(preset.opacity) * intensity
@@ -806,6 +899,7 @@ final class FaceMakeupViewController: UIViewController {
         lipstickSettings.colorIntensity = 1.0
 
         applyLipstickSettings()
+        persistSettings()
 
         if updatesSelector {
             updateVisibleLipstickCells(animated: animated)
@@ -847,6 +941,7 @@ final class FaceMakeupViewController: UIViewController {
 
         applyBlushSettings()
         updateBlushPresetSelection(animated: animated)
+        persistSettings()
     }
 
     private func updateBlushPresetSelection(animated: Bool) {
@@ -979,6 +1074,7 @@ final class FaceMakeupViewController: UIViewController {
         hairStyleButton.isHidden = true
         updateControlTabAvailability()
         updateControlTabVisibility()
+        demoHeadRenderer.updateHairColor(hue: hairHueValue, strength: hairStrengthValue)
         demoHeadRenderer.updateHairPlacement(y: hairOffsetYValue, z: hairOffsetZValue, scale: hairScaleValue)
         demoHeadRenderer.setHeadHidden(hideHeadSwitch.isOn)
         demoHeadRenderer.setHairHidden(hideHairSwitch.isOn)
