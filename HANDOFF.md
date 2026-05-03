@@ -7,7 +7,7 @@
   - AR: `ARSCNView`, `ARFaceTrackingConfiguration`, rendu via `FaceRenderer`.
   - Demo: `SCNView`, tete/cheveux/yeux/levres depuis assets locaux, rendu via `DemoHeadRenderer`.
 - Etat courant: refactor UI/state/rendering en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne.
-- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`.
+- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`; presets/modeles sortis de `MakeupMaterialFactory`.
 
 ## Fichiers importants
 
@@ -20,6 +20,10 @@
   - Contient `MakeupLipstickSnapFlowLayout`, `MakeupLipstickPresetCell`, `MakeupLipstickIconView`.
 - `Miroir enchanté/MakeupSettingsState.swift`
   - Nouveau state central: load/persist `UserDefaults`, indices presets, lipstick finish, blush, hair placement/color, switches head/hair, AR auto framing.
+- `Miroir enchanté/MakeupSettings.swift`
+  - Modeles `LipstickSettings` et `BlushSettings` + valeurs par defaut.
+- `Miroir enchanté/MakeupPresets.swift`
+  - Presets lipstick/blush et compat `LipstickSettings.presets` / `BlushSettings.presets`.
 - `Miroir enchanté/CosmeticTheme.swift`
   - Nouveau theme couleur commun.
 - `Miroir enchanté/MakeupUIExtensions.swift`
@@ -35,7 +39,7 @@
 - `Miroir enchanté/DemoHeadRenderer.swift`
   - Rendu demo SceneKit, cheveux, yeux, tete, inclinaison, couleurs cheveux.
 - `Miroir enchanté/MakeupMaterialFactory.swift`
-  - Materiaux SceneKit communs maquillage.
+  - Materiaux SceneKit communs maquillage uniquement. Ne contient plus settings/presets.
 - `Miroir enchanté/ModelAssets/`
   - Assets bundle OBJ/MTL/textures utilises par app.
 - `Miroir enchanté/*.lproj/Localizable.strings`
@@ -45,27 +49,24 @@
 
 Derniers commits verifies:
 
+- `9e7dced Separate makeup rendering geometry`
+- `e743332 Refactor makeup controls`
 - `eaf223c Refactor demo asset loading`
 - `eff4132 Persist makeup settings`
 - `a3ad15e Add AR auto framing toggle and refine blush mask`
 - `0ecce34 Add blush controls and refine makeup UI`
 - `96f2a14 Add app icon assets`
 - `fc54e57 Add lipstick preset carousel`
-- `eeeb90a Stabilize demo hair rendering`
-- `e743332 Refactor makeup controls`
 
 Dirty tree actuel, non commit:
 
 - Modifies:
-  - `Miroir enchanté/DemoHeadRenderer.swift`
-  - `Miroir enchanté/FaceMakeupViewController.swift`
-  - `Miroir enchanté/FaceRenderer.swift`
+  - `Miroir enchanté/MakeupMaterialFactory.swift`
   - `Miroir enchanté/ModelAssets/Lower Lip.mtl`
   - `Miroir enchanté/ModelAssets/Lower Lip.obj`
 - Non suivis:
-  - `Miroir enchanté/ARCheekMeshGeometry.swift`
-  - `Miroir enchanté/ARLipMeshGeometry.swift`
-  - `Miroir enchanté/MakeupRendering.swift`
+  - `Miroir enchanté/MakeupPresets.swift`
+  - `Miroir enchanté/MakeupSettings.swift`
   - `assets/complet.blend`
   - `assets/complet.blend1`
 
@@ -86,6 +87,9 @@ Attention: `Lower Lip.*` et `assets/complet.blend*` existaient comme changements
   - Source de verite persistante.
   - `rebuildLipstickSettings()` applique preset + intensite + finish.
   - `rebuildBlushSettings()` applique preset + sliders blush.
+- `MakeupSettings` / `MakeupPresets`:
+  - Donnees pures separees du factory SceneKit.
+  - Les call sites existants continuent d'utiliser `LipstickSettings.presets` et `BlushSettings.presets`.
 - `MakeupRendering`:
   - `FaceRenderer` et `DemoHeadRenderer` conformes.
   - `FaceMakeupViewController` propage lipstick/blush/makeup-enabled via `makeupRenderers`.
