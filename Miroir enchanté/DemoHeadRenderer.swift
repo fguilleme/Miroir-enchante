@@ -434,41 +434,7 @@ final class DemoHeadRenderer: MakeupRendering {
         modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
-        let skinMaterial = MakeupMaterialFactory.makeSkinMaterial()
-
-        let head = SCNNode(geometry: SCNSphere(radius: 1.0))
-        head.name = "FallbackHead"
-        head.scale = SCNVector3(0.78, 1.08, 0.48)
-        head.geometry?.firstMaterial = skinMaterial
-        modelContainerNode.addChildNode(head)
-
-        let nose = SCNNode(geometry: SCNCone(topRadius: 0.03, bottomRadius: 0.13, height: 0.34))
-        nose.name = "FallbackNose"
-        nose.eulerAngles.x = .pi / 2
-        nose.position = SCNVector3(0, -0.08, 0.54)
-        nose.geometry?.firstMaterial = skinMaterial
-        head.addChildNode(nose)
-
-        let upperLip = makeFallbackLipNode(name: "UpperLip", width: 0.62, height: 0.10)
-        upperLip.position = SCNVector3(0, -0.38, 0.62)
-        head.addChildNode(upperLip)
-
-        let lowerLip = makeFallbackLipNode(name: "LowerLip", width: 0.58, height: 0.14)
-        lowerLip.position = SCNVector3(0, -0.50, 0.62)
-        head.addChildNode(lowerLip)
-    }
-
-    private func makeFallbackLipNode(name: String, width: CGFloat, height: CGFloat) -> SCNNode {
-        let path = UIBezierPath(
-            roundedRect: CGRect(x: -width / 2, y: -height / 2, width: width, height: height),
-            cornerRadius: height / 2
-        )
-        let geometry = SCNShape(path: path, extrusionDepth: 0.025)
-        geometry.chamferRadius = 0.01
-
-        let node = SCNNode(geometry: geometry)
-        node.name = name
-        return node
+        modelContainerNode.addChildNode(DemoFallbackFactory.makePrimitiveHead())
     }
 
     private func centerAndScaleModel() {
@@ -497,9 +463,8 @@ final class DemoHeadRenderer: MakeupRendering {
     }
 
     private func modelFramingBounds() -> (min: SCNVector3, max: SCNVector3) {
-        return modelContainerNode.hierarchyBoundingBox { [weak self] node in
-            guard let self else { return true }
-            return !self.isLikelyHairGeometry(node)
+        return modelContainerNode.hierarchyBoundingBox { node in
+            return !DemoGeometryClassifier.isLikelyHairGeometry(node)
         }
     }
 
@@ -536,10 +501,10 @@ final class DemoHeadRenderer: MakeupRendering {
         for node in modelContainerNode.childNodesRecursive where node.geometry != nil && !node.isDescendant(of: hairRootNode) && !node.isDescendant(of: eyeRootNode) && !node.isDescendant(of: cheekRootNode) {
             guard let geometry = node.geometry else { continue }
 
-            if geometry.materials.contains(where: materialNameMatchesHair) {
+            if geometry.materials.contains(where: DemoGeometryClassifier.materialMatchesHair) {
                 node.renderingOrder = 30
                 geometry.materials = geometry.materials.map { existingMaterial in
-                    if materialNameMatchesHair(existingMaterial) {
+                    if DemoGeometryClassifier.materialMatchesHair(existingMaterial) {
                         return preparedHairMaterial(from: existingMaterial)
                     }
 
@@ -576,9 +541,8 @@ final class DemoHeadRenderer: MakeupRendering {
             return nil
         }
 
-        let nodes = DemoModelAssetLoader.loadOBJNodes(filename: filename) { [weak self] materialName in
-            guard let self else { return false }
-            return self.materialNameLooksLikeHair(materialName)
+        let nodes = DemoModelAssetLoader.loadOBJNodes(filename: filename) { materialName in
+            return DemoGeometryClassifier.materialNameLooksLikeHair(materialName)
         } materialProvider: { [weak self] materialName in
             guard let self else { return MakeupMaterialFactory.makeHairMaterial() }
             let sourceMaterial = MakeupMaterialFactory.makeHairMaterial()
@@ -616,9 +580,8 @@ final class DemoHeadRenderer: MakeupRendering {
             return nil
         }
 
-        let nodes = DemoModelAssetLoader.loadOBJNodes(filename: filename) { [weak self] materialName in
-            guard let self else { return false }
-            return self.materialNameLooksLikeTexturedEye(materialName)
+        let nodes = DemoModelAssetLoader.loadOBJNodes(filename: filename) { materialName in
+            return DemoGeometryClassifier.materialNameLooksLikeTexturedEye(materialName)
         } materialProvider: { [weak self] materialName in
             self?.makeTexturedEyeMaterial(named: materialName) ?? SCNMaterial()
         }
@@ -657,8 +620,8 @@ final class DemoHeadRenderer: MakeupRendering {
 
         guard let geometry = node.geometry else { return }
         node.renderingOrder = 30
-        let nodeLooksLikeHair = nodeNameLooksLikeHair(node)
-        let hasExplicitHairMaterial = geometry.materials.contains(where: materialNameMatchesHair)
+        let nodeLooksLikeHair = DemoGeometryClassifier.nodeLooksLikeHair(node)
+        let hasExplicitHairMaterial = geometry.materials.contains(where: DemoGeometryClassifier.materialMatchesHair)
 
         if geometry.materials.isEmpty {
             let material = preparedHairMaterial(from: fallbackHairMaterial)
@@ -668,7 +631,7 @@ final class DemoHeadRenderer: MakeupRendering {
         }
 
         geometry.materials = geometry.materials.map { existingMaterial in
-            guard materialNameMatchesHair(existingMaterial) || (!hasExplicitHairMaterial && nodeLooksLikeHair) else {
+            guard DemoGeometryClassifier.materialMatchesHair(existingMaterial) || (!hasExplicitHairMaterial && nodeLooksLikeHair) else {
                 return makeHiddenGeometryMaterial()
             }
 
@@ -963,31 +926,14 @@ final class DemoHeadRenderer: MakeupRendering {
     }
 
     private func pruneNonEyeGeometry(in rootNode: SCNNode) {
-        for node in rootNode.childNodesRecursive where node.geometry != nil && !isLikelyEyeGeometry(node) {
+        for node in rootNode.childNodesRecursive where node.geometry != nil && !DemoGeometryClassifier.isLikelyEyeGeometry(node) {
             node.removeFromParentNode()
-        }
-    }
-
-    private func isLikelyEyeGeometry(_ node: SCNNode) -> Bool {
-        let nodeName = normalizeNodeName(node.name ?? "")
-        if nodeName.contains("head") || nodeName.contains("face") || nodeName.contains("defaultmat") {
-            return false
-        }
-
-        if nodeName.contains("eye") {
-            return true
-        }
-
-        guard let geometry = node.geometry else { return false }
-        return geometry.materials.contains { material in
-            let materialName = normalizeNodeName(material.name ?? "")
-            return materialName.contains("eye") || materialName.contains("aistandard3")
         }
     }
 
     private func pruneNonHairGeometry(in rootNode: SCNNode) {
         let geometryNodes = rootNode.childNodesRecursive.filter { $0.geometry != nil }
-        let hairNodes = geometryNodes.filter { isLikelyHairGeometry($0) }
+        let hairNodes = geometryNodes.filter { DemoGeometryClassifier.isLikelyHairGeometry($0) }
 
         guard !hairNodes.isEmpty else {
             for node in geometryNodes {
@@ -999,85 +945,6 @@ final class DemoHeadRenderer: MakeupRendering {
         for node in geometryNodes where !hairNodes.contains(where: { $0 === node }) {
             node.removeFromParentNode()
         }
-    }
-
-    private func isLikelyHairGeometry(_ node: SCNNode) -> Bool {
-        guard let geometry = node.geometry else {
-            return false
-        }
-
-        if nodeNameLooksLikeEye(node) {
-            return false
-        }
-
-        // The separated hair OBJ can still contain eyes and head geometry.
-        // Keep any geometry that has a hair material, then hide the non-hair
-        // material slots in prepareHairMaterial(on:) instead of discarding the
-        // whole node.
-        if geometry.materials.contains(where: materialNameMatchesHair) {
-            return true
-        }
-
-        if geometry.materials.contains(where: materialNameMatchesEye) {
-            return false
-        }
-
-        let nodeName = normalizeNodeName(node.name ?? "")
-        let rigTerms = ["armature", "skeleton", "joint", "bone", "rootjoint", "controller", "control", "ik", "fk"]
-        if rigTerms.contains(where: { nodeName.contains($0) }) {
-            return false
-        }
-
-        if nodeName.contains("head") || nodeName.contains("face") {
-            return false
-        }
-
-        // Do not inspect parent names here: the combined demo OBJ is named
-        // "Female head with hair", and using lineage names would classify the
-        // whole head as hair. Only the renderable object/material should decide.
-        return nodeNameLooksLikeHair(node)
-    }
-
-    private func nodeNameLooksLikeHair(_ node: SCNNode) -> Bool {
-        let nodeName = normalizeNodeName(node.name ?? "")
-        return nodeName.contains("hair") || nodeName.contains("bang") || nodeName.contains("xpsnewmeshhair")
-    }
-
-    private func nodeNameLooksLikeEye(_ node: SCNNode) -> Bool {
-        let nodeName = normalizeNodeName(node.name ?? "")
-        return nodeName.contains("eye") || nodeName.contains("iris") || nodeName.contains("cornea")
-    }
-
-    private func materialNameMatchesHair(_ material: SCNMaterial) -> Bool {
-        if let materialName = material.name {
-            if materialNameLooksLikeHair(materialName) {
-                return true
-            }
-        }
-
-        return false
-    }
-
-    private func materialNameLooksLikeHair(_ materialName: String) -> Bool {
-        let name = normalizeNodeName(materialName)
-        return name.contains("hair") || name.contains("bang")
-    }
-
-    private func materialNameLooksLikeTexturedEye(_ materialName: String) -> Bool {
-        let name = normalizeNodeName(materialName)
-        // Diagnostic confirmed the iris UVs live on Eyes / Eyes.001. The
-        // aiStandard3* meshes are the cornea sphere and would overlay a
-        // washed-out copy of the iris if they were textured too.
-        return name == "eyes" || name == "eyes001" || (name.contains("eye") && !name.contains("aistandard"))
-    }
-
-    private func materialNameMatchesEye(_ material: SCNMaterial) -> Bool {
-        guard let materialName = material.name else {
-            return false
-        }
-
-        let name = normalizeNodeName(materialName)
-        return name.contains("eye") || name.contains("iris") || name.contains("cornea") || name.contains("aistandard3")
     }
 
     private func fitHairNode(_ hairNode: SCNNode, style: DemoHairStyle) {
@@ -1115,149 +982,6 @@ final class DemoHeadRenderer: MakeupRendering {
         )
     }
 
-    private func makeProceduralHairNode(style: DemoHairStyle) -> SCNNode {
-        let headBounds = modelContainerNode.hierarchyBoundingBox(excluding: hairRootNode)
-        let headSize = size(of: headBounds)
-        let headCenter = center(of: headBounds)
-
-        let capNode = SCNNode()
-        capNode.name = "ProceduralHair"
-        capNode.geometry = makeHairCapGeometry(
-            center: SCNVector3(
-                headCenter.x,
-                headBounds.min.y + headSize.y * (style == .femaleHair ? 0.72 : 0.77),
-                headCenter.z - headSize.z * 0.02
-            ),
-            radius: SCNVector3(
-                headSize.x * (style == .femaleHair ? 0.53 : 0.50),
-                headSize.y * (style == .femaleHair ? 0.24 : 0.18),
-                headSize.z * (style == .femaleHair ? 0.51 : 0.47)
-            ),
-            lowerAngle: style == .femaleHair ? 1.08 : 0.88
-        )
-        capNode.geometry?.firstMaterial = MakeupMaterialFactory.makeHairMaterial()
-
-        if style == .femaleHair {
-            addProceduralBangs(to: capNode, headBounds: headBounds)
-        }
-
-        return capNode
-    }
-
-    private func makeHairCapGeometry(center: SCNVector3, radius: SCNVector3, lowerAngle: Float) -> SCNGeometry {
-        let latitudeSegments = 12
-        let longitudeSegments = 40
-        var vertices: [SCNVector3] = []
-        var indices: [Int32] = []
-
-        for latitude in 0...latitudeSegments {
-            let theta = lowerAngle * Float(latitude) / Float(latitudeSegments)
-            let sinTheta = sin(theta)
-            let cosTheta = cos(theta)
-
-            for longitude in 0...longitudeSegments {
-                let phi = 2 * Float.pi * Float(longitude) / Float(longitudeSegments)
-                vertices.append(SCNVector3(
-                    center.x + radius.x * sinTheta * cos(phi),
-                    center.y + radius.y * cosTheta,
-                    center.z + radius.z * sinTheta * sin(phi)
-                ))
-            }
-        }
-
-        for latitude in 0..<latitudeSegments {
-            for longitude in 0..<longitudeSegments {
-                let row = longitudeSegments + 1
-                let a = Int32(latitude * row + longitude)
-                let b = Int32((latitude + 1) * row + longitude)
-                let c = Int32(latitude * row + longitude + 1)
-                let d = Int32((latitude + 1) * row + longitude + 1)
-                indices.append(contentsOf: [a, b, c, c, b, d])
-            }
-        }
-
-        let source = SCNGeometrySource(vertices: vertices)
-        let element = SCNGeometryElement(indices: indices, primitiveType: .triangles)
-        return SCNGeometry(sources: [source], elements: [element])
-    }
-
-    private func addProceduralBangs(to capNode: SCNNode, headBounds: (min: SCNVector3, max: SCNVector3)) {
-        let headSize = size(of: headBounds)
-        let frontZ = headBounds.max.z + headSize.z * 0.012
-        let browY = headBounds.min.y + headSize.y * 0.72
-        let topY = headBounds.min.y + headSize.y * 0.78
-        let centerX = (headBounds.min.x + headBounds.max.x) * 0.5
-
-        for index in 0..<3 {
-            let xOffset = (Float(index) - 1.0) * headSize.x * 0.055
-            let width = CGFloat(headSize.x * 0.085)
-            let height = CGFloat(headSize.y * 0.04)
-            let path = UIBezierPath()
-            path.move(to: CGPoint(x: -width * 0.5, y: CGFloat(topY)))
-            path.addQuadCurve(
-                to: CGPoint(x: width * 0.5, y: CGFloat(topY)),
-                controlPoint: CGPoint(x: 0, y: CGFloat(browY) - height * 0.22)
-            )
-            path.close()
-
-            let geometry = SCNShape(path: path, extrusionDepth: CGFloat(headSize.z * 0.014))
-            geometry.firstMaterial = MakeupMaterialFactory.makeHairMaterial()
-            let bang = SCNNode(geometry: geometry)
-            bang.name = "ProceduralBang"
-            bang.position = SCNVector3(centerX + xOffset, 0, frontZ)
-            capNode.addChildNode(bang)
-        }
-    }
-
-    private func addProceduralSideSweptHair(to capNode: SCNNode, headBounds: (min: SCNVector3, max: SCNVector3)) {
-        let headSize = size(of: headBounds)
-        let frontZ = headBounds.max.z + headSize.z * 0.014
-        let material = MakeupMaterialFactory.makeHairMaterial()
-        let topY = headBounds.min.y + headSize.y * 0.79
-        let browY = headBounds.min.y + headSize.y * 0.67
-        let leftX = headBounds.min.x + headSize.x * 0.16
-        let rightX = headBounds.max.x - headSize.x * 0.17
-
-        let sweepPath = UIBezierPath()
-        sweepPath.move(to: CGPoint(x: CGFloat(leftX), y: CGFloat(topY)))
-        sweepPath.addCurve(
-            to: CGPoint(x: CGFloat(rightX), y: CGFloat(browY + headSize.y * 0.055)),
-            controlPoint1: CGPoint(x: CGFloat(leftX + headSize.x * 0.18), y: CGFloat(topY - headSize.y * 0.02)),
-            controlPoint2: CGPoint(x: CGFloat(rightX - headSize.x * 0.16), y: CGFloat(browY + headSize.y * 0.03))
-        )
-        sweepPath.addCurve(
-            to: CGPoint(x: CGFloat(leftX + headSize.x * 0.08), y: CGFloat(browY + headSize.y * 0.04)),
-            controlPoint1: CGPoint(x: CGFloat(rightX - headSize.x * 0.16), y: CGFloat(browY - headSize.y * 0.015)),
-            controlPoint2: CGPoint(x: CGFloat(leftX + headSize.x * 0.22), y: CGFloat(browY - headSize.y * 0.005))
-        )
-        sweepPath.close()
-
-        let sweepGeometry = SCNShape(path: sweepPath, extrusionDepth: CGFloat(headSize.z * 0.018))
-        sweepGeometry.firstMaterial = material.copy() as? SCNMaterial
-        let sweepNode = SCNNode(geometry: sweepGeometry)
-        sweepNode.name = "ProceduralSideSweep"
-        sweepNode.position = SCNVector3(0, 0, frontZ)
-        capNode.addChildNode(sweepNode)
-
-        let sideburnWidth = CGFloat(headSize.x * 0.10)
-        let sideburnHeight = CGFloat(headSize.y * 0.11)
-        for side: Float in [-1, 1] {
-            let sideX = side < 0 ? headBounds.min.x + headSize.x * 0.08 : headBounds.max.x - headSize.x * 0.08
-            let sideburnPath = UIBezierPath()
-            sideburnPath.move(to: CGPoint(x: CGFloat(sideX), y: CGFloat(browY + headSize.y * 0.12)))
-            sideburnPath.addLine(to: CGPoint(x: CGFloat(sideX + side * Float(sideburnWidth)), y: CGFloat(browY + headSize.y * 0.07)))
-            sideburnPath.addLine(to: CGPoint(x: CGFloat(sideX + side * Float(sideburnWidth) * 0.35), y: CGFloat(browY - Float(sideburnHeight))))
-            sideburnPath.close()
-
-            let geometry = SCNShape(path: sideburnPath, extrusionDepth: CGFloat(headSize.z * 0.012))
-            geometry.firstMaterial = material.copy() as? SCNMaterial
-            let node = SCNNode(geometry: geometry)
-            node.name = "ProceduralSideburn"
-            node.position = SCNVector3(0, 0, frontZ - headSize.z * 0.025)
-            capNode.addChildNode(node)
-        }
-    }
-
     private func center(of bounds: (min: SCNVector3, max: SCNVector3)) -> SCNVector3 {
         SCNVector3(
             (bounds.min.x + bounds.max.x) * 0.5,
@@ -1275,66 +999,14 @@ final class DemoHeadRenderer: MakeupRendering {
     }
 
     private func makeFallbackLipOverlayNodes() -> [SCNNode] {
-        let bounds = modelContainerNode.hierarchyBoundingBox
-        let size = SCNVector3(
-            bounds.max.x - bounds.min.x,
-            bounds.max.y - bounds.min.y,
-            bounds.max.z - bounds.min.z
+        let lipNodes = DemoFallbackFactory.makeLipOverlayNodes(
+            bounds: modelContainerNode.hierarchyBoundingBox,
+            verticalRatio: fallbackLipVerticalRatio,
+            widthRatio: fallbackLipWidthRatio,
+            lipstickSettings: lipstickSettings
         )
-
-        // This small procedural lip overlay gives us a controllable test target
-        // even when the exported OBJ is a single unnamed mesh. It assumes the
-        // model's neutral/front-facing orientation is the SceneKit default.
-        let frontZ = bounds.max.z + size.z * 0.004
-        let centerX = (bounds.min.x + bounds.max.x) * 0.5
-        let mouthY = bounds.min.y + size.y * fallbackLipVerticalRatio
-        let lipWidth = CGFloat(max(size.x * fallbackLipWidthRatio, 0.08))
-        let upperHeight = CGFloat(max(size.y * 0.014, 0.018))
-        let lowerHeight = CGFloat(max(size.y * 0.018, 0.024))
-
-        let upperLip = makeOverlayLipNode(name: "UpperLip", width: lipWidth, height: upperHeight, isUpperLip: true)
-        upperLip.position = SCNVector3(centerX, mouthY + Float(upperHeight * 0.35), frontZ)
-
-        let lowerLip = makeOverlayLipNode(name: "LowerLip", width: lipWidth * 0.92, height: lowerHeight, isUpperLip: false)
-        lowerLip.position = SCNVector3(centerX, mouthY - Float(lowerHeight * 0.35), frontZ)
-
-        fallbackLipRootNode.addChildNode(upperLip)
-        fallbackLipRootNode.addChildNode(lowerLip)
-        return [upperLip, lowerLip]
-    }
-
-    private func makeOverlayLipNode(name: String, width: CGFloat, height: CGFloat, isUpperLip: Bool) -> SCNNode {
-        let path = makeLipPath(width: width, height: height, isUpperLip: isUpperLip)
-        let geometry = SCNShape(path: path, extrusionDepth: 0.003)
-        geometry.chamferRadius = 0.0015
-        geometry.firstMaterial = MakeupMaterialFactory.makeLipstickMaterial(settings: lipstickSettings)
-
-        let node = SCNNode(geometry: geometry)
-        node.name = name
-        node.renderingOrder = 20
-        return node
-    }
-
-    private func makeLipPath(width: CGFloat, height: CGFloat, isUpperLip: Bool) -> UIBezierPath {
-        let halfWidth = width * 0.5
-        let path = UIBezierPath()
-
-        if isUpperLip {
-            path.move(to: CGPoint(x: -halfWidth, y: -height * 0.18))
-            path.addQuadCurve(to: CGPoint(x: 0, y: height * 0.18), controlPoint: CGPoint(x: -width * 0.22, y: height * 0.52))
-            path.addQuadCurve(to: CGPoint(x: halfWidth, y: -height * 0.18), controlPoint: CGPoint(x: width * 0.22, y: height * 0.52))
-            path.addQuadCurve(to: CGPoint(x: 0, y: -height * 0.34), controlPoint: CGPoint(x: width * 0.18, y: -height * 0.30))
-            path.addQuadCurve(to: CGPoint(x: -halfWidth, y: -height * 0.18), controlPoint: CGPoint(x: -width * 0.18, y: -height * 0.30))
-        } else {
-            path.move(to: CGPoint(x: -halfWidth, y: height * 0.08))
-            path.addQuadCurve(to: CGPoint(x: 0, y: -height * 0.45), controlPoint: CGPoint(x: -width * 0.26, y: -height * 0.50))
-            path.addQuadCurve(to: CGPoint(x: halfWidth, y: height * 0.08), controlPoint: CGPoint(x: width * 0.26, y: -height * 0.50))
-            path.addQuadCurve(to: CGPoint(x: 0, y: height * 0.26), controlPoint: CGPoint(x: width * 0.20, y: height * 0.22))
-            path.addQuadCurve(to: CGPoint(x: -halfWidth, y: height * 0.08), controlPoint: CGPoint(x: -width * 0.20, y: height * 0.22))
-        }
-
-        path.close()
-        return path
+        lipNodes.forEach { fallbackLipRootNode.addChildNode($0) }
+        return lipNodes
     }
 
     private func apply(material: SCNMaterial, to node: SCNNode) {
