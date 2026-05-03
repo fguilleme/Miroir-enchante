@@ -67,9 +67,9 @@ final class FaceMakeupViewController: UIViewController {
         configureModeButton()
         configureExperienceModeButton()
         configureHairStyleButton()
-        configureARAutoFramingButton()
         configureMakeupControls()
         configureBeforeAfterButton()
+        configureARAutoFramingButton()
         configureUnsupportedDeviceMessageIfNeeded()
         applyLipstickSettings()
         applyBlushSettings()
@@ -215,10 +215,10 @@ final class FaceMakeupViewController: UIViewController {
 
         view.addSubview(arAutoFramingButton)
         NSLayoutConstraint.activate([
-            arAutoFramingButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            arAutoFramingButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 68),
-            arAutoFramingButton.widthAnchor.constraint(equalToConstant: 44),
-            arAutoFramingButton.heightAnchor.constraint(equalToConstant: 44)
+            arAutoFramingButton.trailingAnchor.constraint(equalTo: beforeAfterButton.leadingAnchor, constant: -10),
+            arAutoFramingButton.centerYAnchor.constraint(equalTo: beforeAfterButton.centerYAnchor),
+            arAutoFramingButton.widthAnchor.constraint(equalToConstant: 42),
+            arAutoFramingButton.heightAnchor.constraint(equalToConstant: 42)
         ])
     }
 
