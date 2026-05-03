@@ -33,4 +33,9 @@
 "hair.none" = "髪なし";
 "hair.style_1" = "髪 1";
 "hair.style_2" = "髪 2";
+"eyeshadow.taupe" = "トープ";
+"eyeshadow.rose" = "ローズ";
+"eyeshadow.plum" = "プラム";
+"eyeshadow.copper" = "コッパー";
+"eyeshadow.smoke" = "スモーク";
 "error.truedepth_required" = "顔トラッキングにはTrueDepthカメラ搭載のiPhoneが必要です。";

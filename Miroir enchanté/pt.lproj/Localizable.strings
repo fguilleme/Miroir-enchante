@@ -33,4 +33,9 @@
 "hair.none" = "Sem cabelo";
 "hair.style_1" = "Cabelo 1";
 "hair.style_2" = "Cabelo 2";
+"eyeshadow.taupe" = "Taupe";
+"eyeshadow.rose" = "Rosa";
+"eyeshadow.plum" = "Ameixa";
+"eyeshadow.copper" = "Cobre";
+"eyeshadow.smoke" = "Esfumado";
 "error.truedepth_required" = "O rastreamento facial requer um iPhone com câmera TrueDepth.";

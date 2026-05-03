@@ -67,17 +67,33 @@ final class DemoHeadRenderer: MakeupRendering {
     let lipNodeNameHints = ["UpperLip", "LowerLip", "Upper Lip", "Lower Lip", "Upper_lip", "Lower_lip", "Lips", "Mouth"]
     let companionLipAssetFilenames = ["Upper Lip.obj", "Lower Lip.obj"]
     let cheekAssetFilenames = ["left cheek.obj", "right cheek.obj"]
+    let eyelidAssetFilenames = [
+        "Upper Left eyelid.obj",
+        "Upper Right eyelid.obj",
+        "Lower Left eyelid.obj",
+        "Lower Right eyelid.obj",
+        "Upper Left Eyelid.obj",
+        "Upper Right Eyelid.obj",
+        "Lower Left Eyelid.obj",
+        "Lower Right Eyelid.obj",
+        "Upper eyelids.obj",
+        "Lower eyelids.obj",
+        "Eyelids.obj"
+    ]
     let eyeAssetFilenames = ["left eyes.obj", "right eyes.obj"]
 
     let modelContainerNode = SCNNode()
     private let fallbackLipRootNode = SCNNode()
     private let cheekRootNode = SCNNode()
+    private let eyelidRootNode = SCNNode()
     private let eyeRootNode = SCNNode()
     let hairRootNode = SCNNode()
     private var lipNodes: [SCNNode] = []
     private var cheekNodes: [SCNNode] = []
+    private var eyelidNodes: [SCNNode] = []
     private var lipstickSettings = LipstickSettings.default
     private var blushSettings = BlushSettings.default
+    private var eyeshadowSettings = EyeshadowSettings.default
     var currentHairStyle: DemoHairStyle = .none
     var hairHueValue: CGFloat = 0.24
     var hairStrengthValue: CGFloat = 0.84
@@ -107,6 +123,7 @@ final class DemoHeadRenderer: MakeupRendering {
         loadHeadModel()
         applyLipstickMaterial(settings: lipstickSettings)
         applyBlushMaterial(settings: blushSettings)
+        applyEyeshadowMaterial(settings: eyeshadowSettings)
     }
 
     func updateLipstickSettings(_ settings: LipstickSettings) {
@@ -118,6 +135,11 @@ final class DemoHeadRenderer: MakeupRendering {
         blushSettings = settings
         updateCheekPlacement(settings: settings)
         applyBlushMaterial(settings: settings)
+    }
+
+    func updateEyeshadowSettings(_ settings: EyeshadowSettings) {
+        eyeshadowSettings = settings
+        applyEyeshadowMaterial(settings: settings)
     }
 
     func setHeadHidden(_ hidden: Bool) {
@@ -161,6 +183,13 @@ final class DemoHeadRenderer: MakeupRendering {
         }
     }
 
+    func applyEyeshadowMaterial(settings: EyeshadowSettings) {
+        for node in eyelidNodes {
+            node.renderingOrder = 42
+            applyEyeshadow(settings: settings, to: node)
+        }
+    }
+
     private func updateCheekPlacement(settings: BlushSettings) {
         // Demo cheek meshes are exported in the same Blender coordinate space
         // as the head. Keep placement conservative here: the real adjustable
@@ -176,6 +205,7 @@ final class DemoHeadRenderer: MakeupRendering {
         scene.background.contents = UIColor.black
         scene.rootNode.addChildNode(modelContainerNode)
         modelContainerNode.addChildNode(cheekRootNode)
+        modelContainerNode.addChildNode(eyelidRootNode)
         modelContainerNode.addChildNode(eyeRootNode)
         hairRootNode.position = hairPlacementOffset
         hairRootNode.scale = SCNVector3(hairPlacementScale, hairPlacementScale, hairPlacementScale)
@@ -234,6 +264,7 @@ final class DemoHeadRenderer: MakeupRendering {
         modelContainerNode.childNodes.forEach { $0.removeFromParentNode() }
         modelContainerNode.addChildNode(fallbackLipRootNode)
         modelContainerNode.addChildNode(cheekRootNode)
+        modelContainerNode.addChildNode(eyelidRootNode)
         modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
@@ -243,6 +274,7 @@ final class DemoHeadRenderer: MakeupRendering {
 
         installCompanionLipAssets()
         installCheekAssets()
+        installEyelidAssets()
         // eyes.obj is exported in the same coordinate space as the head. Its
         // material file does not need texture references because the demo
         // renderer applies the bundled eye textures explicitly below.
@@ -342,9 +374,43 @@ final class DemoHeadRenderer: MakeupRendering {
         applyBlushMaterial(settings: blushSettings)
     }
 
+    private func installEyelidAssets() {
+        eyelidRootNode.childNodes.forEach { $0.removeFromParentNode() }
+        eyelidNodes.removeAll()
+
+        for filename in eyelidAssetFilenames {
+            guard let eyelidScene = DemoModelAssetLoader.loadBundledScene(filename: filename, logsMissingAsset: false) else { continue }
+
+            let assetRoot = SCNNode()
+            assetRoot.name = DemoModelAssetLoader.splitFilename(filename).name
+
+            for child in eyelidScene.rootNode.childNodes {
+                let clone = child.clone()
+                if clone.name == nil {
+                    clone.name = DemoModelAssetLoader.splitFilename(filename).name
+                }
+                assetRoot.addChildNode(clone)
+            }
+
+            let geometryNodes = assetRoot.childNodesRecursive.filter { $0.geometry != nil }
+            guard !geometryNodes.isEmpty else { continue }
+
+            eyelidRootNode.addChildNode(assetRoot)
+            eyelidNodes.append(contentsOf: geometryNodes)
+            print("Loaded eyelid asset: \(filename)")
+        }
+
+        if eyelidNodes.isEmpty {
+            print("No eyelid asset loaded yet. Expected one or more of \(eyelidAssetFilenames.joined(separator: ", ")) in the bundle.")
+        }
+
+        applyEyeshadowMaterial(settings: eyeshadowSettings)
+    }
+
     private func installFallbackPrimitiveHead() {
         modelContainerNode.childNodes.forEach { $0.removeFromParentNode() }
         modelContainerNode.addChildNode(cheekRootNode)
+        modelContainerNode.addChildNode(eyelidRootNode)
         modelContainerNode.addChildNode(eyeRootNode)
         modelContainerNode.addChildNode(hairRootNode)
 
@@ -412,7 +478,7 @@ final class DemoHeadRenderer: MakeupRendering {
 
     private func applySkinMaterialToModel() {
         let skinMaterial = MakeupMaterialFactory.makeSkinMaterial()
-        for node in modelContainerNode.childNodesRecursive where node.geometry != nil && !node.isDescendant(of: hairRootNode) && !node.isDescendant(of: eyeRootNode) && !node.isDescendant(of: cheekRootNode) {
+        for node in modelContainerNode.childNodesRecursive where node.geometry != nil && !node.isDescendant(of: hairRootNode) && !node.isDescendant(of: eyeRootNode) && !node.isDescendant(of: cheekRootNode) && !node.isDescendant(of: eyelidRootNode) {
             guard let geometry = node.geometry else { continue }
 
             if geometry.materials.contains(where: DemoGeometryClassifier.materialMatchesHair) {
@@ -433,6 +499,7 @@ final class DemoHeadRenderer: MakeupRendering {
     func applyHeadAndHairVisibility() {
         hairRootNode.isHidden = isHairHidden
         cheekRootNode.isHidden = isHeadHidden || !isMakeupEnabled
+        eyelidRootNode.isHidden = isHeadHidden || !isMakeupEnabled
 
         for node in lipNodes {
             node.isHidden = !isMakeupEnabled
@@ -441,6 +508,7 @@ final class DemoHeadRenderer: MakeupRendering {
         for node in modelContainerNode.childNodesRecursive where node.geometry != nil {
             guard !node.isDescendant(of: hairRootNode),
                   !node.isDescendant(of: cheekRootNode),
+                  !node.isDescendant(of: eyelidRootNode),
                   !node.isDescendant(of: eyeRootNode),
                   !lipNodes.contains(where: { $0 === node }) else {
                 continue
@@ -614,6 +682,19 @@ final class DemoHeadRenderer: MakeupRendering {
 
         for material in geometry.materials {
             configureDemoLipstickMaterial(material, settings: settings)
+        }
+    }
+
+    private func applyEyeshadow(settings: EyeshadowSettings, to node: SCNNode) {
+        guard let geometry = node.geometry else { return }
+
+        if geometry.materials.isEmpty {
+            geometry.firstMaterial = MakeupMaterialFactory.makeEyeshadowMaterial(settings: settings)
+            return
+        }
+
+        for material in geometry.materials {
+            MakeupMaterialFactory.configureEyeshadowMaterial(material, settings: settings)
         }
     }
 

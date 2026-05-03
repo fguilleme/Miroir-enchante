@@ -29,14 +29,17 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
     private weak var sceneView: ARSCNView?
     private weak var lipsNode: SCNNode?
     private weak var cheeksNode: SCNNode?
+    private weak var eyeshadowNode: SCNNode?
     private weak var lipDebugNode: SCNNode?
 
     private var baseFaceGeometry: ARSCNFaceGeometry?
     private var lipMesh: LipMeshGeometry?
     private var cheekMesh: CheekMeshGeometry?
+    private var eyeshadowMesh: EyeshadowMeshGeometry?
     private var hasDetectedFace = false
     private var lipstickSettings = LipstickSettings.default
     private var blushSettings = BlushSettings.default
+    private var eyeshadowSettings = EyeshadowSettings.default
     private var isMakeupEnabled = true
     private let lipsOnlyMaterial = MakeupMaterialFactory.makeARLipstickMaterial()
     private let fullFaceMaterial = MakeupMaterialFactory.makeARLipstickMaterial()
@@ -66,6 +69,12 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
     func updateBlushSettings(_ settings: BlushSettings) {
         blushSettings = settings
         cheekMesh?.updateMask(settings: settings)
+        applyCurrentMode()
+    }
+
+    func updateEyeshadowSettings(_ settings: EyeshadowSettings) {
+        eyeshadowSettings = settings
+        eyeshadowMesh?.updateMask(settings: settings)
         applyCurrentMode()
     }
 
@@ -119,6 +128,16 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
                 self.cheeksNode = cheeksNode
             }
 
+            if let eyeshadowMesh = EyeshadowMeshGeometry(device: device, faceGeometry: faceAnchor.geometry) {
+                self.eyeshadowMesh = eyeshadowMesh
+                eyeshadowMesh.updateMask(settings: eyeshadowSettings)
+
+                let eyeshadowNode = SCNNode(geometry: eyeshadowMesh.geometry)
+                eyeshadowNode.renderingOrder = 38
+                faceNode.addChildNode(eyeshadowNode)
+                self.eyeshadowNode = eyeshadowNode
+            }
+
             let lipDebugNode = SCNNode(geometry: lipMesh.debugPointGeometry)
             lipDebugNode.renderingOrder = 41
             faceNode.addChildNode(lipDebugNode)
@@ -152,6 +171,7 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
         baseFaceGeometry.update(from: faceAnchor.geometry)
         lipMesh?.update(from: faceAnchor.geometry)
         cheekMesh?.update(from: faceAnchor.geometry)
+        eyeshadowMesh?.update(from: faceAnchor.geometry)
         publishProjectedFaceBounds(for: faceAnchor)
 
         // Lip masking currently comes from vertex-index filtering. Later this
@@ -226,12 +246,15 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
             setSingleMaterial(lipsOnlyMaterial, on: lipsNode?.geometry)
             cheeksNode?.isHidden = !isMakeupEnabled
             setSingleMaterial(MakeupMaterialFactory.makeARBlushMaterial(settings: blushSettings), on: cheeksNode?.geometry)
+            eyeshadowNode?.isHidden = !isMakeupEnabled
+            setSingleMaterial(MakeupMaterialFactory.makeAREyeshadowMaterial(settings: eyeshadowSettings), on: eyeshadowNode?.geometry)
             lipDebugNode?.isHidden = true
 
         case .fullFace:
             baseFaceGeometry?.firstMaterial = fullFaceMaterial
             lipsNode?.isHidden = true
             cheeksNode?.isHidden = true
+            eyeshadowNode?.isHidden = true
             lipDebugNode?.isHidden = true
 
         case .wireframe:
@@ -239,6 +262,7 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
             lipsNode?.isHidden = false
             lipsNode?.geometry?.firstMaterial = MakeupMaterialFactory.makeLipHighlightMaterial()
             cheeksNode?.isHidden = true
+            eyeshadowNode?.isHidden = true
             lipDebugNode?.isHidden = false
         }
 

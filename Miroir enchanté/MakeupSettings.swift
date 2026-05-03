@@ -38,3 +38,19 @@ struct BlushSettings {
         position: 0.5
     )
 }
+
+struct EyeshadowSettings {
+    var color: UIColor
+    var opacity: CGFloat
+    var roughness: CGFloat
+    var intensity: CGFloat
+    var shimmerIntensity: CGFloat
+
+    static let `default` = EyeshadowSettings(
+        color: UIColor(red: 0.58, green: 0.34, blue: 0.47, alpha: 1.0),
+        opacity: 0.38,
+        roughness: 0.58,
+        intensity: 0.72,
+        shimmerIntensity: 0.18
+    )
+}

@@ -33,4 +33,9 @@
 "hair.none" = "بدون مو";
 "hair.style_1" = "مو ۱";
 "hair.style_2" = "مو ۲";
+"eyeshadow.taupe" = "خاکستری قهوه‌ای";
+"eyeshadow.rose" = "رز";
+"eyeshadow.plum" = "آلویی";
+"eyeshadow.copper" = "مسی";
+"eyeshadow.smoke" = "دودی";
 "error.truedepth_required" = "ردیابی چهره به آیفون دارای دوربین TrueDepth نیاز دارد.";

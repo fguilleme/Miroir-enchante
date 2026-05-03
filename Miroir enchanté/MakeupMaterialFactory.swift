@@ -141,6 +141,53 @@ enum MakeupMaterialFactory {
         return material
     }
 
+    static func makeEyeshadowMaterial(settings: EyeshadowSettings = .default) -> SCNMaterial {
+        let material = SCNMaterial()
+        configureEyeshadowMaterial(material, settings: settings)
+        return material
+    }
+
+    static func configureEyeshadowMaterial(_ material: SCNMaterial, settings: EyeshadowSettings = .default) {
+        let intensity = settings.intensity.clamped(to: 0...1)
+        let opacity = (settings.opacity * intensity).clamped(to: 0...0.72)
+        let color = settings.color.withIntensity(0.72 + intensity * 0.42)
+
+        material.lightingModel = .constant
+        material.diffuse.contents = color
+        material.emission.contents = color.withAlphaComponent(0.16 * opacity)
+        material.transparent.contents = nil
+        material.transparency = opacity
+        material.transparencyMode = .aOne
+        material.roughness.contents = settings.roughness
+        material.metalness.contents = 0.0
+        material.specular.contents = UIColor.white.withAlphaComponent(settings.shimmerIntensity * opacity)
+        material.shininess = settings.shimmerIntensity
+        material.isDoubleSided = true
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
+        material.blendMode = .alpha
+        material.fillMode = .fill
+    }
+
+    static func makeAREyeshadowMaterial(settings: EyeshadowSettings = .default) -> SCNMaterial {
+        let material = SCNMaterial()
+        let opacity = (settings.opacity * settings.intensity).clamped(to: 0...0.56)
+        let color = settings.color.withIntensity(0.72 + settings.intensity * 0.32)
+
+        material.lightingModel = .constant
+        material.diffuse.contents = color
+        material.emission.contents = color.withAlphaComponent(0.10 * opacity)
+        material.transparency = opacity
+        material.transparencyMode = .aOne
+        material.isDoubleSided = true
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = false
+        material.blendMode = .alpha
+        material.fillMode = .fill
+
+        return material
+    }
+
     static func makeARLipstickMaterial(settings: LipstickSettings = .default) -> SCNMaterial {
         let material = SCNMaterial()
         configureARLipstickMaterial(material, settings: settings)

@@ -33,4 +33,9 @@
 "hair.none" = "بلا شعر";
 "hair.style_1" = "شعر ١";
 "hair.style_2" = "شعر ٢";
+"eyeshadow.taupe" = "رمادي بني";
+"eyeshadow.rose" = "وردي";
+"eyeshadow.plum" = "برقوقي";
+"eyeshadow.copper" = "نحاسي";
+"eyeshadow.smoke" = "دخاني";
 "error.truedepth_required" = "يتطلب تتبع الوجه جهاز iPhone مزودًا بكاميرا TrueDepth.";

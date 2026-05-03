@@ -33,4 +33,9 @@
 "hair.none" = "无头发";
 "hair.style_1" = "头发 1";
 "hair.style_2" = "头发 2";
+"eyeshadow.taupe" = "灰褐";
+"eyeshadow.rose" = "玫瑰";
+"eyeshadow.plum" = "梅子";
+"eyeshadow.copper" = "铜棕";
+"eyeshadow.smoke" = "烟熏";
 "error.truedepth_required" = "面部跟踪需要配备 TrueDepth 摄像头的 iPhone。";

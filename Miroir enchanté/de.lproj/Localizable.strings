@@ -33,4 +33,9 @@
 "hair.none" = "Ohne Haare";
 "hair.style_1" = "Haare 1";
 "hair.style_2" = "Haare 2";
+"eyeshadow.taupe" = "Taupe";
+"eyeshadow.rose" = "Rose";
+"eyeshadow.plum" = "Pflaume";
+"eyeshadow.copper" = "Kupfer";
+"eyeshadow.smoke" = "Smoky";
 "error.truedepth_required" = "Gesichtsverfolgung erfordert ein iPhone mit TrueDepth-Kamera.";

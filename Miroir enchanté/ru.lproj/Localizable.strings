@@ -33,4 +33,9 @@
 "hair.none" = "Без волос";
 "hair.style_1" = "Волосы 1";
 "hair.style_2" = "Волосы 2";
+"eyeshadow.taupe" = "Тауп";
+"eyeshadow.rose" = "Розовый";
+"eyeshadow.plum" = "Сливовый";
+"eyeshadow.copper" = "Медный";
+"eyeshadow.smoke" = "Дымчатый";
 "error.truedepth_required" = "Для отслеживания лица требуется iPhone с камерой TrueDepth.";

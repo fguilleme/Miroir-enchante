@@ -54,6 +54,7 @@ final class FaceMakeupViewController: UIViewController {
         configureUnsupportedDeviceMessageIfNeeded()
         applyLipstickSettings()
         applyBlushSettings()
+        applyEyeshadowSettings()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -242,6 +243,7 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.blushIntensitySlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
         controlPanel.blushSizeSlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
         controlPanel.blushPositionSlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
+        controlPanel.eyeshadowIntensitySlider.addTarget(self, action: #selector(eyeshadowSliderChanged), for: .valueChanged)
         controlPanel.hairHueSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
         controlPanel.hairStrengthSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
         controlPanel.hairOffsetYSlider.addTarget(self, action: #selector(hairOffsetSliderChanged), for: .valueChanged)
@@ -251,6 +253,9 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.hideHairSwitch.addTarget(self, action: #selector(hideHairSwitchChanged), for: .valueChanged)
         controlPanel.blushPresetButtons.forEach {
             $0.addTarget(self, action: #selector(blushPresetTapped(_:)), for: .touchUpInside)
+        }
+        controlPanel.eyeshadowPresetButtons.forEach {
+            $0.addTarget(self, action: #selector(eyeshadowPresetTapped(_:)), for: .touchUpInside)
         }
         selectedControlTab = controlPanel.configureTabs(isDemoMode: experienceMode == .demo, selectedTab: selectedControlTab)
 
@@ -263,6 +268,7 @@ final class FaceMakeupViewController: UIViewController {
 
         applySelectedLipstickPreset(animated: false)
         applySelectedBlushPreset(animated: false)
+        applySelectedEyeshadowPreset(animated: false)
     }
 
     @objc private func toggleRenderMode() {
@@ -344,6 +350,18 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
+    @objc private func eyeshadowPresetTapped(_ sender: UIButton) {
+        guard EyeshadowSettings.presets.indices.contains(sender.tag) else { return }
+        settingsState.selectedEyeshadowPresetIndex = sender.tag
+        applySelectedEyeshadowPreset(animated: true)
+    }
+
+    @objc private func eyeshadowSliderChanged() {
+        settingsState.eyeshadowSettings.intensity = CGFloat(controlPanel.eyeshadowIntensitySlider.value)
+        applyEyeshadowSettings()
+        persistSettings()
+    }
+
     @objc private func hairSliderChanged() {
         settingsState.hairHueValue = CGFloat(controlPanel.hairHueSlider.value)
         settingsState.hairStrengthValue = CGFloat(controlPanel.hairStrengthSlider.value)
@@ -417,8 +435,23 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
+    private func applySelectedEyeshadowPreset(animated: Bool) {
+        guard EyeshadowSettings.presets.indices.contains(settingsState.selectedEyeshadowPresetIndex) else { return }
+
+        settingsState.eyeshadowSettings.intensity = CGFloat(controlPanel.eyeshadowIntensitySlider.value)
+        settingsState.rebuildEyeshadowSettings()
+
+        applyEyeshadowSettings()
+        updateEyeshadowPresetSelection(animated: animated)
+        persistSettings()
+    }
+
     private func updateBlushPresetSelection(animated: Bool) {
         controlPanel.updateBlushPresetSelection(selectedIndex: settingsState.selectedBlushPresetIndex, animated: animated)
+    }
+
+    private func updateEyeshadowPresetSelection(animated: Bool) {
+        controlPanel.updateEyeshadowPresetSelection(selectedIndex: settingsState.selectedEyeshadowPresetIndex, animated: animated)
     }
 
     private func centerSelectedLipstickPreset(animated: Bool) {
@@ -539,6 +572,7 @@ final class FaceMakeupViewController: UIViewController {
         demoHeadRenderer.setHairHidden(controlPanel.hideHairSwitch.isOn)
         demoHeadRenderer.setMakeupEnabled(!isBeforePreviewActive)
         applyBlushSettings()
+        applyEyeshadowSettings()
         startDemoTiltControl()
     }
 
@@ -701,6 +735,10 @@ final class FaceMakeupViewController: UIViewController {
         makeupRenderers.forEach { $0.updateBlushSettings(settingsState.blushSettings) }
     }
 
+    private func applyEyeshadowSettings() {
+        makeupRenderers.forEach { $0.updateEyeshadowSettings(settingsState.eyeshadowSettings) }
+    }
+
     private func setMakeupEnabledForAllRenderers(_ enabled: Bool) {
         makeupRenderers.forEach { $0.setMakeupEnabled(enabled) }
     }
@@ -708,6 +746,7 @@ final class FaceMakeupViewController: UIViewController {
     private func applyCurrentMakeupSettings(to renderer: MakeupRendering) {
         renderer.updateLipstickSettings(settingsState.lipstickSettings)
         renderer.updateBlushSettings(settingsState.blushSettings)
+        renderer.updateEyeshadowSettings(settingsState.eyeshadowSettings)
     }
 
     private func configureUnsupportedDeviceMessageIfNeeded() {

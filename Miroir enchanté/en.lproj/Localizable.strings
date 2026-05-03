@@ -33,4 +33,9 @@
 "hair.none" = "No Hair";
 "hair.style_1" = "Hair 1";
 "hair.style_2" = "Hair 2";
+"eyeshadow.taupe" = "Taupe";
+"eyeshadow.rose" = "Rose";
+"eyeshadow.plum" = "Plum";
+"eyeshadow.copper" = "Copper";
+"eyeshadow.smoke" = "Smoke";
 "error.truedepth_required" = "Face tracking requires an iPhone with a TrueDepth camera.";

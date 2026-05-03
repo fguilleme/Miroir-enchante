@@ -19,6 +19,14 @@ struct BlushPreset {
     let opacity: Float
 }
 
+struct EyeshadowPreset {
+    let titleKey: String
+    let baseColor: UIColor
+    let roughness: Float
+    let opacity: Float
+    let shimmer: Float
+}
+
 enum MakeupPresets {
     static let lipstick: [LipstickPreset] = [
         LipstickPreset(titleKey: "preset.nude", baseColor: UIColor(red: 0.63, green: 0.36, blue: 0.29, alpha: 1.0), roughness: 0.38, opacity: 0.54),
@@ -40,6 +48,14 @@ enum MakeupPresets {
         BlushPreset(titleKey: "blush.raspberry", baseColor: UIColor(red: 0.74, green: 0.08, blue: 0.32, alpha: 1.0), roughness: 0.66, opacity: 0.30),
         BlushPreset(titleKey: "blush.rosewood", baseColor: UIColor(red: 0.62, green: 0.24, blue: 0.32, alpha: 1.0), roughness: 0.72, opacity: 0.28)
     ]
+
+    static let eyeshadow: [EyeshadowPreset] = [
+        EyeshadowPreset(titleKey: "eyeshadow.taupe", baseColor: UIColor(red: 0.50, green: 0.38, blue: 0.34, alpha: 1.0), roughness: 0.64, opacity: 0.34, shimmer: 0.08),
+        EyeshadowPreset(titleKey: "eyeshadow.rose", baseColor: UIColor(red: 0.74, green: 0.40, blue: 0.54, alpha: 1.0), roughness: 0.58, opacity: 0.38, shimmer: 0.16),
+        EyeshadowPreset(titleKey: "eyeshadow.plum", baseColor: UIColor(red: 0.34, green: 0.16, blue: 0.32, alpha: 1.0), roughness: 0.52, opacity: 0.44, shimmer: 0.22),
+        EyeshadowPreset(titleKey: "eyeshadow.copper", baseColor: UIColor(red: 0.78, green: 0.42, blue: 0.20, alpha: 1.0), roughness: 0.46, opacity: 0.42, shimmer: 0.34),
+        EyeshadowPreset(titleKey: "eyeshadow.smoke", baseColor: UIColor(red: 0.18, green: 0.17, blue: 0.20, alpha: 1.0), roughness: 0.50, opacity: 0.48, shimmer: 0.12)
+    ]
 }
 
 extension LipstickSettings {
@@ -48,4 +64,8 @@ extension LipstickSettings {
 
 extension BlushSettings {
     static var presets: [BlushPreset] { MakeupPresets.blush }
+}
+
+extension EyeshadowSettings {
+    static var presets: [EyeshadowPreset] { MakeupPresets.eyeshadow }
 }
