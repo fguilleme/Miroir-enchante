@@ -6,8 +6,8 @@
 - Deux modes:
   - AR: `ARSCNView`, `ARFaceTrackingConfiguration`, rendu via `FaceRenderer`.
   - Demo: `SCNView`, tete/cheveux/yeux/levres depuis assets locaux, rendu via `DemoHeadRenderer`.
-- Etat courant: refactor UI/state/rendering en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne.
-- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`; presets/modeles sortis de `MakeupMaterialFactory`.
+- Etat courant: refactor UI/state/rendering en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne et parle directement a `MakeupSettingsState`.
+- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`; presets/modeles sortis de `MakeupMaterialFactory`; bridge computed-properties du controleur supprime.
 
 ## Fichiers importants
 
@@ -49,24 +49,21 @@
 
 Derniers commits verifies:
 
+- `7921148 Separate makeup settings and presets`
 - `9e7dced Separate makeup rendering geometry`
 - `e743332 Refactor makeup controls`
 - `eaf223c Refactor demo asset loading`
 - `eff4132 Persist makeup settings`
 - `a3ad15e Add AR auto framing toggle and refine blush mask`
 - `0ecce34 Add blush controls and refine makeup UI`
-- `96f2a14 Add app icon assets`
-- `fc54e57 Add lipstick preset carousel`
 
 Dirty tree actuel, non commit:
 
 - Modifies:
-  - `Miroir enchanté/MakeupMaterialFactory.swift`
+  - `Miroir enchanté/FaceMakeupViewController.swift`
   - `Miroir enchanté/ModelAssets/Lower Lip.mtl`
   - `Miroir enchanté/ModelAssets/Lower Lip.obj`
 - Non suivis:
-  - `Miroir enchanté/MakeupPresets.swift`
-  - `Miroir enchanté/MakeupSettings.swift`
   - `assets/complet.blend`
   - `assets/complet.blend1`
 
@@ -77,7 +74,7 @@ Attention: `Lower Lip.*` et `assets/complet.blend*` existaient comme changements
 - `FaceMakeupViewController`:
   - Possede `sceneView`, `demoSceneView`, `faceRenderer`, `demoHeadRenderer`, boutons flottants et `controlPanel`.
   - Charge `settingsState = MakeupSettingsState.load()`.
-  - Expose computed properties vers `settingsState` pour limiter changement comportemental.
+  - Lit/mute `settingsState` directement dans les actions UI, puis propage aux renderers.
   - Configure `MakeupControlPanelView`, branche targets UIKit, reste `UICollectionViewDataSource/Delegate` pour lipstick presets.
 - `MakeupControlPanelView`:
   - Construit UI panneau et gere visibilite tabs selon mode demo/AR.
@@ -129,6 +126,5 @@ Commande avec `-destination 'generic/platform=iOS Simulator'` a rencontre proble
 
 1. Tester app visuellement sur simulateur/device: panneau, tabs, sliders, presets.
 2. Decouper `DemoHeadRenderer` par responsabilite (`Hair`, `Eyes`, `Lips`, `Blush`, `Fallback`) avec prudence: beaucoup de membres sont `private`.
-3. Si OK, considerer supprimer computed-property bridge dans `FaceMakeupViewController` et parler directement a `settingsState` plus explicitement.
-4. Ajouter petits tests purs pour `MakeupSettingsState` si target tests creee plus tard.
-5. Nettoyer/clarifier changements assets `Lower Lip.*` seulement apres confirmation utilisateur.
+3. Ajouter petits tests purs pour `MakeupSettingsState` si target tests creee plus tard.
+4. Nettoyer/clarifier changements assets `Lower Lip.*` seulement apres confirmation utilisateur.
