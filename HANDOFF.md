@@ -7,7 +7,7 @@
   - AR: `ARSCNView`, `ARFaceTrackingConfiguration`, rendu via `FaceRenderer`.
   - Demo: `SCNView`, tete/cheveux/yeux/levres depuis assets locaux, rendu via `DemoHeadRenderer`.
 - Etat courant: refactor UI/state/rendering en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne et parle directement a `MakeupSettingsState`.
-- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`; presets/modeles sortis de `MakeupMaterialFactory`; bridge computed-properties du controleur supprime; fallback demo et classification geometry extraits de `DemoHeadRenderer`.
+- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`; presets/modeles sortis de `MakeupMaterialFactory`; bridge computed-properties du controleur supprime; fallback, classification geometry et logique hair extraits de `DemoHeadRenderer`.
 
 ## Fichiers importants
 
@@ -37,7 +37,9 @@
 - `Miroir enchanté/ARCheekMeshGeometry.swift`
   - Geometrie AR joues + masque blush vertex colors.
 - `Miroir enchanté/DemoHeadRenderer.swift`
-  - Rendu demo SceneKit, cheveux, yeux, tete, inclinaison, couleurs cheveux.
+  - Rendu demo SceneKit principal: scene/camera, tete, yeux, levres, joues, inclinaison, orchestration.
+- `Miroir enchanté/DemoHeadRenderer+Hair.swift`
+  - Nouvelle extension: style cheveux, chargement OBJ/GLB/USDZ, materials, tint, placement, pruning hair.
 - `Miroir enchanté/DemoFallbackFactory.swift`
   - Nouveau factory pour tete primitive fallback et overlays proceduraux des levres.
 - `Miroir enchanté/DemoGeometryClassifier.swift`
@@ -53,6 +55,7 @@
 
 Derniers commits verifies:
 
+- `c018407 Extract demo fallback helpers`
 - `e58378e Use settings state directly in makeup controller`
 - `7921148 Separate makeup settings and presets`
 - `9e7dced Separate makeup rendering geometry`
@@ -70,8 +73,7 @@ Dirty tree actuel, non commit:
   - `Miroir enchanté/ModelAssets/Lower Lip.mtl`
   - `Miroir enchanté/ModelAssets/Lower Lip.obj`
 - Non suivis:
-  - `Miroir enchanté/DemoFallbackFactory.swift`
-  - `Miroir enchanté/DemoGeometryClassifier.swift`
+  - `Miroir enchanté/DemoHeadRenderer+Hair.swift`
   - `assets/complet.blend`
   - `assets/complet.blend1`
 
@@ -104,6 +106,7 @@ Attention: `Lower Lip.*` et `assets/complet.blend*` existaient comme changements
 - `DemoHeadRenderer`:
   - Fallback primitive head/lip overlay delegue a `DemoFallbackFactory`.
   - Detection hair/eye deleguee a `DemoGeometryClassifier`.
+  - Toute la logique cheveux est maintenant dans `DemoHeadRenderer+Hair.swift`.
   - Code cheveux procedural mort retire; les cheveux demo passent par assets OBJ/GLB/USDZ.
   - A un helper local `clampedCGFloat` car les extensions `CGFloat.clamped` existantes sont `private` dans autres fichiers.
 
@@ -136,6 +139,6 @@ Commande avec `-destination 'generic/platform=iOS Simulator'` a rencontre proble
 ## Prochaines pistes
 
 1. Tester app visuellement sur simulateur/device: panneau, tabs, sliders, presets.
-2. Continuer decoupe `DemoHeadRenderer` par responsabilite (`Hair`, `Eyes`, `Lips`, `Blush`) avec prudence: beaucoup de membres sont `private`.
+2. Continuer decoupe `DemoHeadRenderer` par responsabilite (`Eyes`, `Lips`, `Blush`) avec prudence: certains membres partages sont maintenant internal pour extensions.
 3. Ajouter petits tests purs pour `MakeupSettingsState` si target tests creee plus tard.
 4. Nettoyer/clarifier changements assets `Lower Lip.*` seulement apres confirmation utilisateur.
