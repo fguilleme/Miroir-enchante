@@ -606,13 +606,26 @@ final class DemoHeadRenderer: MakeupRendering {
         guard let geometry = node.geometry else { return }
 
         if geometry.materials.isEmpty {
-            geometry.firstMaterial = MakeupMaterialFactory.makeLipstickMaterial(settings: settings)
+            let material = MakeupMaterialFactory.makeLipstickMaterial(settings: settings)
+            configureDemoLipstickMaterial(material, settings: settings)
+            geometry.firstMaterial = material
             return
         }
 
         for material in geometry.materials {
-            MakeupMaterialFactory.configureLipstickMaterial(material, settings: settings)
+            configureDemoLipstickMaterial(material, settings: settings)
         }
+    }
+
+    private func configureDemoLipstickMaterial(_ material: SCNMaterial, settings: LipstickSettings) {
+        MakeupMaterialFactory.configureLipstickMaterial(material, settings: settings)
+        // Demo lips are real OBJ meshes, not flat overlays. The shared lipstick
+        // factory adds a soft UV alpha mask for generic overlays; on exported
+        // lip meshes that mask can land outside the UV island and hide them.
+        material.transparent.contents = nil
+        material.transparency = clampedCGFloat(settings.opacity, to: 0...1)
+        material.writesToDepthBuffer = false
+        material.readsFromDepthBuffer = true
     }
 
 }
