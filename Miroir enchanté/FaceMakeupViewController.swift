@@ -85,6 +85,9 @@ final class FaceMakeupViewController: UIViewController {
     }
     private var arFaceFramingScale: CGFloat = 1
     private var arFaceFramingTranslation: CGPoint = .zero
+    private var makeupRenderers: [MakeupRendering] {
+        [faceRenderer, demoHeadRenderer]
+    }
 
     override func viewDidLoad() {
         super.viewDidLoad()
@@ -360,8 +363,7 @@ final class FaceMakeupViewController: UIViewController {
 
     private func setBeforePreviewActive(_ active: Bool) {
         isBeforePreviewActive = active
-        faceRenderer.setMakeupEnabled(!active)
-        demoHeadRenderer.setMakeupEnabled(!active)
+        setMakeupEnabledForAllRenderers(!active)
         UIView.animate(withDuration: 0.14) {
             self.beforeAfterButton.alpha = active ? 0.64 : 1.0
         }
@@ -612,12 +614,11 @@ final class FaceMakeupViewController: UIViewController {
         updateARAutoFramingButton()
         hairStyleButton.isHidden = true
         updateControlPanelForExperienceMode()
+        faceRenderer.attach(to: sceneView)
+        applyCurrentMakeupSettings(to: faceRenderer)
+        faceRenderer.setMakeupEnabled(!isBeforePreviewActive)
         demoHeadRenderer.setHeadHidden(false)
         demoHeadRenderer.setHairHidden(false)
-        faceRenderer.attach(to: sceneView)
-        faceRenderer.updateLipstickSettings(lipstickSettings)
-        faceRenderer.updateBlushSettings(blushSettings)
-        faceRenderer.setMakeupEnabled(!isBeforePreviewActive)
 
         let configuration = ARFaceTrackingConfiguration()
         configuration.isLightEstimationEnabled = true
@@ -741,13 +742,20 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     private func applyLipstickSettings() {
-        faceRenderer.updateLipstickSettings(lipstickSettings)
-        demoHeadRenderer.updateLipstickSettings(lipstickSettings)
+        makeupRenderers.forEach { $0.updateLipstickSettings(lipstickSettings) }
     }
 
     private func applyBlushSettings() {
-        faceRenderer.updateBlushSettings(blushSettings)
-        demoHeadRenderer.updateBlushSettings(blushSettings)
+        makeupRenderers.forEach { $0.updateBlushSettings(blushSettings) }
+    }
+
+    private func setMakeupEnabledForAllRenderers(_ enabled: Bool) {
+        makeupRenderers.forEach { $0.setMakeupEnabled(enabled) }
+    }
+
+    private func applyCurrentMakeupSettings(to renderer: MakeupRendering) {
+        renderer.updateLipstickSettings(lipstickSettings)
+        renderer.updateBlushSettings(blushSettings)
     }
 
     private func configureUnsupportedDeviceMessageIfNeeded() {

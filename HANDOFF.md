@@ -6,8 +6,8 @@
 - Deux modes:
   - AR: `ARSCNView`, `ARFaceTrackingConfiguration`, rendu via `FaceRenderer`.
   - Demo: `SCNView`, tete/cheveux/yeux/levres depuis assets locaux, rendu via `DemoHeadRenderer`.
-- Etat courant: refactor UI maquillage en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne.
-- Decision recente: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`.
+- Etat courant: refactor UI/state/rendering en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne.
+- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`.
 
 ## Fichiers importants
 
@@ -24,8 +24,14 @@
   - Nouveau theme couleur commun.
 - `Miroir enchanté/MakeupUIExtensions.swift`
   - Nouveau helper couleur pour icone lipstick (`withBrightnessMultiplier`).
+- `Miroir enchanté/MakeupRendering.swift`
+  - Nouveau protocole commun AR/Demo: lipstick, blush, makeup enabled.
 - `Miroir enchanté/FaceRenderer.swift`
-  - Rendu AR face makeup.
+  - Rendu AR face makeup. Orchestre ARKit + SceneKit; geometries AR extraites.
+- `Miroir enchanté/ARLipMeshGeometry.swift`
+  - Geometrie AR des levres + debug points.
+- `Miroir enchanté/ARCheekMeshGeometry.swift`
+  - Geometrie AR joues + masque blush vertex colors.
 - `Miroir enchanté/DemoHeadRenderer.swift`
   - Rendu demo SceneKit, cheveux, yeux, tete, inclinaison, couleurs cheveux.
 - `Miroir enchanté/MakeupMaterialFactory.swift`
@@ -46,20 +52,20 @@ Derniers commits verifies:
 - `96f2a14 Add app icon assets`
 - `fc54e57 Add lipstick preset carousel`
 - `eeeb90a Stabilize demo hair rendering`
-- `20c3e5a xx`
+- `e743332 Refactor makeup controls`
 
 Dirty tree actuel, non commit:
 
 - Modifies:
   - `Miroir enchanté/DemoHeadRenderer.swift`
   - `Miroir enchanté/FaceMakeupViewController.swift`
+  - `Miroir enchanté/FaceRenderer.swift`
   - `Miroir enchanté/ModelAssets/Lower Lip.mtl`
   - `Miroir enchanté/ModelAssets/Lower Lip.obj`
 - Non suivis:
-  - `Miroir enchanté/CosmeticTheme.swift`
-  - `Miroir enchanté/MakeupControlPanelView.swift`
-  - `Miroir enchanté/MakeupSettingsState.swift`
-  - `Miroir enchanté/MakeupUIExtensions.swift`
+  - `Miroir enchanté/ARCheekMeshGeometry.swift`
+  - `Miroir enchanté/ARLipMeshGeometry.swift`
+  - `Miroir enchanté/MakeupRendering.swift`
   - `assets/complet.blend`
   - `assets/complet.blend1`
 
@@ -80,6 +86,12 @@ Attention: `Lower Lip.*` et `assets/complet.blend*` existaient comme changements
   - Source de verite persistante.
   - `rebuildLipstickSettings()` applique preset + intensite + finish.
   - `rebuildBlushSettings()` applique preset + sliders blush.
+- `MakeupRendering`:
+  - `FaceRenderer` et `DemoHeadRenderer` conformes.
+  - `FaceMakeupViewController` propage lipstick/blush/makeup-enabled via `makeupRenderers`.
+- `FaceRenderer`:
+  - Ne contient plus `LipMeshGeometry` / `CheekMeshGeometry`.
+  - Reste centre sur callbacks ARKit, nodes, modes rendu, orchestration materiaux.
 - `DemoHeadRenderer`:
   - A un helper local `clampedCGFloat` car les extensions `CGFloat.clamped` existantes sont `private` dans autres fichiers.
 
@@ -97,7 +109,7 @@ Commande avec `-destination 'generic/platform=iOS Simulator'` a rencontre proble
 
 ## Points d'attention
 
-- Ne pas ajouter une extension globale `CGFloat.clamped(to:)`: deja presente comme `private extension` dans `FaceRenderer.swift` et `MakeupMaterialFactory.swift`; redeclaration casse build.
+- Ne pas ajouter une extension globale `CGFloat.clamped(to:)`: deja presente comme `private extension` dans `ARCheekMeshGeometry.swift` et `MakeupMaterialFactory.swift`; redeclaration casse build.
 - Les nouveaux fichiers Swift sont deja inclus par projet Xcode via groupe synchronized/file-system sync; build les compile.
 - UI refactor vise comportement identique. A verifier sur device/sim:
   - persistance sliders/presets;
@@ -112,6 +124,7 @@ Commande avec `-destination 'generic/platform=iOS Simulator'` a rencontre proble
 ## Prochaines pistes
 
 1. Tester app visuellement sur simulateur/device: panneau, tabs, sliders, presets.
-2. Si OK, considerer supprimer computed-property bridge dans `FaceMakeupViewController` et parler directement a `settingsState` plus explicitement.
-3. Ajouter petits tests purs pour `MakeupSettingsState` si target tests creee plus tard.
-4. Nettoyer/clarifier changements assets `Lower Lip.*` seulement apres confirmation utilisateur.
+2. Decouper `DemoHeadRenderer` par responsabilite (`Hair`, `Eyes`, `Lips`, `Blush`, `Fallback`) avec prudence: beaucoup de membres sont `private`.
+3. Si OK, considerer supprimer computed-property bridge dans `FaceMakeupViewController` et parler directement a `settingsState` plus explicitement.
+4. Ajouter petits tests purs pour `MakeupSettingsState` si target tests creee plus tard.
+5. Nettoyer/clarifier changements assets `Lower Lip.*` seulement apres confirmation utilisateur.

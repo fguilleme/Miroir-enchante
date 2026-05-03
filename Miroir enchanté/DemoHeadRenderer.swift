@@ -55,7 +55,7 @@ struct HairFitCalibration {
 }
 
 /// Loads a bundled OBJ/GLB/USDZ head model so makeup can be tested without ARKit.
-final class DemoHeadRenderer {
+final class DemoHeadRenderer: MakeupRendering {
     let scene = SCNScene()
     let cameraNode = SCNNode()
 
