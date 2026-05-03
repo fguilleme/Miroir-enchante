@@ -37,12 +37,21 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
     private var cheekMesh: CheekMeshGeometry?
     private var eyeshadowMesh: EyeshadowMeshGeometry?
     private var hasDetectedFace = false
-    private var lipstickSettings = LipstickSettings.default
-    private var blushSettings = BlushSettings.default
-    private var eyeshadowSettings = EyeshadowSettings.default
-    private var isMakeupEnabled = true
+    private let makeupState = MakeupState()
+    private var appliedMakeupRevision: UInt64 = UInt64.max
+    private var frameIndex: UInt64 = 0
     private let lipsOnlyMaterial = MakeupMaterialFactory.makeARLipstickMaterial()
     private let fullFaceMaterial = MakeupMaterialFactory.makeARLipstickMaterial()
+    private let blushMaterial = MakeupMaterialFactory.makeARBlushMaterial()
+    private let eyeshadowMaterial = MakeupMaterialFactory.makeAREyeshadowMaterial()
+    private let invisibleFaceMaterial = MakeupMaterialFactory.makeInvisibleFaceMaterial()
+    private let wireframeMaterial = MakeupMaterialFactory.makeWireframeMaterial()
+    private let lipHighlightMaterial = MakeupMaterialFactory.makeLipHighlightMaterial()
+    private let lipVertexDebugMaterial = MakeupMaterialFactory.makeLipVertexDebugMaterial()
+
+    #if DEBUG
+    private let fpsMonitor = DebugFPSMonitor()
+    #endif
 
     private(set) var renderMode: RenderMode = .lipsOnly
     var faceBoundsDidUpdate: ((CGRect) -> Void)?
@@ -62,25 +71,19 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
     }
 
     func updateLipstickSettings(_ settings: LipstickSettings) {
-        lipstickSettings = settings
-        applyCurrentMode()
+        makeupState.updateLipstick(settings)
     }
 
     func updateBlushSettings(_ settings: BlushSettings) {
-        blushSettings = settings
-        cheekMesh?.updateMask(settings: settings)
-        applyCurrentMode()
+        makeupState.updateBlush(settings)
     }
 
     func updateEyeshadowSettings(_ settings: EyeshadowSettings) {
-        eyeshadowSettings = settings
-        eyeshadowMesh?.updateMask(settings: settings)
-        applyCurrentMode()
+        makeupState.updateEyeshadow(settings)
     }
 
     func setMakeupEnabled(_ enabled: Bool) {
-        isMakeupEnabled = enabled
-        applyCurrentMode()
+        makeupState.updateMakeupEnabled(enabled)
     }
 
     @discardableResult
@@ -120,7 +123,6 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
 
             if let cheekMesh = CheekMeshGeometry(device: device, faceGeometry: faceAnchor.geometry) {
                 self.cheekMesh = cheekMesh
-                cheekMesh.updateMask(settings: blushSettings)
 
                 let cheeksNode = SCNNode(geometry: cheekMesh.geometry)
                 cheeksNode.renderingOrder = 35
@@ -130,7 +132,6 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
 
             if let eyeshadowMesh = EyeshadowMeshGeometry(device: device, faceGeometry: faceAnchor.geometry) {
                 self.eyeshadowMesh = eyeshadowMesh
-                eyeshadowMesh.updateMask(settings: eyeshadowSettings)
 
                 let eyeshadowNode = SCNNode(geometry: eyeshadowMesh.geometry)
                 eyeshadowNode.renderingOrder = 38
@@ -140,11 +141,14 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
 
             let lipDebugNode = SCNNode(geometry: lipMesh.debugPointGeometry)
             lipDebugNode.renderingOrder = 41
+            lipDebugNode.geometry?.firstMaterial = lipVertexDebugMaterial
             faceNode.addChildNode(lipDebugNode)
             self.lipDebugNode = lipDebugNode
         }
 
-        applyCurrentMode()
+        let (snapshot, revision) = makeupState.snapshot()
+        applyMakeup(snapshot: snapshot, revision: revision)
+        applyCurrentMode(snapshot: snapshot)
         return faceNode
     }
 
@@ -172,7 +176,16 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
         lipMesh?.update(from: faceAnchor.geometry)
         cheekMesh?.update(from: faceAnchor.geometry)
         eyeshadowMesh?.update(from: faceAnchor.geometry)
-        publishProjectedFaceBounds(for: faceAnchor)
+        applyPendingMakeupUpdates()
+
+        frameIndex &+= 1
+        if frameIndex.isMultiple(of: 6) {
+            publishProjectedFaceBounds(for: faceAnchor)
+        }
+
+        #if DEBUG
+        fpsMonitor.frameRendered()
+        #endif
 
         // Lip masking currently comes from vertex-index filtering. Later this
         // can be refined with a hand-authored index list, UV-space alpha mask,
@@ -233,21 +246,46 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
         }
     }
 
-    private func applyCurrentMode() {
+    private func applyPendingMakeupUpdates() {
+        guard let (snapshot, revision) = makeupState.snapshotIfChanged(after: appliedMakeupRevision) else {
+            return
+        }
+
+        applyMakeup(snapshot: snapshot, revision: revision)
+        applyCurrentMode(snapshot: snapshot)
+    }
+
+    private func applyMakeup(snapshot: MakeupStateSnapshot, revision: UInt64) {
         SCNTransaction.begin()
         SCNTransaction.animationDuration = 0
-        MakeupMaterialFactory.configureARLipstickMaterial(lipsOnlyMaterial, settings: lipstickSettings)
-        MakeupMaterialFactory.configureARLipstickMaterial(fullFaceMaterial, settings: lipstickSettings)
+        MakeupMaterialFactory.configureARLipstickMaterial(lipsOnlyMaterial, settings: snapshot.lipstick)
+        MakeupMaterialFactory.configureARLipstickMaterial(fullFaceMaterial, settings: snapshot.lipstick)
+        MakeupMaterialFactory.configureARBlushMaterial(blushMaterial, settings: snapshot.blush)
+        MakeupMaterialFactory.configureAREyeshadowMaterial(eyeshadowMaterial, settings: snapshot.eyeshadow)
+        cheekMesh?.updateMask(settings: snapshot.blush)
+        eyeshadowMesh?.updateMask(settings: snapshot.eyeshadow)
+        appliedMakeupRevision = revision
+        SCNTransaction.commit()
+    }
+
+    private func applyCurrentMode() {
+        let (snapshot, _) = makeupState.snapshot()
+        applyCurrentMode(snapshot: snapshot)
+    }
+
+    private func applyCurrentMode(snapshot: MakeupStateSnapshot) {
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = 0
 
         switch renderMode {
         case .lipsOnly:
-            baseFaceGeometry?.firstMaterial = MakeupMaterialFactory.makeInvisibleFaceMaterial()
-            lipsNode?.isHidden = !isMakeupEnabled
+            baseFaceGeometry?.firstMaterial = invisibleFaceMaterial
+            lipsNode?.isHidden = !snapshot.isMakeupEnabled
             setSingleMaterial(lipsOnlyMaterial, on: lipsNode?.geometry)
-            cheeksNode?.isHidden = !isMakeupEnabled
-            setSingleMaterial(MakeupMaterialFactory.makeARBlushMaterial(settings: blushSettings), on: cheeksNode?.geometry)
-            eyeshadowNode?.isHidden = !isMakeupEnabled
-            setSingleMaterial(MakeupMaterialFactory.makeAREyeshadowMaterial(settings: eyeshadowSettings), on: eyeshadowNode?.geometry)
+            cheeksNode?.isHidden = !snapshot.isMakeupEnabled
+            setSingleMaterial(blushMaterial, on: cheeksNode?.geometry)
+            eyeshadowNode?.isHidden = !snapshot.isMakeupEnabled
+            setSingleMaterial(eyeshadowMaterial, on: eyeshadowNode?.geometry)
             lipDebugNode?.isHidden = true
 
         case .fullFace:
@@ -258,9 +296,9 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
             lipDebugNode?.isHidden = true
 
         case .wireframe:
-            baseFaceGeometry?.firstMaterial = MakeupMaterialFactory.makeWireframeMaterial()
+            baseFaceGeometry?.firstMaterial = wireframeMaterial
             lipsNode?.isHidden = false
-            lipsNode?.geometry?.firstMaterial = MakeupMaterialFactory.makeLipHighlightMaterial()
+            lipsNode?.geometry?.firstMaterial = lipHighlightMaterial
             cheeksNode?.isHidden = true
             eyeshadowNode?.isHidden = true
             lipDebugNode?.isHidden = false

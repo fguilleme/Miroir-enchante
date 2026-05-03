@@ -145,7 +145,7 @@ enum MakeupMaterialFactory {
             material.lightingModel = .physicallyBased
             material.diffuse.contents = color
             material.diffuse.intensity = 1.0
-            material.roughness.contents = LipstickRealism.verticalLipNoise
+            material.roughness.contents = MakeupTextureCache.lipVerticalNoise()
             material.roughness.intensity = roughness
             material.specular.contents = UIColor.white.withAlphaComponent(specularStrength * finalOpacity)
             material.shininess = specularStrength
@@ -231,6 +231,11 @@ enum MakeupMaterialFactory {
 
     static func makeAREyeshadowMaterial(settings: EyeshadowSettings = .default) -> SCNMaterial {
         let material = SCNMaterial()
+        configureAREyeshadowMaterial(material, settings: settings)
+        return material
+    }
+
+    static func configureAREyeshadowMaterial(_ material: SCNMaterial, settings: EyeshadowSettings = .default) {
         let opacity = (settings.opacity * settings.intensity).clamped(to: 0...0.56)
         let color = settings.color.withIntensity(0.72 + settings.intensity * 0.32)
 
@@ -244,8 +249,6 @@ enum MakeupMaterialFactory {
         material.readsFromDepthBuffer = false
         material.blendMode = .alpha
         material.fillMode = .fill
-
-        return material
     }
 
     static func makeARLipstickMaterial(settings: LipstickSettings = .default) -> SCNMaterial {
@@ -268,6 +271,11 @@ enum MakeupMaterialFactory {
 
     static func makeARBlushMaterial(settings: BlushSettings = .default) -> SCNMaterial {
         let material = SCNMaterial()
+        configureARBlushMaterial(material, settings: settings)
+        return material
+    }
+
+    static func configureARBlushMaterial(_ material: SCNMaterial, settings: BlushSettings = .default) {
         let intensity = settings.intensity.clamped(to: 0...1)
         let opacity = (settings.opacity * intensity).clamped(to: 0...0.45)
         let color = settings.color.withIntensity(0.78 + intensity * 0.24)
@@ -286,8 +294,6 @@ enum MakeupMaterialFactory {
         material.readsFromDepthBuffer = false
         material.blendMode = .alpha
         material.fillMode = .fill
-
-        return material
     }
 
     static func makeLipHighlightMaterial() -> SCNMaterial {
@@ -335,46 +341,6 @@ enum MakeupMaterialFactory {
 }
 
 typealias LipFinish = LipstickFinish
-
-private enum LipstickRealism {
-    static let verticalLipNoise: UIImage = makeVerticalLipNoise()
-
-    private static func makeVerticalLipNoise() -> UIImage {
-        let width = 96
-        let height = 256
-        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
-        return renderer.image { context in
-            let cg = context.cgContext
-
-            // Smoothed per-column random luminance produces vertical bands
-            // matching natural lip striations. Cached once at first access.
-            var prev: CGFloat = 0.78
-            var values: [CGFloat] = []
-            values.reserveCapacity(width)
-            for _ in 0..<width {
-                let target = CGFloat.random(in: 0.55...1.0)
-                prev = prev * 0.62 + target * 0.38
-                values.append(prev)
-            }
-
-            for x in 0..<width {
-                let value = values[x]
-                cg.setFillColor(UIColor(white: value, alpha: 1).cgColor)
-                cg.fill(CGRect(x: x, y: 0, width: 1, height: height))
-            }
-
-            // Faint horizontal accents read as occasional creases.
-            for _ in 0..<24 {
-                let y = Int.random(in: 0..<height)
-                let bandHeight = Int.random(in: 1...3)
-                let alpha = CGFloat.random(in: 0.05...0.18)
-                cg.setFillColor(UIColor(white: 0.5, alpha: alpha).cgColor)
-                cg.fill(CGRect(x: 0, y: y, width: width, height: bandHeight))
-            }
-        }
-    }
-
-}
 
 private extension UIColor {
     func avoidingPureRed() -> UIColor {
