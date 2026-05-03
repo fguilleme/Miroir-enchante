@@ -28,7 +28,7 @@ final class MakeupControlPanelView: UIStackView {
         let layout = MakeupLipstickSnapFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 12
-        layout.itemSize = CGSize(width: 76, height: 130)
+        layout.itemSize = CGSize(width: 72, height: 116)
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.backgroundColor = .clear
@@ -135,9 +135,9 @@ final class MakeupControlPanelView: UIStackView {
         for button in blushPresetButtons {
             let isSelected = button.tag == selectedIndex
             let updates = {
-                button.transform = isSelected ? CGAffineTransform(scaleX: 1.12, y: 1.12) : .identity
-                button.layer.borderWidth = isSelected ? 2 : 0
-                button.layer.borderColor = CosmeticTheme.gold.cgColor
+                button.transform = isSelected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
+                button.layer.borderWidth = isSelected ? 1.4 : 0
+                button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
             }
 
             if animated {
@@ -152,9 +152,9 @@ final class MakeupControlPanelView: UIStackView {
         for button in eyeshadowPresetButtons {
             let isSelected = button.tag == selectedIndex
             let updates = {
-                button.transform = isSelected ? CGAffineTransform(scaleX: 1.12, y: 1.12) : .identity
-                button.layer.borderWidth = isSelected ? 2 : 0
-                button.layer.borderColor = CosmeticTheme.gold.cgColor
+                button.transform = isSelected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
+                button.layer.borderWidth = isSelected ? 1.4 : 0
+                button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
             }
 
             if animated {
@@ -168,12 +168,47 @@ final class MakeupControlPanelView: UIStackView {
     private func configureBase() {
         translatesAutoresizingMaskIntoConstraints = false
         axis = .vertical
-        spacing = 8
+        spacing = 6
         alignment = .fill
-        backgroundColor = CosmeticTheme.panelBackground
+        backgroundColor = .clear
         layer.cornerRadius = 0
         isLayoutMarginsRelativeArrangement = true
-        directionalLayoutMargins = NSDirectionalEdgeInsets(top: 14, leading: 28, bottom: 8, trailing: 28)
+        directionalLayoutMargins = NSDirectionalEdgeInsets(top: 12, leading: 24, bottom: 6, trailing: 24)
+
+        installBackgroundGlass()
+    }
+
+    private func installBackgroundGlass() {
+        let blurEffect: UIBlurEffect
+        if #available(iOS 13.0, *) {
+            blurEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        } else {
+            blurEffect = UIBlurEffect(style: .dark)
+        }
+
+        let blurView = UIVisualEffectView(effect: blurEffect)
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        blurView.alpha = 0.85
+        blurView.isUserInteractionEnabled = false
+
+        let tintView = UIView()
+        tintView.translatesAutoresizingMaskIntoConstraints = false
+        tintView.backgroundColor = CosmeticTheme.warmPanelTint
+        tintView.isUserInteractionEnabled = false
+
+        insertSubview(blurView, at: 0)
+        insertSubview(tintView, at: 1)
+
+        NSLayoutConstraint.activate([
+            blurView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            blurView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            blurView.topAnchor.constraint(equalTo: topAnchor),
+            blurView.bottomAnchor.constraint(equalTo: bottomAnchor),
+            tintView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            tintView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            tintView.topAnchor.constraint(equalTo: topAnchor),
+            tintView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
     }
 
     private func configureControls() {
@@ -331,9 +366,10 @@ final class MakeupControlPanelView: UIStackView {
     }
 
     private func styleSlider(_ slider: UISlider) {
-        slider.minimumTrackTintColor = CosmeticTheme.gold
-        slider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.13)
-        slider.thumbTintColor = UIColor(red: 1.0, green: 0.89, blue: 0.72, alpha: 1.0)
+        slider.minimumTrackTintColor = CosmeticTheme.gold.withAlphaComponent(0.85)
+        slider.maximumTrackTintColor = UIColor.white.withAlphaComponent(0.10)
+        slider.thumbTintColor = CosmeticTheme.softGold
+        slider.transform = CGAffineTransform(scaleX: 1.0, y: 0.85)
     }
 
     private func makeHairOffsetRow(title: String, slider: UISlider, valueLabel: UILabel) -> UIStackView {
@@ -366,7 +402,7 @@ final class MakeupControlPanelView: UIStackView {
             lipstickCollectionView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             lipstickCollectionView.topAnchor.constraint(equalTo: container.topAnchor),
             lipstickCollectionView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            container.heightAnchor.constraint(equalToConstant: 134)
+            container.heightAnchor.constraint(equalToConstant: 120)
         ])
 
         return container
@@ -398,10 +434,10 @@ final class MakeupControlPanelView: UIStackView {
         let button = UIButton(type: .system)
         button.tag = index
         button.backgroundColor = preset.baseColor
-        button.layer.cornerRadius = 22
-        button.layer.borderColor = CosmeticTheme.gold.cgColor
-        button.widthAnchor.constraint(equalToConstant: 44).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 44).isActive = true
+        button.layer.cornerRadius = 19
+        button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
+        button.widthAnchor.constraint(equalToConstant: 38).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 38).isActive = true
         blushPresetButtons.append(button)
 
         let label = UILabel()
@@ -445,10 +481,10 @@ final class MakeupControlPanelView: UIStackView {
         let button = UIButton(type: .system)
         button.tag = index
         button.backgroundColor = preset.baseColor
-        button.layer.cornerRadius = 18
-        button.layer.borderColor = CosmeticTheme.gold.cgColor
-        button.widthAnchor.constraint(equalToConstant: 48).isActive = true
-        button.heightAnchor.constraint(equalToConstant: 36).isActive = true
+        button.layer.cornerRadius = 16
+        button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
+        button.widthAnchor.constraint(equalToConstant: 44).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 32).isActive = true
         eyeshadowPresetButtons.append(button)
 
         let label = UILabel()
@@ -603,10 +639,10 @@ final class MakeupLipstickPresetCell: UICollectionViewCell {
     override init(frame: CGRect) {
         super.init(frame: frame)
 
-        contentView.layer.cornerRadius = 10
+        contentView.layer.cornerRadius = 12
         contentView.layer.borderWidth = 1
         contentView.layer.borderColor = UIColor.clear.cgColor
-        contentView.backgroundColor = UIColor.white.withAlphaComponent(0.05)
+        contentView.backgroundColor = UIColor.white.withAlphaComponent(0.03)
 
         iconView.translatesAutoresizingMaskIntoConstraints = false
         iconView.isUserInteractionEnabled = false
@@ -622,12 +658,12 @@ final class MakeupLipstickPresetCell: UICollectionViewCell {
         NSLayoutConstraint.activate([
             iconView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 6),
             iconView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -6),
-            iconView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 6),
-            iconView.heightAnchor.constraint(equalToConstant: 98),
+            iconView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
+            iconView.heightAnchor.constraint(equalToConstant: 86),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
             titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
             titleLabel.topAnchor.constraint(equalTo: iconView.bottomAnchor, constant: 4),
-            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -5)
+            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -4)
         ])
     }
 
@@ -639,14 +675,22 @@ final class MakeupLipstickPresetCell: UICollectionViewCell {
         iconView.color = preset.baseColor
         titleLabel.text = L10n.text(preset.titleKey)
         let updates = {
-            self.contentView.transform = isSelected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
-            self.contentView.layer.borderColor = isSelected ? CosmeticTheme.gold.cgColor : UIColor.clear.cgColor
-            self.contentView.backgroundColor = isSelected ? CosmeticTheme.gold.withAlphaComponent(0.13) : UIColor.white.withAlphaComponent(0.05)
-            self.titleLabel.textColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.78)
+            self.contentView.transform = isSelected ? CGAffineTransform(scaleX: 1.05, y: 1.05) : .identity
+            self.contentView.layer.borderColor = isSelected ? CosmeticTheme.gold.withAlphaComponent(0.85).cgColor : UIColor.clear.cgColor
+            self.contentView.backgroundColor = isSelected ? CosmeticTheme.gold.withAlphaComponent(0.06) : UIColor.white.withAlphaComponent(0.03)
+            self.titleLabel.textColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.74)
         }
 
         if animated {
-            UIView.animate(withDuration: 0.18, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
+            UIView.animate(
+                withDuration: 0.22,
+                delay: 0,
+                usingSpringWithDamping: 0.78,
+                initialSpringVelocity: 0.4,
+                options: [.allowUserInteraction, .curveEaseOut],
+                animations: updates,
+                completion: nil
+            )
         } else {
             updates()
         }
@@ -796,16 +840,25 @@ final class MakeupLookCell: UICollectionViewCell {
         }
 
         let updates = {
-            self.contentView.transform = isSelected ? CGAffineTransform(scaleX: 1.06, y: 1.06) : .identity
-            self.contentView.layer.borderColor = isSelected ? CosmeticTheme.gold.cgColor : UIColor.clear.cgColor
+            self.contentView.transform = isSelected ? CGAffineTransform(scaleX: 1.05, y: 1.05) : .identity
+            self.contentView.layer.borderColor = isSelected ? CosmeticTheme.gold.withAlphaComponent(0.85).cgColor : UIColor.clear.cgColor
             self.contentView.backgroundColor = isSelected
-                ? CosmeticTheme.gold.withAlphaComponent(0.14)
-                : UIColor.white.withAlphaComponent(0.05)
-            self.titleLabel.textColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.78)
+                ? CosmeticTheme.gold.withAlphaComponent(0.08)
+                : UIColor.white.withAlphaComponent(0.03)
+            self.titleLabel.textColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.62)
+            self.contentView.alpha = isSelected ? 1.0 : 0.85
         }
 
         if animated {
-            UIView.animate(withDuration: 0.22, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
+            UIView.animate(
+                withDuration: 0.22,
+                delay: 0,
+                usingSpringWithDamping: 0.78,
+                initialSpringVelocity: 0.4,
+                options: [.allowUserInteraction, .curveEaseOut],
+                animations: updates,
+                completion: nil
+            )
         } else {
             updates()
         }

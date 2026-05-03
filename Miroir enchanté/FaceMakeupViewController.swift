@@ -34,6 +34,8 @@ final class FaceMakeupViewController: UIViewController {
     private var didCenterInitialLipstickPreset = false
     private var selectedControlTab: MakeupControlTab = .lipstick
     private var selectedLookID: String?
+    private let selectionFeedback = UISelectionFeedbackGenerator()
+    private let lookFeedback = UIImpactFeedbackGenerator(style: .light)
     private var smoothedInspectionTilt: CGFloat = 0
     private var isBeforePreviewActive = false
     private var arFaceFramingScale: CGFloat = 1
@@ -72,6 +74,9 @@ final class FaceMakeupViewController: UIViewController {
         applyLipstickSettings()
         applyBlushSettings()
         applyEyeshadowSettings()
+
+        selectionFeedback.prepare()
+        lookFeedback.prepare()
     }
 
     override func viewWillAppear(_ animated: Bool) {
@@ -224,6 +229,10 @@ final class FaceMakeupViewController: UIViewController {
         beforeAfterButton.tintColor = CosmeticTheme.softGold
         beforeAfterButton.semanticContentAttribute = .forceLeftToRight
         styleFloatingButton(beforeAfterButton)
+        beforeAfterButton.alpha = 0.78
+        beforeAfterButton.layer.borderColor = UIColor.white.withAlphaComponent(0.05).cgColor
+        beforeAfterButton.titleLabel?.font = .preferredFont(forTextStyle: .subheadline)
+        beforeAfterButton.setTitleColor(UIColor.white.withAlphaComponent(0.88), for: .normal)
         beforeAfterButton.addTarget(self, action: #selector(showBeforePreview), for: .touchDown)
         beforeAfterButton.addTarget(self, action: #selector(showAfterPreview), for: [.touchUpInside, .touchUpOutside, .touchCancel])
 
@@ -353,9 +362,9 @@ final class FaceMakeupViewController: UIViewController {
     private func setBeforePreviewActive(_ active: Bool) {
         isBeforePreviewActive = active
         setMakeupEnabledForAllRenderers(!active)
-        UIView.animate(withDuration: 0.14) {
-            self.beforeAfterButton.alpha = active ? 0.64 : 1.0
-        }
+        UIView.animate(withDuration: 0.18, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: {
+            self.beforeAfterButton.alpha = active ? 0.55 : 0.78
+        })
     }
 
     @objc private func lipstickIntensityChanged() {
@@ -364,6 +373,7 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     @objc private func lipstickFinishChanged() {
+        selectionFeedback.selectionChanged()
         clearLookSelection()
         settingsState.lipstickFinish = LipstickFinish(rawValue: controlPanel.lipstickFinishSegmentedControl.selectedSegmentIndex) ?? .satin
         applySelectedLipstickPreset(animated: true, updatesSelector: false)
@@ -371,6 +381,9 @@ final class FaceMakeupViewController: UIViewController {
 
     @objc private func blushPresetTapped(_ sender: UIButton) {
         guard BlushSettings.presets.indices.contains(sender.tag) else { return }
+        if settingsState.selectedBlushPresetIndex != sender.tag {
+            selectionFeedback.selectionChanged()
+        }
         clearLookSelection()
         settingsState.selectedBlushPresetIndex = sender.tag
         applySelectedBlushPreset(animated: true)
@@ -387,6 +400,9 @@ final class FaceMakeupViewController: UIViewController {
 
     @objc private func eyeshadowPresetTapped(_ sender: UIButton) {
         guard EyeshadowSettings.presets.indices.contains(sender.tag) else { return }
+        if settingsState.selectedEyeshadowPresetIndex != sender.tag {
+            selectionFeedback.selectionChanged()
+        }
         clearLookSelection()
         settingsState.selectedEyeshadowPresetIndex = sender.tag
         applySelectedEyeshadowPreset(animated: true)
@@ -452,6 +468,7 @@ final class FaceMakeupViewController: UIViewController {
             return
         }
 
+        selectionFeedback.selectionChanged()
         clearLookSelection()
         settingsState.selectedLipstickPresetIndex = index
         applySelectedLipstickPreset(animated: animated, updatesSelector: true)
@@ -830,6 +847,10 @@ final class FaceMakeupViewController: UIViewController {
         guard let lipIndex = look.lipstickIndex(),
               let blushIndex = look.blushIndex(),
               let eyesIndex = look.eyesIndex() else { return }
+
+        if animated {
+            lookFeedback.impactOccurred(intensity: 0.65)
+        }
 
         settingsState.selectedLipstickPresetIndex = lipIndex
         settingsState.selectedBlushPresetIndex = blushIndex
