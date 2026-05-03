@@ -98,6 +98,7 @@ final class FaceMakeupViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
 
+        faceRenderer.updateViewportSize(sceneView.bounds.size)
         updateLipstickCollectionLayoutInsets()
 
         guard !didCenterInitialLipstickPreset, controlPanel.lipstickCollectionView.bounds.width > 0 else { return }

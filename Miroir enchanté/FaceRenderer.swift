@@ -38,8 +38,10 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
     private var eyeshadowMesh: EyeshadowMeshGeometry?
     private var hasDetectedFace = false
     private let makeupState = MakeupState()
+    private let viewportLock = NSLock()
     private var appliedMakeupRevision: UInt64 = UInt64.max
     private var frameIndex: UInt64 = 0
+    private var cachedViewportSize: CGSize = .zero
     private let lipsOnlyMaterial = MakeupMaterialFactory.makeARLipstickMaterial()
     private let fullFaceMaterial = MakeupMaterialFactory.makeARLipstickMaterial()
     private let blushMaterial = MakeupMaterialFactory.makeARBlushMaterial()
@@ -68,6 +70,12 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
 
     func attach(to sceneView: ARSCNView) {
         self.sceneView = sceneView
+    }
+
+    func updateViewportSize(_ size: CGSize) {
+        viewportLock.lock()
+        cachedViewportSize = size
+        viewportLock.unlock()
     }
 
     func updateLipstickSettings(_ settings: LipstickSettings) {
@@ -173,9 +181,19 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
         // ARKit supplies updated face vertices every frame. Updating existing
         // SceneKit geometry and Metal buffers avoids node churn and flicker.
         baseFaceGeometry.update(from: faceAnchor.geometry)
-        lipMesh?.update(from: faceAnchor.geometry)
-        cheekMesh?.update(from: faceAnchor.geometry)
-        eyeshadowMesh?.update(from: faceAnchor.geometry)
+
+        let (snapshot, _) = makeupState.snapshot()
+        switch renderMode {
+        case .lipsOnly where snapshot.isMakeupEnabled:
+            lipMesh?.update(from: faceAnchor.geometry)
+            cheekMesh?.update(from: faceAnchor.geometry)
+            eyeshadowMesh?.update(from: faceAnchor.geometry)
+        case .wireframe:
+            lipMesh?.update(from: faceAnchor.geometry)
+        case .lipsOnly, .fullFace:
+            break
+        }
+
         applyPendingMakeupUpdates()
 
         frameIndex &+= 1
@@ -205,12 +223,11 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
     }
 
     private func publishProjectedFaceBounds(for faceAnchor: ARFaceAnchor) {
-        guard let sceneView,
-              let currentFrame = sceneView.session.currentFrame else {
+        guard let currentFrame = sceneView?.session.currentFrame else {
             return
         }
 
-        let viewportSize = sceneView.bounds.size
+        let viewportSize = currentViewportSize()
         guard viewportSize.width > 1, viewportSize.height > 1 else { return }
 
         var minX = CGFloat.greatestFiniteMagnitude
@@ -244,6 +261,12 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
         DispatchQueue.main.async { [faceBoundsDidUpdate] in
             faceBoundsDidUpdate?(expandedRect)
         }
+    }
+
+    private func currentViewportSize() -> CGSize {
+        viewportLock.lock()
+        defer { viewportLock.unlock() }
+        return cachedViewportSize
     }
 
     private func applyPendingMakeupUpdates() {
