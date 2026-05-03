@@ -7,6 +7,21 @@ import UIKit
 
 final class MakeupControlPanelView: UIStackView {
     let controlsSegmentedControl = UISegmentedControl(items: ["Lipstick", "Blush", "Eyes", "Hair", "Debug"])
+    let looksCollectionView: UICollectionView = {
+        let layout = UICollectionViewFlowLayout()
+        layout.scrollDirection = .horizontal
+        layout.minimumLineSpacing = 10
+        layout.minimumInteritemSpacing = 0
+        layout.itemSize = CGSize(width: 84, height: 40)
+        layout.sectionInset = UIEdgeInsets(top: 0, left: 4, bottom: 0, right: 4)
+
+        let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        collectionView.backgroundColor = .clear
+        collectionView.showsHorizontalScrollIndicator = false
+        collectionView.clipsToBounds = false
+        collectionView.register(MakeupLookCell.self, forCellWithReuseIdentifier: MakeupLookCell.reuseIdentifier)
+        return collectionView
+    }()
     let lipstickIntensitySlider = UISlider()
     let lipstickFinishSegmentedControl = UISegmentedControl(items: ["Mat", "Satiné", "Brillant"])
     let lipstickCollectionView: UICollectionView = {
@@ -258,6 +273,7 @@ final class MakeupControlPanelView: UIStackView {
         hairControlRows = [hairRow]
         debugControlRows = [hairOffsetYRow, hairOffsetZRow, hairScaleRow, visibilityRow]
 
+        addArrangedSubview(makeLooksRow())
         addArrangedSubview(controlsSegmentedControl)
         addArrangedSubview(lipstickSelectorRow)
         addArrangedSubview(lipstickIntensityRow)
@@ -274,6 +290,21 @@ final class MakeupControlPanelView: UIStackView {
         addArrangedSubview(hairScaleRow)
         addArrangedSubview(visibilityRow)
         setSelectedTab(.lipstick)
+    }
+
+    private func makeLooksRow() -> UIView {
+        let container = UIView()
+        container.translatesAutoresizingMaskIntoConstraints = false
+        looksCollectionView.translatesAutoresizingMaskIntoConstraints = false
+        container.addSubview(looksCollectionView)
+        NSLayoutConstraint.activate([
+            looksCollectionView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
+            looksCollectionView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            looksCollectionView.topAnchor.constraint(equalTo: container.topAnchor),
+            looksCollectionView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            container.heightAnchor.constraint(equalToConstant: 42)
+        ])
+        return container
     }
 
     private func updateControlTabVisibility() {
@@ -701,5 +732,82 @@ final class MakeupLipstickIconView: UIView {
     private func drawSwatch() {
         color.setFill()
         UIBezierPath(roundedRect: CGRect(x: 10, y: 95, width: 42, height: 4), cornerRadius: 1).fill()
+    }
+}
+
+final class MakeupLookCell: UICollectionViewCell {
+    static let reuseIdentifier = "MakeupLookCell"
+
+    private let titleLabel = UILabel()
+    private let swatchStack = UIStackView()
+    private let swatchViews: [UIView] = (0..<3).map { _ in UIView() }
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        contentView.layer.cornerRadius = 12
+        contentView.layer.borderWidth = 1
+        contentView.layer.borderColor = UIColor.clear.cgColor
+        contentView.backgroundColor = UIColor.white.withAlphaComponent(0.05)
+
+        swatchStack.axis = .horizontal
+        swatchStack.spacing = 3
+        swatchStack.alignment = .center
+        swatchStack.distribution = .fillEqually
+        swatchStack.translatesAutoresizingMaskIntoConstraints = false
+
+        for view in swatchViews {
+            view.layer.cornerRadius = 5
+            view.layer.borderWidth = 0.5
+            view.layer.borderColor = UIColor.white.withAlphaComponent(0.18).cgColor
+            view.widthAnchor.constraint(equalToConstant: 10).isActive = true
+            view.heightAnchor.constraint(equalToConstant: 10).isActive = true
+            swatchStack.addArrangedSubview(view)
+        }
+
+        titleLabel.translatesAutoresizingMaskIntoConstraints = false
+        titleLabel.font = .preferredFont(forTextStyle: .caption2)
+        titleLabel.textAlignment = .center
+        titleLabel.textColor = UIColor.white.withAlphaComponent(0.82)
+        titleLabel.adjustsFontSizeToFitWidth = true
+        titleLabel.minimumScaleFactor = 0.7
+
+        contentView.addSubview(swatchStack)
+        contentView.addSubview(titleLabel)
+
+        NSLayoutConstraint.activate([
+            swatchStack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            swatchStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+            titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
+            titleLabel.topAnchor.constraint(equalTo: swatchStack.bottomAnchor, constant: 3),
+            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -3)
+        ])
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(look: MakeupLook, isSelected: Bool, animated: Bool) {
+        titleLabel.text = L10n.text(look.titleKey)
+        for (view, color) in zip(swatchViews, look.swatchColors) {
+            view.backgroundColor = color
+        }
+
+        let updates = {
+            self.contentView.transform = isSelected ? CGAffineTransform(scaleX: 1.06, y: 1.06) : .identity
+            self.contentView.layer.borderColor = isSelected ? CosmeticTheme.gold.cgColor : UIColor.clear.cgColor
+            self.contentView.backgroundColor = isSelected
+                ? CosmeticTheme.gold.withAlphaComponent(0.14)
+                : UIColor.white.withAlphaComponent(0.05)
+            self.titleLabel.textColor = isSelected ? .white : UIColor.white.withAlphaComponent(0.78)
+        }
+
+        if animated {
+            UIView.animate(withDuration: 0.22, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
+        } else {
+            updates()
+        }
     }
 }

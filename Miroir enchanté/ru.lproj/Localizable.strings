@@ -39,3 +39,7 @@
 "eyeshadow.copper" = "Медный";
 "eyeshadow.smoke" = "Дымчатый";
 "error.truedepth_required" = "Для отслеживания лица требуется iPhone с камерой TrueDepth.";
+"look.natural_nude" = "Natural";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Bold";

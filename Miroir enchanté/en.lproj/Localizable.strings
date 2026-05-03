@@ -38,4 +38,8 @@
 "eyeshadow.plum" = "Plum";
 "eyeshadow.copper" = "Copper";
 "eyeshadow.smoke" = "Smoke";
+"look.natural_nude" = "Natural";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Bold";
 "error.truedepth_required" = "Face tracking requires an iPhone with a TrueDepth camera.";

@@ -39,3 +39,7 @@
 "eyeshadow.copper" = "铜棕";
 "eyeshadow.smoke" = "烟熏";
 "error.truedepth_required" = "面部跟踪需要配备 TrueDepth 摄像头的 iPhone。";
+"look.natural_nude" = "Natural";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Bold";

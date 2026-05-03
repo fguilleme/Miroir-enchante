@@ -39,3 +39,7 @@
 "eyeshadow.copper" = "Kupfer";
 "eyeshadow.smoke" = "Smoky";
 "error.truedepth_required" = "Gesichtsverfolgung erfordert ein iPhone mit TrueDepth-Kamera.";
+"look.natural_nude" = "Natural";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Bold";

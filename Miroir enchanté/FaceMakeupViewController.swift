@@ -33,6 +33,7 @@ final class FaceMakeupViewController: UIViewController {
     private var settingsState = MakeupSettingsState.load()
     private var didCenterInitialLipstickPreset = false
     private var selectedControlTab: MakeupControlTab = .lipstick
+    private var selectedLookID: String?
     private var smoothedInspectionTilt: CGFloat = 0
     private var isBeforePreviewActive = false
     private var arFaceFramingScale: CGFloat = 1
@@ -258,6 +259,8 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.configureInitialValues(from: settingsState)
         controlPanel.lipstickCollectionView.dataSource = self
         controlPanel.lipstickCollectionView.delegate = self
+        controlPanel.looksCollectionView.dataSource = self
+        controlPanel.looksCollectionView.delegate = self
         controlPanel.controlsSegmentedControl.addTarget(self, action: #selector(controlTabChanged), for: .valueChanged)
         controlPanel.lipstickIntensitySlider.addTarget(self, action: #selector(lipstickIntensityChanged), for: .valueChanged)
         controlPanel.lipstickFinishSegmentedControl.addTarget(self, action: #selector(lipstickFinishChanged), for: .valueChanged)
@@ -356,21 +359,25 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     @objc private func lipstickIntensityChanged() {
+        clearLookSelection()
         applySelectedLipstickPreset(animated: false, updatesSelector: false)
     }
 
     @objc private func lipstickFinishChanged() {
+        clearLookSelection()
         settingsState.lipstickFinish = LipstickFinish(rawValue: controlPanel.lipstickFinishSegmentedControl.selectedSegmentIndex) ?? .satin
         applySelectedLipstickPreset(animated: true, updatesSelector: false)
     }
 
     @objc private func blushPresetTapped(_ sender: UIButton) {
         guard BlushSettings.presets.indices.contains(sender.tag) else { return }
+        clearLookSelection()
         settingsState.selectedBlushPresetIndex = sender.tag
         applySelectedBlushPreset(animated: true)
     }
 
     @objc private func blushSliderChanged() {
+        clearLookSelection()
         settingsState.blushSettings.intensity = CGFloat(controlPanel.blushIntensitySlider.value)
         settingsState.blushSettings.size = CGFloat(controlPanel.blushSizeSlider.value)
         settingsState.blushSettings.position = CGFloat(controlPanel.blushPositionSlider.value)
@@ -380,11 +387,13 @@ final class FaceMakeupViewController: UIViewController {
 
     @objc private func eyeshadowPresetTapped(_ sender: UIButton) {
         guard EyeshadowSettings.presets.indices.contains(sender.tag) else { return }
+        clearLookSelection()
         settingsState.selectedEyeshadowPresetIndex = sender.tag
         applySelectedEyeshadowPreset(animated: true)
     }
 
     @objc private func eyeshadowSliderChanged() {
+        clearLookSelection()
         settingsState.eyeshadowSettings.intensity = CGFloat(controlPanel.eyeshadowIntensitySlider.value)
         applyEyeshadowSettings()
         persistSettings()
@@ -443,6 +452,7 @@ final class FaceMakeupViewController: UIViewController {
             return
         }
 
+        clearLookSelection()
         settingsState.selectedLipstickPresetIndex = index
         applySelectedLipstickPreset(animated: animated, updatesSelector: true)
         centerSelectedLipstickPreset(animated: animated)
@@ -816,6 +826,68 @@ final class FaceMakeupViewController: UIViewController {
         renderer.updateEyeshadowSettings(settingsState.eyeshadowSettings)
     }
 
+    func applyLook(_ look: MakeupLook, animated: Bool) {
+        guard let lipIndex = look.lipstickIndex(),
+              let blushIndex = look.blushIndex(),
+              let eyesIndex = look.eyesIndex() else { return }
+
+        settingsState.selectedLipstickPresetIndex = lipIndex
+        settingsState.selectedBlushPresetIndex = blushIndex
+        settingsState.selectedEyeshadowPresetIndex = eyesIndex
+        settingsState.lipstickFinish = look.lipstickFinish
+        settingsState.lipstickIntensityValue = look.lipstickIntensity
+        settingsState.blushSettings.intensity = look.blushIntensity
+        settingsState.blushSettings.size = look.blushSize
+        settingsState.blushSettings.position = look.blushPosition
+        settingsState.eyeshadowSettings.intensity = look.eyesIntensity
+        settingsState.rebuildLipstickSettings()
+        settingsState.rebuildBlushSettings()
+        settingsState.rebuildEyeshadowSettings()
+
+        syncControlPanelToState()
+
+        selectedLookID = look.id
+        refreshLooksSelection(animated: animated)
+
+        let duration = animated ? 0.25 : 0.0
+        SCNTransaction.begin()
+        SCNTransaction.animationDuration = duration
+        applyLipstickSettings()
+        applyBlushSettings()
+        applyEyeshadowSettings()
+        SCNTransaction.commit()
+
+        persistSettings()
+    }
+
+    private func syncControlPanelToState() {
+        controlPanel.lipstickIntensitySlider.setValue(Float(settingsState.lipstickIntensityValue), animated: true)
+        controlPanel.lipstickFinishSegmentedControl.selectedSegmentIndex = settingsState.lipstickFinish.rawValue
+        controlPanel.blushIntensitySlider.setValue(Float(settingsState.blushSettings.intensity), animated: true)
+        controlPanel.blushSizeSlider.setValue(Float(settingsState.blushSettings.size), animated: true)
+        controlPanel.blushPositionSlider.setValue(Float(settingsState.blushSettings.position), animated: true)
+        controlPanel.eyeshadowIntensitySlider.setValue(Float(settingsState.eyeshadowSettings.intensity), animated: true)
+        controlPanel.updateBlushPresetSelection(selectedIndex: settingsState.selectedBlushPresetIndex, animated: true)
+        controlPanel.updateEyeshadowPresetSelection(selectedIndex: settingsState.selectedEyeshadowPresetIndex, animated: true)
+        updateVisibleLipstickCells(animated: true)
+        centerSelectedLipstickPreset(animated: true)
+    }
+
+    private func refreshLooksSelection(animated: Bool) {
+        let collectionView = controlPanel.looksCollectionView
+        for case let cell as MakeupLookCell in collectionView.visibleCells {
+            guard let indexPath = collectionView.indexPath(for: cell) else { continue }
+            let look = MakeupLooks.all[indexPath.item]
+            cell.configure(look: look, isSelected: look.id == selectedLookID, animated: animated)
+        }
+    }
+
+    private func clearLookSelection() {
+        guard selectedLookID != nil else { return }
+        selectedLookID = nil
+        refreshLooksSelection(animated: true)
+    }
+
     private func configureUnsupportedDeviceMessageIfNeeded() {
         guard !ARFaceTrackingConfiguration.isSupported else { return }
 
@@ -843,10 +915,25 @@ private func clampedCGFloat(_ value: CGFloat, to range: ClosedRange<CGFloat>) ->
 
 extension FaceMakeupViewController: UICollectionViewDataSource, UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        LipstickSettings.presets.count
+        if collectionView === controlPanel.looksCollectionView {
+            return MakeupLooks.all.count
+        }
+        return LipstickSettings.presets.count
     }
 
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
+        if collectionView === controlPanel.looksCollectionView {
+            guard let cell = collectionView.dequeueReusableCell(
+                withReuseIdentifier: MakeupLookCell.reuseIdentifier,
+                for: indexPath
+            ) as? MakeupLookCell else {
+                return UICollectionViewCell()
+            }
+            let look = MakeupLooks.all[indexPath.item]
+            cell.configure(look: look, isSelected: look.id == selectedLookID, animated: false)
+            return cell
+        }
+
         guard let cell = collectionView.dequeueReusableCell(
             withReuseIdentifier: MakeupLipstickPresetCell.reuseIdentifier,
             for: indexPath
@@ -860,20 +947,27 @@ extension FaceMakeupViewController: UICollectionViewDataSource, UICollectionView
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if collectionView === controlPanel.looksCollectionView {
+            applyLook(MakeupLooks.all[indexPath.item], animated: true)
+            return
+        }
         selectLipstickPreset(at: indexPath.item, animated: true)
     }
 
     func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+        guard scrollView === controlPanel.lipstickCollectionView else { return }
         updateSelectedLipstickPresetFromCenter(animated: true)
     }
 
     func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+        guard scrollView === controlPanel.lipstickCollectionView else { return }
         if !decelerate {
             updateSelectedLipstickPresetFromCenter(animated: true)
         }
     }
 
     func scrollViewDidEndScrollingAnimation(_ scrollView: UIScrollView) {
+        guard scrollView === controlPanel.lipstickCollectionView else { return }
         updateVisibleLipstickCells(animated: true)
     }
 }

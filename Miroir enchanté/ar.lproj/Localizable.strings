@@ -39,3 +39,7 @@
 "eyeshadow.copper" = "نحاسي";
 "eyeshadow.smoke" = "دخاني";
 "error.truedepth_required" = "يتطلب تتبع الوجه جهاز iPhone مزودًا بكاميرا TrueDepth.";
+"look.natural_nude" = "Natural";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Bold";

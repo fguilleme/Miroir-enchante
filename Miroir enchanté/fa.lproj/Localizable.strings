@@ -39,3 +39,7 @@
 "eyeshadow.copper" = "مسی";
 "eyeshadow.smoke" = "دودی";
 "error.truedepth_required" = "ردیابی چهره به آیفون دارای دوربین TrueDepth نیاز دارد.";
+"look.natural_nude" = "Natural";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Bold";

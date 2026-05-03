@@ -39,3 +39,7 @@
 "eyeshadow.copper" = "コッパー";
 "eyeshadow.smoke" = "スモーク";
 "error.truedepth_required" = "顔トラッキングにはTrueDepthカメラ搭載のiPhoneが必要です。";
+"look.natural_nude" = "Natural";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Bold";

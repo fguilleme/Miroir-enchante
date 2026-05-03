@@ -38,4 +38,8 @@
 "eyeshadow.plum" = "Prune";
 "eyeshadow.copper" = "Cuivre";
 "eyeshadow.smoke" = "Fumé";
+"look.natural_nude" = "Naturel";
+"look.soft_rose" = "Rose";
+"look.evening_glam" = "Glam";
+"look.bold_red" = "Audace";
 "error.truedepth_required" = "Le suivi du visage nécessite un iPhone avec une caméra TrueDepth.";
