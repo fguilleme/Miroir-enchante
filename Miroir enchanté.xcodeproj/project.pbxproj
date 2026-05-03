@@ -10,9 +10,51 @@
 		0FDDF3082FA2566A00BFEEB2 /* Miroir enchanté.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Miroir enchanté.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		0FDEAD022FA3000000DEC002 /* Exceptions for "Miroir enchanté" folder in "Miroir enchanté" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				"ModelAssets/Female hair.mtl",
+				"ModelAssets/Female hair.obj",
+				"ModelAssets/Female head.mtl",
+				"ModelAssets/Female head.obj",
+				"ModelAssets/left cheek.mtl",
+				"ModelAssets/left cheek.obj",
+				"ModelAssets/left eyes.mtl",
+				"ModelAssets/left eyes.obj",
+				"ModelAssets/Lower Left eyelid.mtl",
+				"ModelAssets/Lower Left eyelid.obj",
+				"ModelAssets/Lower Lip.mtl",
+				"ModelAssets/Lower Lip.obj",
+				"ModelAssets/Lower Right eyelid.mtl",
+				"ModelAssets/Lower Right eyelid.obj",
+				"ModelAssets/right cheek.mtl",
+				"ModelAssets/right cheek.obj",
+				"ModelAssets/right eyes.mtl",
+				"ModelAssets/right eyes.obj",
+				"ModelAssets/textures eyes/eyeBump.jpg",
+				"ModelAssets/textures eyes/eyeColor.jpg",
+				"ModelAssets/textures eyes/eyeSpecular.jpg",
+				"ModelAssets/textures hair/flatspec.tga.png",
+				"ModelAssets/textures hair/hair_d7.png",
+				"ModelAssets/textures hair/hair_n.png",
+				"ModelAssets/Upper Left eyelid.mtl",
+				"ModelAssets/Upper Left eyelid.obj",
+				"ModelAssets/Upper Lip.mtl",
+				"ModelAssets/Upper Lip.obj",
+				"ModelAssets/Upper Right eyelid.mtl",
+				"ModelAssets/Upper Right eyelid.obj",
+			);
+			target = 0FDDF3072FA2566A00BFEEB2 /* Miroir enchanté */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		0FDDF30A2FA2566A00BFEEB2 /* Miroir enchanté */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				0FDEAD022FA3000000DEC002 /* Exceptions for "Miroir enchanté" folder in "Miroir enchanté" target */,
+			);
 			path = "Miroir enchanté";
 			sourceTree = "<group>";
 		};
@@ -55,6 +97,7 @@
 				0FDDF3042FA2566A00BFEEB2 /* Sources */,
 				0FDDF3052FA2566A00BFEEB2 /* Frameworks */,
 				0FDDF3062FA2566A00BFEEB2 /* Resources */,
+				0FDEAD012FA3000000DEC001 /* Copy Demo Assets in Debug */,
 			);
 			buildRules = (
 			);
@@ -123,6 +166,87 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		0FDEAD012FA3000000DEC001 /* Copy Demo Assets in Debug */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Female head.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Female head.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Female hair.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Female hair.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Upper Lip.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Upper Lip.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Lower Lip.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Lower Lip.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/left cheek.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/left cheek.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/right cheek.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/right cheek.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/left eyes.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/left eyes.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/right eyes.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/right eyes.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Upper Left eyelid.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Upper Left eyelid.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Upper Right eyelid.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Upper Right eyelid.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Lower Left eyelid.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Lower Left eyelid.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Lower Right eyelid.obj",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/Lower Right eyelid.mtl",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/textures eyes/eyeColor.jpg",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/textures eyes/eyeSpecular.jpg",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/textures eyes/eyeBump.jpg",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/textures hair/hair_d7.png",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/textures hair/hair_n.png",
+				"$(SRCROOT)/Miroir enchanté/ModelAssets/textures hair/flatspec.tga.png",
+			);
+			name = "Copy Demo Assets in Debug";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Female head.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Female head.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Female hair.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Female hair.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Upper Lip.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Upper Lip.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Lower Lip.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Lower Lip.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/left cheek.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/left cheek.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/right cheek.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/right cheek.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/left eyes.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/left eyes.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/right eyes.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/right eyes.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Upper Left eyelid.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Upper Left eyelid.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Upper Right eyelid.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Upper Right eyelid.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Lower Left eyelid.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Lower Left eyelid.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Lower Right eyelid.obj",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/Lower Right eyelid.mtl",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/eyeColor.jpg",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/eyeSpecular.jpg",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/eyeBump.jpg",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/hair_d7.png",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/hair_n.png",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/flatspec.tga.png",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"$CONFIGURATION\" = \"Debug\" ]; then\n    resources_dir=\"${TARGET_BUILD_DIR}/${UNLOCALIZED_RESOURCES_FOLDER_PATH}\"\n    while IFS= read -r asset_path; do\n        cp \"$SRCROOT/Miroir enchanté/$asset_path\" \"$resources_dir/\"\n    done <<'ASSETS'\nModelAssets/Female head.obj\nModelAssets/Female head.mtl\nModelAssets/Female hair.obj\nModelAssets/Female hair.mtl\nModelAssets/Upper Lip.obj\nModelAssets/Upper Lip.mtl\nModelAssets/Lower Lip.obj\nModelAssets/Lower Lip.mtl\nModelAssets/left cheek.obj\nModelAssets/left cheek.mtl\nModelAssets/right cheek.obj\nModelAssets/right cheek.mtl\nModelAssets/left eyes.obj\nModelAssets/left eyes.mtl\nModelAssets/right eyes.obj\nModelAssets/right eyes.mtl\nModelAssets/Upper Left eyelid.obj\nModelAssets/Upper Left eyelid.mtl\nModelAssets/Upper Right eyelid.obj\nModelAssets/Upper Right eyelid.mtl\nModelAssets/Lower Left eyelid.obj\nModelAssets/Lower Left eyelid.mtl\nModelAssets/Lower Right eyelid.obj\nModelAssets/Lower Right eyelid.mtl\nModelAssets/textures eyes/eyeColor.jpg\nModelAssets/textures eyes/eyeSpecular.jpg\nModelAssets/textures eyes/eyeBump.jpg\nModelAssets/textures hair/hair_d7.png\nModelAssets/textures hair/hair_n.png\nModelAssets/textures hair/flatspec.tga.png\nASSETS\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		0FDDF3042FA2566A00BFEEB2 /* Sources */ = {
@@ -262,7 +386,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 96JK7HBZ58;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
@@ -302,7 +426,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = 96JK7HBZ58;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;

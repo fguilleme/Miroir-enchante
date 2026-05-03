@@ -19,7 +19,7 @@ final class FaceMakeupViewController: UIViewController {
     private let sceneView = ARSCNView(frame: .zero)
     private let demoSceneView = SCNView(frame: .zero)
     private let faceRenderer = FaceRenderer()
-    private let demoHeadRenderer = DemoHeadRenderer(assetFilename: "Female head.obj")
+    private lazy var demoHeadRenderer = DemoHeadRenderer(assetFilename: "Female head.obj")
     private let motionManager = CMMotionManager()
     private let modeButton = UIButton(type: .system)
     private let experienceModeButton = UIButton(type: .system)
@@ -29,7 +29,7 @@ final class FaceMakeupViewController: UIViewController {
     private let controlPanel = MakeupControlPanelView()
 
     private var unsupportedDeviceLabel: UILabel?
-    private var experienceMode: ExperienceMode = ARFaceTrackingConfiguration.isSupported ? .ar : .demo
+    private var experienceMode: ExperienceMode = FaceMakeupViewController.initialExperienceMode()
     private var settingsState = MakeupSettingsState.load()
     private var didCenterInitialLipstickPreset = false
     private var selectedControlTab: MakeupControlTab = .lipstick
@@ -38,7 +38,23 @@ final class FaceMakeupViewController: UIViewController {
     private var arFaceFramingScale: CGFloat = 1
     private var arFaceFramingTranslation: CGPoint = .zero
     private var makeupRenderers: [MakeupRendering] {
-        [faceRenderer, demoHeadRenderer]
+        Self.isDemoFeatureEnabled ? [faceRenderer, demoHeadRenderer] : [faceRenderer]
+    }
+
+    private static var isDemoFeatureEnabled: Bool {
+        #if DEBUG
+        true
+        #else
+        false
+        #endif
+    }
+
+    private static func initialExperienceMode() -> ExperienceMode {
+        if isDemoFeatureEnabled && !ARFaceTrackingConfiguration.isSupported {
+            return .demo
+        }
+
+        return .ar
     }
 
     override func viewDidLoad() {
@@ -112,12 +128,15 @@ final class FaceMakeupViewController: UIViewController {
             demoSceneView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
 
-        demoSceneView.scene = demoHeadRenderer.scene
-        demoSceneView.pointOfView = demoHeadRenderer.cameraNode
         demoSceneView.backgroundColor = .black
         demoSceneView.autoenablesDefaultLighting = false
         demoSceneView.isPlaying = false
         demoSceneView.isHidden = true
+
+        if Self.isDemoFeatureEnabled {
+            demoSceneView.scene = demoHeadRenderer.scene
+            demoSceneView.pointOfView = demoHeadRenderer.cameraNode
+        }
 
         faceRenderer.faceBoundsDidUpdate = { [weak self] faceBounds in
             self?.updateARFaceFraming(faceBounds: faceBounds)
@@ -134,6 +153,7 @@ final class FaceMakeupViewController: UIViewController {
         modeButton.setTitle(faceRenderer.renderMode.buttonTitle, for: .normal)
         styleFloatingButton(modeButton)
         modeButton.addTarget(self, action: #selector(toggleRenderMode), for: .touchUpInside)
+        modeButton.isHidden = !Self.isDemoFeatureEnabled
 
         view.addSubview(modeButton)
         NSLayoutConstraint.activate([
@@ -149,6 +169,7 @@ final class FaceMakeupViewController: UIViewController {
         experienceModeButton.setTitle(experienceButtonTitle, for: .normal)
         styleFloatingButton(experienceModeButton)
         experienceModeButton.addTarget(self, action: #selector(toggleExperienceMode), for: .touchUpInside)
+        experienceModeButton.isHidden = !Self.isDemoFeatureEnabled
 
         view.addSubview(experienceModeButton)
         NSLayoutConstraint.activate([
@@ -257,7 +278,10 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.eyeshadowPresetButtons.forEach {
             $0.addTarget(self, action: #selector(eyeshadowPresetTapped(_:)), for: .touchUpInside)
         }
-        selectedControlTab = controlPanel.configureTabs(isDemoMode: experienceMode == .demo, selectedTab: selectedControlTab)
+        selectedControlTab = controlPanel.configureTabs(
+            isDemoMode: Self.isDemoFeatureEnabled && experienceMode == .demo,
+            selectedTab: selectedControlTab
+        )
 
         view.addSubview(controlPanel)
         NSLayoutConstraint.activate([
@@ -296,6 +320,8 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     @objc private func toggleExperienceMode() {
+        guard Self.isDemoFeatureEnabled else { return }
+
         switch experienceMode {
         case .ar:
             experienceMode = .demo
@@ -307,6 +333,8 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     @objc private func cycleDemoHairStyle() {
+        guard Self.isDemoFeatureEnabled else { return }
+
         let style = demoHeadRenderer.cycleHairStyle()
         hairStyleButton.setTitle(L10n.text(style.titleKey), for: .normal)
     }
@@ -365,7 +393,9 @@ final class FaceMakeupViewController: UIViewController {
     @objc private func hairSliderChanged() {
         settingsState.hairHueValue = CGFloat(controlPanel.hairHueSlider.value)
         settingsState.hairStrengthValue = CGFloat(controlPanel.hairStrengthSlider.value)
-        demoHeadRenderer.updateHairColor(hue: settingsState.hairHueValue, strength: settingsState.hairStrengthValue)
+        if Self.isDemoFeatureEnabled {
+            demoHeadRenderer.updateHairColor(hue: settingsState.hairHueValue, strength: settingsState.hairStrengthValue)
+        }
         persistSettings()
     }
 
@@ -374,7 +404,9 @@ final class FaceMakeupViewController: UIViewController {
         settingsState.hairOffsetZValue = controlPanel.hairOffsetZSlider.value
         settingsState.hairScaleValue = controlPanel.hairScaleSlider.value
         controlPanel.updateHairOffsetValueLabels()
-        demoHeadRenderer.updateHairPlacement(y: settingsState.hairOffsetYValue, z: settingsState.hairOffsetZValue, scale: settingsState.hairScaleValue)
+        if Self.isDemoFeatureEnabled {
+            demoHeadRenderer.updateHairPlacement(y: settingsState.hairOffsetYValue, z: settingsState.hairOffsetZValue, scale: settingsState.hairScaleValue)
+        }
         persistSettings()
     }
 
@@ -384,16 +416,23 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     private func updateControlPanelForExperienceMode() {
-        selectedControlTab = controlPanel.configureTabs(isDemoMode: experienceMode == .demo, selectedTab: selectedControlTab)
+        selectedControlTab = controlPanel.configureTabs(
+            isDemoMode: Self.isDemoFeatureEnabled && experienceMode == .demo,
+            selectedTab: selectedControlTab
+        )
     }
 
     @objc private func hideHeadSwitchChanged() {
-        demoHeadRenderer.setHeadHidden(controlPanel.hideHeadSwitch.isOn)
+        if Self.isDemoFeatureEnabled {
+            demoHeadRenderer.setHeadHidden(controlPanel.hideHeadSwitch.isOn)
+        }
         persistSettings()
     }
 
     @objc private func hideHairSwitchChanged() {
-        demoHeadRenderer.setHairHidden(controlPanel.hideHairSwitch.isOn)
+        if Self.isDemoFeatureEnabled {
+            demoHeadRenderer.setHairHidden(controlPanel.hideHairSwitch.isOn)
+        }
         persistSettings()
     }
 
@@ -542,8 +581,12 @@ final class FaceMakeupViewController: UIViewController {
 
     private func applyExperienceMode() {
         setBeforePreviewActive(false)
+        if !Self.isDemoFeatureEnabled {
+            experienceMode = .ar
+        }
+
         experienceModeButton.setTitle(experienceButtonTitle, for: .normal)
-        unsupportedDeviceLabel?.isHidden = experienceMode == .demo || ARFaceTrackingConfiguration.isSupported
+        unsupportedDeviceLabel?.isHidden = (Self.isDemoFeatureEnabled && experienceMode == .demo) || ARFaceTrackingConfiguration.isSupported
 
         switch experienceMode {
         case .ar:
@@ -554,6 +597,11 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     private func startDemoFaceMode() {
+        guard Self.isDemoFeatureEnabled else {
+            startFaceTrackingSessionIfSupported()
+            return
+        }
+
         sceneView.session.pause()
         sceneView.delegate = nil
         sceneView.session.delegate = nil
@@ -579,9 +627,22 @@ final class FaceMakeupViewController: UIViewController {
     private func startFaceTrackingSessionIfSupported() {
         guard ARFaceTrackingConfiguration.isSupported else {
             print("AR face tracking is not supported on this device.")
-            experienceMode = .demo
-            startDemoFaceMode()
-            experienceModeButton.setTitle(experienceButtonTitle, for: .normal)
+            if Self.isDemoFeatureEnabled {
+                experienceMode = .demo
+                startDemoFaceMode()
+                experienceModeButton.setTitle(experienceButtonTitle, for: .normal)
+            } else {
+                sceneView.session.pause()
+                sceneView.delegate = nil
+                sceneView.session.delegate = nil
+                sceneView.isPlaying = false
+                sceneView.isHidden = true
+                demoSceneView.isHidden = true
+                modeButton.isHidden = true
+                arAutoFramingButton.isHidden = true
+                hairStyleButton.isHidden = true
+                updateControlPanelForExperienceMode()
+            }
             return
         }
 
@@ -595,7 +656,7 @@ final class FaceMakeupViewController: UIViewController {
         sceneView.delegate = faceRenderer
         sceneView.automaticallyUpdatesLighting = true
         sceneView.isPlaying = true
-        modeButton.isHidden = false
+        modeButton.isHidden = !Self.isDemoFeatureEnabled
         arAutoFramingButton.isHidden = false
         updateARAutoFramingButton()
         hairStyleButton.isHidden = true
@@ -603,8 +664,10 @@ final class FaceMakeupViewController: UIViewController {
         faceRenderer.attach(to: sceneView)
         applyCurrentMakeupSettings(to: faceRenderer)
         faceRenderer.setMakeupEnabled(!isBeforePreviewActive)
-        demoHeadRenderer.setHeadHidden(false)
-        demoHeadRenderer.setHairHidden(false)
+        if Self.isDemoFeatureEnabled {
+            demoHeadRenderer.setHeadHidden(false)
+            demoHeadRenderer.setHairHidden(false)
+        }
 
         let configuration = ARFaceTrackingConfiguration()
         configuration.isLightEstimationEnabled = true
@@ -694,6 +757,8 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     private func startDemoTiltControl() {
+        guard Self.isDemoFeatureEnabled else { return }
+
         guard motionManager.isDeviceMotionAvailable else {
             demoHeadRenderer.updateInspectionTilt(horizontal: 0)
             return
@@ -724,7 +789,9 @@ final class FaceMakeupViewController: UIViewController {
         }
 
         smoothedInspectionTilt = 0
-        demoHeadRenderer.updateInspectionTilt(horizontal: 0)
+        if Self.isDemoFeatureEnabled {
+            demoHeadRenderer.updateInspectionTilt(horizontal: 0)
+        }
     }
 
     private func applyLipstickSettings() {
