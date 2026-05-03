@@ -1,0 +1,173 @@
+//
+//  MakeupSettingsState.swift
+//  Miroir enchanté
+//
+
+import Foundation
+import UIKit
+
+enum MakeupControlTab: Int {
+    case lipstick = 0
+    case blush = 1
+    case hair = 2
+    case debug = 3
+}
+
+enum LipstickFinish: Int {
+    case matte = 0
+    case satin = 1
+    case glossy = 2
+}
+
+struct MakeupSettingsState {
+    var isARAutoFramingEnabled: Bool = false
+    var selectedLipstickPresetIndex: Int = 3
+    var lipstickIntensityValue: CGFloat = 0.9
+    var lipstickFinish: LipstickFinish = .satin
+    var lipstickSettings: LipstickSettings = .default
+    var selectedBlushPresetIndex: Int = 2
+    var blushSettings: BlushSettings = .default
+    var hairHueValue: CGFloat = 0.24
+    var hairStrengthValue: CGFloat = 0.84
+    var hairOffsetYValue: Float = -0.08
+    var hairOffsetZValue: Float = 0.15
+    var hairScaleValue: Float = 1.0
+    var isHeadHidden: Bool = false
+    var isHairHidden: Bool = false
+
+    static func load(defaults: UserDefaults = .standard) -> MakeupSettingsState {
+        defaults.register(defaults: [
+            SettingsKey.arAutoFramingEnabled: false,
+            SettingsKey.selectedLipstickPresetIndex: 3,
+            SettingsKey.lipstickIntensity: 0.9,
+            SettingsKey.lipstickFinish: LipstickFinish.satin.rawValue,
+            SettingsKey.selectedBlushPresetIndex: 2,
+            SettingsKey.blushIntensity: Double(BlushSettings.default.intensity),
+            SettingsKey.blushSize: Double(BlushSettings.default.size),
+            SettingsKey.blushPosition: Double(BlushSettings.default.position),
+            SettingsKey.hairHue: 0.24,
+            SettingsKey.hairStrength: 0.84,
+            SettingsKey.hairOffsetY: -0.08,
+            SettingsKey.hairOffsetZ: 0.15,
+            SettingsKey.hairScale: 1.0,
+            SettingsKey.hideHead: false,
+            SettingsKey.hideHair: false
+        ])
+
+        var state = MakeupSettingsState()
+        state.isARAutoFramingEnabled = defaults.bool(forKey: SettingsKey.arAutoFramingEnabled)
+        state.selectedLipstickPresetIndex = defaults.integer(forKey: SettingsKey.selectedLipstickPresetIndex)
+        state.lipstickIntensityValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.lipstickIntensity)), to: 0.4...1.0)
+        state.lipstickFinish = LipstickFinish(rawValue: defaults.integer(forKey: SettingsKey.lipstickFinish)) ?? .satin
+        state.selectedBlushPresetIndex = defaults.integer(forKey: SettingsKey.selectedBlushPresetIndex)
+        state.blushSettings.intensity = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushIntensity)), to: 0...1)
+        state.blushSettings.size = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushSize)), to: 0.65...1.45)
+        state.blushSettings.position = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushPosition)), to: 0...1)
+        state.hairHueValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairHue)), to: 0...1)
+        state.hairStrengthValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairStrength)), to: 0...1)
+        state.hairOffsetYValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetY)), to: -3...1))
+        state.hairOffsetZValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetZ)), to: -1...5))
+        state.hairScaleValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairScale)), to: 0.15...2.0))
+        state.isHeadHidden = defaults.bool(forKey: SettingsKey.hideHead)
+        state.isHairHidden = defaults.bool(forKey: SettingsKey.hideHair)
+        state.sanitizePresetIndices()
+        state.rebuildLipstickSettings()
+        state.rebuildBlushSettings()
+        return state
+    }
+
+    func persist(defaults: UserDefaults = .standard) {
+        defaults.set(isARAutoFramingEnabled, forKey: SettingsKey.arAutoFramingEnabled)
+        defaults.set(selectedLipstickPresetIndex, forKey: SettingsKey.selectedLipstickPresetIndex)
+        defaults.set(Double(lipstickIntensityValue), forKey: SettingsKey.lipstickIntensity)
+        defaults.set(lipstickFinish.rawValue, forKey: SettingsKey.lipstickFinish)
+        defaults.set(selectedBlushPresetIndex, forKey: SettingsKey.selectedBlushPresetIndex)
+        defaults.set(Double(blushSettings.intensity), forKey: SettingsKey.blushIntensity)
+        defaults.set(Double(blushSettings.size), forKey: SettingsKey.blushSize)
+        defaults.set(Double(blushSettings.position), forKey: SettingsKey.blushPosition)
+        defaults.set(Double(hairHueValue), forKey: SettingsKey.hairHue)
+        defaults.set(Double(hairStrengthValue), forKey: SettingsKey.hairStrength)
+        defaults.set(Double(hairOffsetYValue), forKey: SettingsKey.hairOffsetY)
+        defaults.set(Double(hairOffsetZValue), forKey: SettingsKey.hairOffsetZ)
+        defaults.set(Double(hairScaleValue), forKey: SettingsKey.hairScale)
+        defaults.set(isHeadHidden, forKey: SettingsKey.hideHead)
+        defaults.set(isHairHidden, forKey: SettingsKey.hideHair)
+    }
+
+    mutating func rebuildLipstickSettings() {
+        guard LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) else { return }
+
+        let preset = LipstickSettings.presets[selectedLipstickPresetIndex]
+        let intensity = clampedCGFloat(lipstickIntensityValue, to: 0.2...1.0)
+        lipstickIntensityValue = intensity
+        lipstickSettings.color = preset.baseColor
+        lipstickSettings.opacity = CGFloat(preset.opacity) * intensity
+        lipstickSettings.roughness = lipstickRoughness(for: preset)
+        lipstickSettings.glossIntensity = lipstickGlossIntensity(for: preset)
+        lipstickSettings.colorIntensity = 1.0
+    }
+
+    mutating func rebuildBlushSettings() {
+        guard BlushSettings.presets.indices.contains(selectedBlushPresetIndex) else { return }
+
+        let preset = BlushSettings.presets[selectedBlushPresetIndex]
+        blushSettings.color = preset.baseColor
+        blushSettings.opacity = CGFloat(preset.opacity)
+        blushSettings.roughness = CGFloat(preset.roughness)
+    }
+
+    private mutating func sanitizePresetIndices() {
+        if !LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) {
+            selectedLipstickPresetIndex = 3
+        }
+
+        if !BlushSettings.presets.indices.contains(selectedBlushPresetIndex) {
+            selectedBlushPresetIndex = 2
+        }
+    }
+
+    private func lipstickRoughness(for preset: LipstickPreset) -> CGFloat {
+        switch lipstickFinish {
+        case .matte:
+            return max(CGFloat(preset.roughness), 0.62)
+        case .satin:
+            return clampedCGFloat(CGFloat(preset.roughness), to: 0.24...0.44)
+        case .glossy:
+            return min(CGFloat(preset.roughness), 0.18)
+        }
+    }
+
+    private func lipstickGlossIntensity(for preset: LipstickPreset) -> CGFloat {
+        switch lipstickFinish {
+        case .matte:
+            return 0.10
+        case .satin:
+            return clampedCGFloat(CGFloat(1.0 - preset.roughness), to: 0.30...0.52)
+        case .glossy:
+            return 0.78
+        }
+    }
+
+    private enum SettingsKey {
+        static let prefix = "FaceMakeupViewController."
+        static let arAutoFramingEnabled = prefix + "arAutoFramingEnabled"
+        static let selectedLipstickPresetIndex = prefix + "selectedLipstickPresetIndex"
+        static let lipstickIntensity = prefix + "lipstickIntensity"
+        static let lipstickFinish = prefix + "lipstickFinish"
+        static let selectedBlushPresetIndex = prefix + "selectedBlushPresetIndex"
+        static let blushIntensity = prefix + "blushIntensity"
+        static let blushSize = prefix + "blushSize"
+        static let blushPosition = prefix + "blushPosition"
+        static let hairHue = prefix + "hairHue"
+        static let hairStrength = prefix + "hairStrength"
+        static let hairOffsetY = prefix + "hairOffsetY"
+        static let hairOffsetZ = prefix + "hairOffsetZ"
+        static let hairScale = prefix + "hairScale"
+        static let hideHead = prefix + "hideHead"
+        static let hideHair = prefix + "hideHair"
+    }
+}
+
+private func clampedCGFloat(_ value: CGFloat, to range: ClosedRange<CGFloat>) -> CGFloat {
+    Swift.min(Swift.max(value, range.lowerBound), range.upperBound)
+}

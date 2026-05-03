@@ -2,169 +2,116 @@
 
 ## Resume rapide
 
-- Projet iOS UIKit + ARKit/SceneKit pour un prototype de miroir maquillage.
-- Deux modes principaux:
-  - AR: `ARSCNView` + `ARFaceTrackingConfiguration`.
-  - Demo: scene SceneKit locale avec tete OBJ, levres OBJ, cheveux OBJ, yeux OBJ.
-- Objectif actuel: reparer le rendu Demo des cheveux et des yeux avec textures locales.
-- Dernier etat visuel rapporte par l'utilisateur:
-  - Cheveux: rendu casse / parfois invisibles / parfois en fallback gris-noir, transparence et orientation ont ete instables.
-  - Yeux: restent blancs; `eyeColor.jpg`, `eyeSpecular.jpg`, `eyeBump.jpg` ne semblent pas produire un iris visible.
-  - L'utilisateur veut revenir a l'utilisation des textures PNG/JPG pour cheveux et yeux, y compris normal/bump.
+- Projet iOS UIKit + ARKit/SceneKit: prototype miroir maquillage.
+- Deux modes:
+  - AR: `ARSCNView`, `ARFaceTrackingConfiguration`, rendu via `FaceRenderer`.
+  - Demo: `SCNView`, tete/cheveux/yeux/levres depuis assets locaux, rendu via `DemoHeadRenderer`.
+- Etat courant: refactor UI maquillage en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne.
+- Decision recente: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`.
 
 ## Fichiers importants
 
-- `Miroir enchante/DemoHeadRenderer.swift`
-  - Charge et configure la scene Demo.
-  - Charge les assets OBJ directs: tete, levres, cheveux, yeux.
-  - Contient les materiaux cheveux/yeux et les controles de couleur cheveux.
-- `Miroir enchante/FaceMakeupViewController.swift`
-  - UI UIKit, sliders rouge/opacity/brillance/couleur.
-  - Ajoute les sliders cheveux `Teinte` / `Force`.
-  - Ajoute le switch `Yeux seuls`.
-  - Lie l'inclinometre/CoreMotion a la rotation Demo.
-- `Miroir enchante/MakeupMaterialFactory.swift`
-  - Materiaux partages maquillage / peau / cheveux basiques.
-- `Miroir enchante/ModelAssets/`
-  - `Female head.obj` + `.mtl`
-  - `Female hair.obj` + `.mtl`
-  - `left eyes.obj` + `left eyes.mtl` (cornee `aiStandard3` + iris `Eyes`)
-  - `right eyes.obj` + `right eyes.mtl` (cornee `aiStandard3.001` + iris `Eyes.001`)
-  - `Upper Lip.obj`, `Lower Lip.obj`
-  - `textures hair/hair_d7.png`
-  - `textures hair/hair_n.png`
-  - `textures hair/flatspec.tga.png`
-  - `textures eyes/eyeColor.jpg`
-  - `textures eyes/eyeSpecular.jpg`
-  - `textures eyes/eyeBump.jpg`
+- `Miroir enchanté/SceneDelegate.swift`
+  - Point entree UI. Installe `FaceMakeupViewController`.
+- `Miroir enchanté/FaceMakeupViewController.swift`
+  - Controleur principal. Gere cycle AR/demo, boutons flottants, actions UI, persistence via `MakeupSettingsState`, appels renderers.
+- `Miroir enchanté/MakeupControlPanelView.swift`
+  - Nouveau panneau controle: tabs lipstick/blush/hair/debug, sliders, switches, presets blush, collection lipstick.
+  - Contient `MakeupLipstickSnapFlowLayout`, `MakeupLipstickPresetCell`, `MakeupLipstickIconView`.
+- `Miroir enchanté/MakeupSettingsState.swift`
+  - Nouveau state central: load/persist `UserDefaults`, indices presets, lipstick finish, blush, hair placement/color, switches head/hair, AR auto framing.
+- `Miroir enchanté/CosmeticTheme.swift`
+  - Nouveau theme couleur commun.
+- `Miroir enchanté/MakeupUIExtensions.swift`
+  - Nouveau helper couleur pour icone lipstick (`withBrightnessMultiplier`).
+- `Miroir enchanté/FaceRenderer.swift`
+  - Rendu AR face makeup.
+- `Miroir enchanté/DemoHeadRenderer.swift`
+  - Rendu demo SceneKit, cheveux, yeux, tete, inclinaison, couleurs cheveux.
+- `Miroir enchanté/MakeupMaterialFactory.swift`
+  - Materiaux SceneKit communs maquillage.
+- `Miroir enchanté/ModelAssets/`
+  - Assets bundle OBJ/MTL/textures utilises par app.
+- `Miroir enchanté/*.lproj/Localizable.strings`
+  - Localisation UI.
 
 ## Etat Git recent
 
-Derniers commits:
+Derniers commits verifies:
 
-- `7544131 Add demo hair assets and color controls`
-- `38faf26 Add localized demo makeup hair mode`
-- `0b06fc3 Add ARKit makeup prototype`
-- `5f1990f Initial Commit`
+- `eaf223c Refactor demo asset loading`
+- `eff4132 Persist makeup settings`
+- `a3ad15e Add AR auto framing toggle and refine blush mask`
+- `0ecce34 Add blush controls and refine makeup UI`
+- `96f2a14 Add app icon assets`
+- `fc54e57 Add lipstick preset carousel`
+- `eeeb90a Stabilize demo hair rendering`
+- `20c3e5a xx`
 
-Etat de travail actuel, non commite:
+Dirty tree actuel, non commit:
 
 - Modifies:
-  - `Miroir enchante/DemoHeadRenderer.swift`
-  - `Miroir enchante/FaceMakeupViewController.swift`
-  - `Miroir enchante/ModelAssets/Female hair.obj`
-  - `Miroir enchante/ModelAssets/Female hair.mtl`
-  - `Miroir enchante/ModelAssets/Female head.obj`
-  - `Miroir enchante/ModelAssets/eyes.obj`
-  - `Miroir enchante/ModelAssets/eyes.mtl`
-  - fichiers `Localizable.strings` dans plusieurs langues
-- Non suivi:
-  - `assets/` avec anciens essais FBX/GLB/OBJ/Blender.
+  - `Miroir enchanté/DemoHeadRenderer.swift`
+  - `Miroir enchanté/FaceMakeupViewController.swift`
+  - `Miroir enchanté/ModelAssets/Lower Lip.mtl`
+  - `Miroir enchanté/ModelAssets/Lower Lip.obj`
+- Non suivis:
+  - `Miroir enchanté/CosmeticTheme.swift`
+  - `Miroir enchanté/MakeupControlPanelView.swift`
+  - `Miroir enchanté/MakeupSettingsState.swift`
+  - `Miroir enchanté/MakeupUIExtensions.swift`
+  - `assets/complet.blend`
+  - `assets/complet.blend1`
 
-Ne pas revert les OBJ/MTL sans demander: l'utilisateur les modifie depuis Blender.
+Attention: `Lower Lip.*` et `assets/complet.blend*` existaient comme changements avant ce handoff. Ne pas revert sans demande explicite.
+
+## Architecture actuelle
+
+- `FaceMakeupViewController`:
+  - Possede `sceneView`, `demoSceneView`, `faceRenderer`, `demoHeadRenderer`, boutons flottants et `controlPanel`.
+  - Charge `settingsState = MakeupSettingsState.load()`.
+  - Expose computed properties vers `settingsState` pour limiter changement comportemental.
+  - Configure `MakeupControlPanelView`, branche targets UIKit, reste `UICollectionViewDataSource/Delegate` pour lipstick presets.
+- `MakeupControlPanelView`:
+  - Construit UI panneau et gere visibilite tabs selon mode demo/AR.
+  - En AR: tabs visibles `lipstick`, `blush`.
+  - En demo: tabs visibles `lipstick`, `blush`, `hair`, `debug`.
+- `MakeupSettingsState`:
+  - Source de verite persistante.
+  - `rebuildLipstickSettings()` applique preset + intensite + finish.
+  - `rebuildBlushSettings()` applique preset + sliders blush.
+- `DemoHeadRenderer`:
+  - A un helper local `clampedCGFloat` car les extensions `CGFloat.clamped` existantes sont `private` dans autres fichiers.
 
 ## Build/Test
 
-Commande de build qui a reussi apres les derniers changements Swift:
+Commande verifiee apres refactor:
 
 ```sh
-xcodebuild -project "Miroir enchanté.xcodeproj" -scheme "Miroir enchanté" -destination "generic/platform=iOS" -derivedDataPath /private/tmp/MiroirEnchanteBuild CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project 'Miroir enchanté.xcodeproj' -scheme 'Miroir enchanté' -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
 ```
 
-Dernier resultat connu: `BUILD SUCCEEDED`.
+Dernier resultat: `BUILD SUCCEEDED`.
 
-## Architecture Demo actuelle
+Commande avec `-destination 'generic/platform=iOS Simulator'` a rencontre problemes CoreSimulator locaux (`simdiskimaged`), puis build OK avec `-sdk iphonesimulator`.
 
-- `DemoHeadRenderer` contient:
-  - `modelContainerNode`: racine qui tourne avec CoreMotion.
-  - `eyeRootNode`: yeux charges depuis `eyes.obj`.
-  - `hairRootNode`: cheveux charges depuis `Female hair.obj`.
-  - `fallbackLipRootNode`: levres compagnon.
-- `DemoHairStyle` a actuellement `.none` et `.femaleHair`.
-- Les cheveux et yeux sont charges via un parseur OBJ maison `loadOBJNodes(...)`, pas via SceneKit directement, pour filtrer les sous-meshes par materiau.
-- Logs attendus sur device:
-  - `Loaded companion lip asset: Upper Lip.obj`
-  - `Loaded companion lip asset: Lower Lip.obj`
-  - `Loaded demo eye OBJ directly: eyes.obj`
-  - `Loaded demo hair OBJ directly: Female hair.obj`
-  - `Demo eye material ... eyeColor.jpg loaded, eyeSpecular.jpg loaded, eyeBump/eyesBump.jpg loaded`
+## Points d'attention
 
-## Assets / noms de materiaux constates
+- Ne pas ajouter une extension globale `CGFloat.clamped(to:)`: deja presente comme `private extension` dans `FaceRenderer.swift` et `MakeupMaterialFactory.swift`; redeclaration casse build.
+- Les nouveaux fichiers Swift sont deja inclus par projet Xcode via groupe synchronized/file-system sync; build les compile.
+- UI refactor vise comportement identique. A verifier sur device/sim:
+  - persistance sliders/presets;
+  - tabs AR vs demo;
+  - selection lipstick carousel;
+  - switches hide head/hair en demo;
+  - bouton Avant / Apres;
+  - auto framing AR.
+- Path repo contient accent: `/Volumes/XTRA/Dev/Miroir enchanté`.
+- Pas de tests unitaires connus. Validation actuelle = build Xcode.
 
-`Female hair.obj` actuel:
+## Prochaines pistes
 
-- `mtllib Female hair.mtl`
-- `o Generic_Item_new_mesh`
-- `usemtl hair.001`
-
-`eyes.obj` actuel:
-
-- `mtllib eyes.mtl`
-- `o Eye_1_R` / `usemtl aiStandard3`
-- `o Eye_2_R` / `usemtl Eyes`
-- `o Eye_2_R.001` / `usemtl Eyes.001`
-- `o Eye_1_R.001` / `usemtl aiStandard3.001`
-
-`Female hair.mtl` ne reference pas les textures par `map_Kd`/`map_Bump`; le code les applique manuellement.
-
-`eyes.mtl` ne reference pas non plus les JPG; le code les applique manuellement.
-
-## Points sensibles dans le code
-
-- Cheveux:
-  - `DemoHeadRenderer.preparedHairMaterial(...)`, autour de la zone qui charge `hair_d7.png` et `hair_n.png`.
-  - Mise a jour 2026-05-01: la transparence n'utilise plus `.rgbZero`. Les pixels fonces sont conserves, l'alpha vient de `hair_d7.png` via `transparent.contents`, en `transparencyMode = .aOne`.
-  - `applyHairColor(...)` garde `diffuse.intensity = 1.0` et n'applique plus qu'un `multiply` faible, pour eviter de noircir totalement la texture des cheveux.
-  - Un log debut applique liste presence/absence des trois textures: `Demo hair material ...`.
-  - Si les cheveux apparaissent encore trop sombres avec `Force` au max, baisser le facteur `0.10 + strength * 0.55` dans `applyHairColor`. Si les cheveux apparaissent comme un calque opaque (perte de l'alpha des pointes), verifier que `hair_d7.png` a bien un canal alpha; sinon retomber sur le 1ere passe `.rgbZero` mais avec un blend doux.
-- Yeux:
-  - `makeTexturedEyeMaterial(named:)` est passe en `lightingModel = .blinn` (auparavant `.physicallyBased`). Le PBR avec spec blanche donnait une boule blanche de face: c'etait le symptome rapporte.
-  - Specular intensity reduit a 0.12, normal intensity reduit a 0.15, shininess a 0.25.
-  - Logs detailles a `loadEyeOBJNode(...)`: pour chaque mesh charge directement, on imprime `material`, `tris`, `verts`, `uv`, `diffuseImage`. Si `uv` est 0 ou si `diffuseImage` est `false`, c'est la premiere chose a regarder.
-  - Le loader direct continue de filtrer `Eyes` / `Eyes.001` et d'ignorer `aiStandard3*` (cornee). Les iris sont bien dans `Eyes`/`Eyes.001` d'apres le fichier OBJ.
-- Rotation:
-  - `updateInspectionTilt(horizontal:)` utilise `demoRotationLimit = 135 deg`.
-  - `FaceMakeupViewController` amplifie `motion.gravity.x * 1.75`.
-  - L'utilisateur voulait pouvoir voir derriere avec l'inclinometre.
-- Visibilite tete/cheveux:
-  - L'ancien switch `control.eyes_only` est remplace par deux switches independants `control.hide_head` et `control.hide_hair`.
-  - Cote renderer: `setHeadHidden(_:)` et `setHairHidden(_:)`. `applyHeadAndHairVisibility` lit `isHeadHidden` et `isHairHidden` separement.
-  - Les yeux et les levres restent visibles meme quand la tete est masquee.
-
-## Symptomes actuels a reprendre
-
-- Cheveux:
-  - Avant, le fallback/faux materiau donnait des plaques grises/noires.
-  - Avec les textures, l'utilisateur a vu les cheveux trop transparents, puis blancs, puis plus de cheveux.
-  - Il faut prioriser l'alpha et la texture `hair_d7.png`, puis seulement ensuite la teinte.
-  - 2026-05-01: changement applique pour utiliser `transparent.contents = hair_d7.png` + `.aOne` au lieu de `.rgbZero`. A confirmer sur device.
-- Yeux:
-  - Les yeux sont blancs.
-  - L'utilisateur soupconne que la texture des yeux n'est pas utilisee ou que les UV ne pointent pas au bon endroit.
-  - Les fichiers attendus sont bien sous `ModelAssets/textures eyes/`.
-  - 2026-05-01: passage en `lightingModel = .blinn` pour eyeux et baisse spec/normal. Logs detailles (tris/verts/uv/diffuseImage) ajoutes au loader direct. A confirmer sur device.
-
-## Prochaines pistes concretes
-
-1. Ajouter des logs plus explicites a l'application des materiaux:
-   - pour chaque materiau cheveux: nom, presence diffuse/normal/specular, mode transparence.
-   - pour chaque materiau yeux: nom, nombre de vertices/triangles, presence UV, presence diffuse/specular/normal.
-2. Reparer cheveux en premier:
-   - retirer `.rgbZero`;
-   - utiliser l'alpha de `hair_d7.png` via `transparent.contents`;
-   - ne pas multiplier trop fort au depart (`multiply.intensity` faible, ex. 0.25);
-   - tester sans `hair_n.png` puis le remettre, car une normal map trop forte peut noircir ou casser le rendu.
-3. Reparer yeux:
-   - verifier que le parseur OBJ lit bien les `vt` et les assigne aux triangles des meshes `Eyes` / `Eyes.001`;
-   - tester temporairement `material.diffuse.contents = eyeColor` avec `lightingModel = .constant` pour separer probleme UV/probleme lighting;
-   - si blanc persiste, inspecter `eyeColor.jpg`: les UV des yeux peuvent viser une zone blanche hors iris.
-4. Garder le switch `Yeux seuls`; il est utile pour diagnostiquer le placement des yeux sans tete/cheveux.
-5. Ne pas s'occuper de localisation maintenant, l'utilisateur a dit que ce serait plus tard.
-
-## Notes pratiques
-
-- Le projet est local uniquement, pas de reseau/API.
-- Attention aux chemins avec accent: le repo est `/Volumes/XTRA/Dev/Miroir enchanté`.
-- Les assets dans `assets/` sont des essais/source et ne sont pas forcement dans le bundle.
-- Les assets reellement utilises par l'app sont sous `Miroir enchante/ModelAssets/`.
-- SceneKit sur iOS charge mal FBX/GLB dans ce projet; preferer OBJ/USDZ.
+1. Tester app visuellement sur simulateur/device: panneau, tabs, sliders, presets.
+2. Si OK, considerer supprimer computed-property bridge dans `FaceMakeupViewController` et parler directement a `settingsState` plus explicitement.
+3. Ajouter petits tests purs pour `MakeupSettingsState` si target tests creee plus tard.
+4. Nettoyer/clarifier changements assets `Lower Lip.*` seulement apres confirmation utilisateur.

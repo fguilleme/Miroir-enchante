@@ -41,6 +41,10 @@ enum DemoHairStyle: CaseIterable {
     }
 }
 
+private func clampedCGFloat(_ value: CGFloat, to range: ClosedRange<CGFloat>) -> CGFloat {
+    Swift.min(Swift.max(value, range.lowerBound), range.upperBound)
+}
+
 struct HairFitCalibration {
     let width: Float
     let height: Float
@@ -117,8 +121,8 @@ final class DemoHeadRenderer {
     }
 
     func updateHairColor(hue: CGFloat, strength: CGFloat) {
-        hairHueValue = hue.clamped(to: 0...1)
-        hairStrengthValue = strength.clamped(to: 0...1)
+        hairHueValue = clampedCGFloat(hue, to: 0...1)
+        hairStrengthValue = clampedCGFloat(strength, to: 0...1)
         applyHairColorToCachedMaterials()
     }
 
@@ -145,7 +149,7 @@ final class DemoHeadRenderer {
     }
 
     func updateInspectionTilt(horizontal: CGFloat) {
-        let clampedHorizontal = Float(horizontal.clamped(to: -1...1))
+        let clampedHorizontal = Float(clampedCGFloat(horizontal, to: -1...1))
         modelContainerNode.removeAllActions()
         SCNTransaction.begin()
         SCNTransaction.animationDuration = 0.12
@@ -791,7 +795,7 @@ final class DemoHeadRenderer {
         format.scale = baseTexture.scale
         format.opaque = false
 
-        let tintAlpha = 0.25 + hairStrengthValue.clamped(to: 0...1) * 0.70
+        let tintAlpha = 0.25 + clampedCGFloat(hairStrengthValue, to: 0...1) * 0.70
         return UIGraphicsImageRenderer(size: baseTexture.size, format: format).image { _ in
             baseTexture.draw(in: rect)
             tint.withAlphaComponent(tintAlpha).setFill()
@@ -811,8 +815,8 @@ final class DemoHeadRenderer {
     }
 
     private func hairTintColor() -> UIColor {
-        let hue = hairHueValue.clamped(to: 0...1)
-        let strength = hairStrengthValue.clamped(to: 0...1)
+        let hue = clampedCGFloat(hairHueValue, to: 0...1)
+        let strength = clampedCGFloat(hairStrengthValue, to: 0...1)
         let stops: [(position: CGFloat, color: UIColor)] = [
             (0.00, UIColor(red: 0.030, green: 0.028, blue: 0.026, alpha: 1.0)),
             (0.22, UIColor(red: 0.095, green: 0.060, blue: 0.038, alpha: 1.0)),
@@ -844,7 +848,7 @@ final class DemoHeadRenderer {
     }
 
     private func interpolatedColor(from startColor: UIColor, to endColor: UIColor, fraction: CGFloat) -> UIColor {
-        let t = fraction.clamped(to: 0...1)
+        let t = clampedCGFloat(fraction, to: 0...1)
         var startRed: CGFloat = 0
         var startGreen: CGFloat = 0
         var startBlue: CGFloat = 0
@@ -1456,11 +1460,5 @@ private extension SCNNode {
         }
 
         return hasBounds ? (minVector, maxVector) : (SCNVector3Zero, SCNVector3(1, 1, 1))
-    }
-}
-
-private extension CGFloat {
-    func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
-        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
