@@ -115,6 +115,8 @@ struct MakeupSettingsState {
         lipstickSettings.roughness = lipstickRoughness(for: preset)
         lipstickSettings.glossIntensity = lipstickGlossIntensity(for: preset)
         lipstickSettings.colorIntensity = 1.0
+        lipstickSettings.specularIntensity = CGFloat(preset.specularIntensity)
+        lipstickSettings.colorVariation = CGFloat(preset.colorVariation)
     }
 
     mutating func rebuildBlushSettings() {

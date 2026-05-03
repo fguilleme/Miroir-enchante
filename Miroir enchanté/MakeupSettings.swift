@@ -11,13 +11,17 @@ struct LipstickSettings {
     var roughness: CGFloat
     var glossIntensity: CGFloat
     var colorIntensity: CGFloat
+    var specularIntensity: CGFloat
+    var colorVariation: CGFloat
 
     static let `default` = LipstickSettings(
         color: UIColor(red: 0.62, green: 0.04, blue: 0.11, alpha: 1.0),
         opacity: 0.58,
         roughness: 0.24,
         glossIntensity: 0.55,
-        colorIntensity: 1.0
+        colorIntensity: 1.0,
+        specularIntensity: 0.55,
+        colorVariation: 0.35
     )
 }
 

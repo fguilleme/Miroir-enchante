@@ -62,57 +62,117 @@ enum MakeupMaterialFactory {
     }
 
     static func configureLipstickMaterial(_ material: SCNMaterial, settings: LipstickSettings = .default) {
-        let opacity = settings.opacity.clamped(to: 0...1)
-        let color = settings.color.withIntensity(settings.colorIntensity)
-
-        material.lightingModel = .physicallyBased
-        material.diffuse.contents = color
-        material.transparent.contents = makeSoftOvalAlphaMask()
-        material.transparency = opacity
-        material.transparencyMode = .aOne
-        material.roughness.contents = settings.roughness
-        material.metalness.contents = 0.0
-        material.specular.contents = UIColor.white.withAlphaComponent(settings.glossIntensity * opacity)
-        material.shininess = settings.glossIntensity
-        material.isDoubleSided = true
-        material.writesToDepthBuffer = false
-        material.readsFromDepthBuffer = false
-        material.blendMode = .alpha
-        material.fillMode = .fill
+        applyLipstickMaterialParams(
+            material,
+            color: settings.color.withIntensity(settings.colorIntensity),
+            baseOpacity: settings.opacity,
+            roughness: settings.roughness,
+            specularStrength: settings.specularIntensity,
+            colorVariation: settings.colorVariation,
+            overlayMode: false
+        )
     }
 
-    private static func makeSoftOvalAlphaMask(size: CGSize = CGSize(width: 128, height: 128)) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
+    static func updateLipstickMaterial(
+        _ material: SCNMaterial,
+        preset: LipstickPreset,
+        intensity: Float,
+        finish: LipFinish,
+        overlayMode: Bool = false
+    ) {
+        let clampedIntensity = CGFloat(intensity).clamped(to: 0.2...1.0)
+        let baseColor = preset.baseColor.avoidingPureRed()
+        let presetRoughness = CGFloat(preset.roughness)
+        let presetSpecular = CGFloat(preset.specularIntensity)
+        let baseOpacity = CGFloat(preset.opacity) * clampedIntensity
 
-        return renderer.image { context in
-            let cgContext = context.cgContext
-            cgContext.clear(CGRect(origin: .zero, size: size))
+        applyLipstickMaterialParams(
+            material,
+            color: baseColor,
+            baseOpacity: baseOpacity,
+            roughness: roughness(for: finish, presetRoughness: presetRoughness),
+            specularStrength: specularStrength(for: finish, presetSpecular: presetSpecular),
+            colorVariation: CGFloat(preset.colorVariation),
+            overlayMode: overlayMode
+        )
+    }
 
-            let colors = [
-                UIColor.white.cgColor,
-                UIColor.white.withAlphaComponent(0.72).cgColor,
-                UIColor.clear.cgColor
-            ] as CFArray
-            let locations: [CGFloat] = [0.0, 0.55, 1.0]
-            guard let gradient = CGGradient(
-                colorsSpace: CGColorSpaceCreateDeviceRGB(),
-                colors: colors,
-                locations: locations
-            ) else { return }
+    private static func applyLipstickMaterialParams(
+        _ material: SCNMaterial,
+        color: UIColor,
+        baseOpacity: CGFloat,
+        roughness: CGFloat,
+        specularStrength: CGFloat,
+        colorVariation: CGFloat,
+        overlayMode: Bool
+    ) {
+        // Cap final opacity below 1: fully opaque lipstick looks painted on,
+        // not stained. The cap leaves the underlying lip texture readable
+        // through alpha blending — that *is* the blend with the underlying face.
+        let finalOpacity = Swift.min(0.72, baseOpacity).clamped(to: 0...1)
+        _ = colorVariation
 
-            cgContext.saveGState()
-            let ovalRect = CGRect(x: size.width * 0.08, y: size.height * 0.16, width: size.width * 0.84, height: size.height * 0.68)
-            cgContext.addEllipse(in: ovalRect)
-            cgContext.clip()
-            cgContext.drawRadialGradient(
-                gradient,
-                startCenter: CGPoint(x: size.width * 0.5, y: size.height * 0.5),
-                startRadius: 0,
-                endCenter: CGPoint(x: size.width * 0.5, y: size.height * 0.5),
-                endRadius: size.width * 0.46,
-                options: []
-            )
-            cgContext.restoreGState()
+        material.metalness.contents = 0.0
+        material.transparent.contents = nil
+        material.multiply.contents = nil
+        material.transparency = finalOpacity
+        material.transparencyMode = .aOne
+        material.isDoubleSided = true
+        material.writesToDepthBuffer = false
+        material.blendMode = .alpha
+        material.fillMode = .fill
+
+        if overlayMode {
+            // AR overlay path. ARLipMeshGeometry has no texCoord/UV channel,
+            // so UV-bound textures cannot be used. PBR + emission also fights
+            // the alpha blend (emission paints color regardless of opacity),
+            // which makes the intensity slider read as flat. A constant
+            // lighting model + plain alpha blend produces a clean tint that
+            // honors transparency directly.
+            material.lightingModel = .constant
+            material.diffuse.contents = color
+            material.diffuse.intensity = 1.0
+            material.roughness.contents = roughness
+            material.specular.contents = UIColor.clear
+            material.shininess = 0
+            material.emission.contents = UIColor.clear
+            material.readsFromDepthBuffer = false
+        } else {
+            // Demo OBJ lip mesh has UV coordinates and lives in a controlled
+            // scene with stable lighting. PBR plus a procedural roughness
+            // texture gives subtle vertical gloss striations that read as
+            // real lip detail.
+            material.lightingModel = .physicallyBased
+            material.diffuse.contents = color
+            material.diffuse.intensity = 1.0
+            material.roughness.contents = LipstickRealism.verticalLipNoise
+            material.roughness.intensity = roughness
+            material.specular.contents = UIColor.white.withAlphaComponent(specularStrength * finalOpacity)
+            material.shininess = specularStrength
+            material.emission.contents = UIColor.clear
+            material.readsFromDepthBuffer = true
+        }
+    }
+
+    private static func roughness(for finish: LipFinish, presetRoughness: CGFloat) -> CGFloat {
+        switch finish {
+        case .matte:
+            return Swift.max(presetRoughness, 0.72)
+        case .satin:
+            return presetRoughness.clamped(to: 0.30...0.50)
+        case .glossy:
+            return Swift.min(presetRoughness, 0.16)
+        }
+    }
+
+    private static func specularStrength(for finish: LipFinish, presetSpecular: CGFloat) -> CGFloat {
+        switch finish {
+        case .matte:
+            return Swift.min(0.10, presetSpecular * 0.30)
+        case .satin:
+            return presetSpecular.clamped(to: 0.30...0.55)
+        case .glossy:
+            return Swift.max(0.78, presetSpecular * 1.10).clamped(to: 0...1.0)
         }
     }
 
@@ -195,23 +255,15 @@ enum MakeupMaterialFactory {
     }
 
     static func configureARLipstickMaterial(_ material: SCNMaterial, settings: LipstickSettings = .default) {
-        let opacity = settings.opacity.clamped(to: 0...1)
-        let color = settings.color.withIntensity(settings.colorIntensity)
-
-        // AR face geometry can receive unstable or very dark lighting around
-        // the mouth, especially with facial hair and an open mouth. A constant
-        // material keeps the overlay cosmetic instead of letting PBR shading
-        // turn the selected mouth band black.
-        material.lightingModel = .constant
-        material.diffuse.contents = color
-        material.emission.contents = color.withAlphaComponent(0.18 * opacity)
-        material.transparency = opacity
-        material.transparencyMode = .aOne
-        material.isDoubleSided = true
-        material.writesToDepthBuffer = false
-        material.readsFromDepthBuffer = false
-        material.blendMode = .alpha
-        material.fillMode = .fill
+        applyLipstickMaterialParams(
+            material,
+            color: settings.color.withIntensity(settings.colorIntensity),
+            baseOpacity: settings.opacity,
+            roughness: settings.roughness,
+            specularStrength: settings.specularIntensity,
+            colorVariation: settings.colorVariation,
+            overlayMode: true
+        )
     }
 
     static func makeARBlushMaterial(settings: BlushSettings = .default) -> SCNMaterial {
@@ -279,6 +331,60 @@ enum MakeupMaterialFactory {
         material.fillMode = .lines
 
         return material
+    }
+}
+
+typealias LipFinish = LipstickFinish
+
+private enum LipstickRealism {
+    static let verticalLipNoise: UIImage = makeVerticalLipNoise()
+
+    private static func makeVerticalLipNoise() -> UIImage {
+        let width = 96
+        let height = 256
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: width, height: height))
+        return renderer.image { context in
+            let cg = context.cgContext
+
+            // Smoothed per-column random luminance produces vertical bands
+            // matching natural lip striations. Cached once at first access.
+            var prev: CGFloat = 0.78
+            var values: [CGFloat] = []
+            values.reserveCapacity(width)
+            for _ in 0..<width {
+                let target = CGFloat.random(in: 0.55...1.0)
+                prev = prev * 0.62 + target * 0.38
+                values.append(prev)
+            }
+
+            for x in 0..<width {
+                let value = values[x]
+                cg.setFillColor(UIColor(white: value, alpha: 1).cgColor)
+                cg.fill(CGRect(x: x, y: 0, width: 1, height: height))
+            }
+
+            // Faint horizontal accents read as occasional creases.
+            for _ in 0..<24 {
+                let y = Int.random(in: 0..<height)
+                let bandHeight = Int.random(in: 1...3)
+                let alpha = CGFloat.random(in: 0.05...0.18)
+                cg.setFillColor(UIColor(white: 0.5, alpha: alpha).cgColor)
+                cg.fill(CGRect(x: 0, y: y, width: width, height: bandHeight))
+            }
+        }
+    }
+
+}
+
+private extension UIColor {
+    func avoidingPureRed() -> UIColor {
+        var red: CGFloat = 0
+        var green: CGFloat = 0
+        var blue: CGFloat = 0
+        var alpha: CGFloat = 0
+        guard getRed(&red, green: &green, blue: &blue, alpha: &alpha) else { return self }
+        guard red > 0.92, green < 0.08, blue < 0.08 else { return self }
+        return UIColor(red: 0.84, green: 0.10, blue: 0.14, alpha: alpha)
     }
 }
 
