@@ -39,10 +39,11 @@
 "eyeshadow.copper" = "コッパー";
 "eyeshadow.smoke" = "スモーク";
 "error.truedepth_required" = "顔トラッキングにはTrueDepthカメラ搭載のiPhoneが必要です。";
-"look.natural_nude" = "Natural";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
-"look.bold_red" = "Bold";
+"look.natural_nude" = "自然";
+"look.soft_rose" = "ローズ";
+"look.evening_glam" = "グラム";
+"look.bold_red" = "大胆";
+"control.before_after" = "前 / 後";
 "tab.looks" = "ルック";
 "tab.lips" = "リップ";
 "tab.face" = "肌";
@@ -63,7 +64,7 @@
 "finish.glossy" = "ツヤ";
 "bug.report.title" = "問題を報告";
 "bug.report.header" = "バグレポート - Miroir enchanté";
-"bug.report.email_hint" = "%@ にこのレポートを送信してください。";
+"bug.report.email_hint" = "このレポートの送信先:";
 "bug.report.description" = "問題の内容をここに記入してください:";
 "bug.report.device" = "デバイス";
 "bug.report.ios" = "iOS";

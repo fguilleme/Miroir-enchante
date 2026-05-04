@@ -39,10 +39,11 @@
 "eyeshadow.copper" = "铜棕";
 "eyeshadow.smoke" = "烟熏";
 "error.truedepth_required" = "面部跟踪需要配备 TrueDepth 摄像头的 iPhone。";
-"look.natural_nude" = "Natural";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
-"look.bold_red" = "Bold";
+"look.natural_nude" = "自然";
+"look.soft_rose" = "玫瑰";
+"look.evening_glam" = "魅惑";
+"look.bold_red" = "红唇";
+"control.before_after" = "前 / 后";
 "tab.looks" = "妆容";
 "tab.lips" = "唇妆";
 "tab.face" = "底妆";
@@ -63,7 +64,7 @@
 "finish.glossy" = "水光";
 "bug.report.title" = "报告问题";
 "bug.report.header" = "错误报告 - Miroir enchanté";
-"bug.report.email_hint" = "请将此报告发送给%@。";
+"bug.report.email_hint" = "请将此报告发送至:";
 "bug.report.description" = "请在此描述问题:";
 "bug.report.device" = "设备";
 "bug.report.ios" = "iOS";

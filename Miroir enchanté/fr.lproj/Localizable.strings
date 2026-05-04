@@ -39,9 +39,10 @@
 "eyeshadow.copper" = "Cuivre";
 "eyeshadow.smoke" = "Fumé";
 "look.natural_nude" = "Naturel";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
+"look.soft_rose" = "Rose doux";
+"look.evening_glam" = "Soirée";
 "look.bold_red" = "Audace";
+"control.before_after" = "Avant / Après";
 "error.truedepth_required" = "Le suivi du visage nécessite un iPhone avec une caméra TrueDepth.";
 "tab.looks" = "Looks";
 "tab.lips" = "Lèvres";
@@ -63,7 +64,7 @@
 "finish.glossy" = "Brillant";
 "bug.report.title" = "Signaler un problème";
 "bug.report.header" = "Rapport de bug - Miroir enchanté";
-"bug.report.email_hint" = "Envoyez ce rapport à %@.";
+"bug.report.email_hint" = "Envoyez ce rapport à:";
 "bug.report.description" = "Décris le problème ici:";
 "bug.report.device" = "Appareil";
 "bug.report.ios" = "iOS";

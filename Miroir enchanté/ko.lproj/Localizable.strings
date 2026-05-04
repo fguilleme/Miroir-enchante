@@ -39,10 +39,11 @@
 "eyeshadow.copper" = "코퍼";
 "eyeshadow.smoke" = "스모크";
 "error.truedepth_required" = "얼굴 추적에는 TrueDepth 카메라가 있는 iPhone이 필요합니다.";
-"look.natural_nude" = "Natural";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
-"look.bold_red" = "Bold";
+"look.natural_nude" = "내추럴";
+"look.soft_rose" = "로즈";
+"look.evening_glam" = "글램";
+"look.bold_red" = "볼드";
+"control.before_after" = "전 / 후";
 "tab.looks" = "룩";
 "tab.lips" = "립";
 "tab.face" = "페이스";
@@ -63,7 +64,7 @@
 "finish.glossy" = "글로시";
 "bug.report.title" = "문제 신고";
 "bug.report.header" = "버그 리포트 - Miroir enchanté";
-"bug.report.email_hint" = "이 리포트를 %@에 보내세요.";
+"bug.report.email_hint" = "이 리포트를 보낼 곳:";
 "bug.report.description" = "문제를 여기에 설명하세요:";
 "bug.report.device" = "기기";
 "bug.report.ios" = "iOS";

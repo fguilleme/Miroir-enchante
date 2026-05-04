@@ -42,6 +42,7 @@
 "look.soft_rose" = "Rose";
 "look.evening_glam" = "Glam";
 "look.bold_red" = "Bold";
+"control.before_after" = "Before / After";
 "error.truedepth_required" = "Face tracking requires an iPhone with a TrueDepth camera.";
 "tab.looks" = "Looks";
 "tab.lips" = "Lips";
@@ -63,7 +64,7 @@
 "finish.glossy" = "Glossy";
 "bug.report.title" = "Report an issue";
 "bug.report.header" = "Bug report - Miroir enchanté";
-"bug.report.email_hint" = "Send this report to %@.";
+"bug.report.email_hint" = "Send this report to:";
 "bug.report.description" = "Describe the issue here:";
 "bug.report.device" = "Device";
 "bug.report.ios" = "iOS";

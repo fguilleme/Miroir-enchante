@@ -69,9 +69,9 @@ final class FaceMakeupViewController: UIViewController {
         configureModeButton()
         configureExperienceModeButton()
         configureHairStyleButton()
-        configureBugReportButton()
         configureMakeupControls()
         configureBeforeAfterButton()
+        configureBugReportButton()
         configureARAutoFramingButton()
         configureUnsupportedDeviceMessageIfNeeded()
         applyLipstickSettings()
@@ -220,7 +220,7 @@ final class FaceMakeupViewController: UIViewController {
         view.addSubview(bugReportButton)
         NSLayoutConstraint.activate([
             bugReportButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
-            bugReportButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            bugReportButton.bottomAnchor.constraint(equalTo: controlPanel.topAnchor, constant: -10),
             bugReportButton.widthAnchor.constraint(equalToConstant: 44),
             bugReportButton.heightAnchor.constraint(equalToConstant: 44)
         ])
@@ -248,7 +248,7 @@ final class FaceMakeupViewController: UIViewController {
 
     private func configureBeforeAfterButton() {
         beforeAfterButton.translatesAutoresizingMaskIntoConstraints = false
-        beforeAfterButton.setTitle("Avant / Après", for: .normal)
+        beforeAfterButton.setTitle(L10n.text("control.before_after"), for: .normal)
         beforeAfterButton.setImage(UIImage(systemName: "rectangle.split.2x1"), for: .normal)
         beforeAfterButton.tintColor = CosmeticTheme.softGold
         beforeAfterButton.semanticContentAttribute = .forceLeftToRight

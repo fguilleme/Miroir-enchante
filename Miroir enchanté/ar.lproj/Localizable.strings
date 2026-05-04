@@ -39,10 +39,11 @@
 "eyeshadow.copper" = "نحاسي";
 "eyeshadow.smoke" = "دخاني";
 "error.truedepth_required" = "يتطلب تتبع الوجه جهاز iPhone مزودًا بكاميرا TrueDepth.";
-"look.natural_nude" = "Natural";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
-"look.bold_red" = "Bold";
+"look.natural_nude" = "طبيعي";
+"look.soft_rose" = "وردي";
+"look.evening_glam" = "لامع";
+"look.bold_red" = "جريء";
+"control.before_after" = "قبل / بعد";
 "tab.looks" = "إطلالات";
 "tab.lips" = "شفاه";
 "tab.face" = "بشرة";
@@ -63,7 +64,7 @@
 "finish.glossy" = "لامع";
 "bug.report.title" = "الإبلاغ عن مشكلة";
 "bug.report.header" = "تقرير خطأ - Miroir enchanté";
-"bug.report.email_hint" = "أرسل هذا التقرير إلى %@.";
+"bug.report.email_hint" = "أرسل هذا التقرير إلى:";
 "bug.report.description" = "صف المشكلة هنا:";
 "bug.report.device" = "الجهاز";
 "bug.report.ios" = "iOS";

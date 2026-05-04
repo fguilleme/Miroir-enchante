@@ -40,9 +40,10 @@
 "eyeshadow.smoke" = "Esfumado";
 "error.truedepth_required" = "O rastreamento facial requer um iPhone com câmera TrueDepth.";
 "look.natural_nude" = "Natural";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
-"look.bold_red" = "Bold";
+"look.soft_rose" = "Rosa";
+"look.evening_glam" = "Glamour";
+"look.bold_red" = "Ousado";
+"control.before_after" = "Antes / Depois";
 "tab.looks" = "Looks";
 "tab.lips" = "Lábios";
 "tab.face" = "Rosto";
@@ -63,7 +64,7 @@
 "finish.glossy" = "Brilho";
 "bug.report.title" = "Reportar problema";
 "bug.report.header" = "Relatório de bug - Miroir enchanté";
-"bug.report.email_hint" = "Envie este relatório para %@.";
+"bug.report.email_hint" = "Envie este relatório para:";
 "bug.report.description" = "Descreva o problema aqui:";
 "bug.report.device" = "Dispositivo";
 "bug.report.ios" = "iOS";

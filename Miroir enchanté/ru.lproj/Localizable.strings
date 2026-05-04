@@ -39,10 +39,11 @@
 "eyeshadow.copper" = "Медный";
 "eyeshadow.smoke" = "Дымчатый";
 "error.truedepth_required" = "Для отслеживания лица требуется iPhone с камерой TrueDepth.";
-"look.natural_nude" = "Natural";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
-"look.bold_red" = "Bold";
+"look.natural_nude" = "Натур.";
+"look.soft_rose" = "Роза";
+"look.evening_glam" = "Глам";
+"look.bold_red" = "Яркий";
+"control.before_after" = "До / После";
 "tab.looks" = "Образы";
 "tab.lips" = "Губы";
 "tab.face" = "Тон";
@@ -63,7 +64,7 @@
 "finish.glossy" = "Глянец";
 "bug.report.title" = "Сообщить о проблеме";
 "bug.report.header" = "Отчет об ошибке - Miroir enchanté";
-"bug.report.email_hint" = "Отправьте этот отчет в %@.";
+"bug.report.email_hint" = "Отправьте этот отчет на:";
 "bug.report.description" = "Опишите проблему здесь:";
 "bug.report.device" = "Устройство";
 "bug.report.ios" = "iOS";

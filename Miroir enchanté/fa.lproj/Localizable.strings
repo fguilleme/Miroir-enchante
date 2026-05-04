@@ -39,10 +39,11 @@
 "eyeshadow.copper" = "مسی";
 "eyeshadow.smoke" = "دودی";
 "error.truedepth_required" = "ردیابی چهره به آیفون دارای دوربین TrueDepth نیاز دارد.";
-"look.natural_nude" = "Natural";
-"look.soft_rose" = "Rose";
-"look.evening_glam" = "Glam";
-"look.bold_red" = "Bold";
+"look.natural_nude" = "طبیعی";
+"look.soft_rose" = "رزی";
+"look.evening_glam" = "گلم";
+"look.bold_red" = "جسور";
+"control.before_after" = "قبل / بعد";
 "tab.looks" = "استایل";
 "tab.lips" = "لب";
 "tab.face" = "صورت";
@@ -63,7 +64,7 @@
 "finish.glossy" = "براق";
 "bug.report.title" = "گزارش مشکل";
 "bug.report.header" = "گزارش خطا - Miroir enchanté";
-"bug.report.email_hint" = "این گزارش را به %@ بفرستید.";
+"bug.report.email_hint" = "این گزارش را بفرستید به:";
 "bug.report.description" = "مشکل را اینجا توضیح دهید:";
 "bug.report.device" = "دستگاه";
 "bug.report.ios" = "iOS";

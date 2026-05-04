@@ -31,7 +31,9 @@ final class BugReportPresenter {
         var textLines = [
             L10n.text("bug.report.header"),
             "",
-            String(format: L10n.text("bug.report.email_hint"), reportRecipient),
+            L10n.text("bug.report.email_hint"),
+            "",
+            reportRecipient,
             "",
             L10n.text("bug.report.description"),
             "",
