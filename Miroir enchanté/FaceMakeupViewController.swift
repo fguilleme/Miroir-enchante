@@ -26,6 +26,7 @@ final class FaceMakeupViewController: UIViewController {
     private let hairStyleButton = UIButton(type: .system)
     private let arAutoFramingButton = UIButton(type: .system)
     private let beforeAfterButton = UIButton(type: .system)
+    private let bugReportButton = UIButton(type: .system)
     private let controlPanel = MakeupControlPanelView()
 
     private var unsupportedDeviceLabel: UILabel?
@@ -68,6 +69,7 @@ final class FaceMakeupViewController: UIViewController {
         configureModeButton()
         configureExperienceModeButton()
         configureHairStyleButton()
+        configureBugReportButton()
         configureMakeupControls()
         configureBeforeAfterButton()
         configureARAutoFramingButton()
@@ -203,6 +205,24 @@ final class FaceMakeupViewController: UIViewController {
             hairStyleButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
             hairStyleButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 104),
             hairStyleButton.heightAnchor.constraint(equalToConstant: 44)
+        ])
+    }
+
+    private func configureBugReportButton() {
+        bugReportButton.translatesAutoresizingMaskIntoConstraints = false
+        bugReportButton.setImage(UIImage(systemName: "exclamationmark.bubble"), for: .normal)
+        bugReportButton.imageView?.contentMode = .scaleAspectFit
+        bugReportButton.tintColor = CosmeticTheme.softGold
+        bugReportButton.addTarget(self, action: #selector(presentBugReport), for: .touchUpInside)
+        bugReportButton.accessibilityLabel = "Signaler un problème"
+        styleFloatingButton(bugReportButton)
+
+        view.addSubview(bugReportButton)
+        NSLayoutConstraint.activate([
+            bugReportButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            bugReportButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
+            bugReportButton.widthAnchor.constraint(equalToConstant: 44),
+            bugReportButton.heightAnchor.constraint(equalToConstant: 44)
         ])
     }
 
@@ -365,6 +385,10 @@ final class FaceMakeupViewController: UIViewController {
 
         let style = demoHeadRenderer.cycleHairStyle()
         hairStyleButton.setTitle(L10n.text(style.titleKey), for: .normal)
+    }
+
+    @objc private func presentBugReport() {
+        BugReportPresenter.present(from: self, sourceView: bugReportButton)
     }
 
     @objc private func showBeforePreview() {
