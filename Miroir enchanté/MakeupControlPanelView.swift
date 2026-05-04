@@ -22,7 +22,7 @@ final class MakeupControlPanelView: UIStackView {
         layout.scrollDirection = .horizontal
         layout.minimumLineSpacing = 10
         layout.minimumInteritemSpacing = 0
-        layout.itemSize = CGSize(width: 84, height: 40)
+        layout.itemSize = CGSize(width: 76, height: 82)
         layout.sectionInset = UIEdgeInsets(top: 0, left: 4, bottom: 0, right: 4)
 
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
@@ -409,7 +409,7 @@ final class MakeupControlPanelView: UIStackView {
             looksCollectionView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             looksCollectionView.topAnchor.constraint(equalTo: container.topAnchor),
             looksCollectionView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            container.heightAnchor.constraint(equalToConstant: 42)
+            container.heightAnchor.constraint(equalToConstant: 84)
         ])
         return container
     }
@@ -939,6 +939,7 @@ final class MakeupLookCell: UICollectionViewCell {
     static let reuseIdentifier = "MakeupLookCell"
 
     private let titleLabel = UILabel()
+    private let sketchView = MakeupZoneFaceIconView()
     private let swatchStack = UIStackView()
     private let swatchViews: [UIView] = (0..<5).map { _ in UIView() }
 
@@ -950,6 +951,9 @@ final class MakeupLookCell: UICollectionViewCell {
         contentView.layer.borderColor = UIColor.clear.cgColor
         contentView.backgroundColor = UIColor.white.withAlphaComponent(0.05)
 
+        sketchView.translatesAutoresizingMaskIntoConstraints = false
+        sketchView.isUserInteractionEnabled = false
+
         swatchStack.axis = .horizontal
         swatchStack.spacing = 3
         swatchStack.alignment = .center
@@ -957,11 +961,11 @@ final class MakeupLookCell: UICollectionViewCell {
         swatchStack.translatesAutoresizingMaskIntoConstraints = false
 
         for view in swatchViews {
-            view.layer.cornerRadius = 5
+            view.layer.cornerRadius = 3
             view.layer.borderWidth = 0.5
             view.layer.borderColor = UIColor.white.withAlphaComponent(0.18).cgColor
-            view.widthAnchor.constraint(equalToConstant: 10).isActive = true
-            view.heightAnchor.constraint(equalToConstant: 10).isActive = true
+            view.widthAnchor.constraint(equalToConstant: 7).isActive = true
+            view.heightAnchor.constraint(equalToConstant: 7).isActive = true
             swatchStack.addArrangedSubview(view)
         }
 
@@ -972,16 +976,20 @@ final class MakeupLookCell: UICollectionViewCell {
         titleLabel.adjustsFontSizeToFitWidth = true
         titleLabel.minimumScaleFactor = 0.7
 
-        contentView.addSubview(swatchStack)
         contentView.addSubview(titleLabel)
+        contentView.addSubview(sketchView)
+        contentView.addSubview(swatchStack)
 
         NSLayoutConstraint.activate([
-            swatchStack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            swatchStack.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
             titleLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
-            titleLabel.topAnchor.constraint(equalTo: swatchStack.bottomAnchor, constant: 3),
-            titleLabel.bottomAnchor.constraint(lessThanOrEqualTo: contentView.bottomAnchor, constant: -3)
+            titleLabel.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
+            sketchView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
+            sketchView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -4),
+            sketchView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
+            sketchView.bottomAnchor.constraint(equalTo: swatchStack.topAnchor, constant: -1),
+            swatchStack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            swatchStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4)
         ])
     }
 
@@ -991,6 +999,7 @@ final class MakeupLookCell: UICollectionViewCell {
 
     func configure(look: MakeupLook, isSelected: Bool, animated: Bool) {
         titleLabel.text = L10n.text(look.titleKey)
+        sketchView.configure(look: look)
         for (view, color) in zip(swatchViews, look.swatchColors) {
             view.backgroundColor = color
         }
@@ -1018,5 +1027,155 @@ final class MakeupLookCell: UICollectionViewCell {
         } else {
             updates()
         }
+    }
+}
+
+struct MakeupFaceZone: OptionSet {
+    let rawValue: Int
+
+    static let lips = MakeupFaceZone(rawValue: 1 << 0)
+    static let blush = MakeupFaceZone(rawValue: 1 << 1)
+    static let glow = MakeupFaceZone(rawValue: 1 << 2)
+    static let contour = MakeupFaceZone(rawValue: 1 << 3)
+    static let eyes = MakeupFaceZone(rawValue: 1 << 4)
+    static let fullLook: MakeupFaceZone = [.lips, .blush, .glow, .contour, .eyes]
+}
+
+struct MakeupFaceIconPalette {
+    var lips: UIColor
+    var blush: UIColor
+    var glow: UIColor
+    var contour: UIColor
+    var eyes: UIColor
+}
+
+final class MakeupZoneFaceIconView: UIView {
+    private var zones: MakeupFaceZone = .fullLook
+    private var palette = MakeupFaceIconPalette(
+        lips: .systemRed,
+        blush: .systemPink,
+        glow: CosmeticTheme.softGold,
+        contour: UIColor(red: 0.42, green: 0.28, blue: 0.22, alpha: 1.0),
+        eyes: UIColor(red: 0.42, green: 0.28, blue: 0.44, alpha: 1.0)
+    )
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear
+        contentMode = .redraw
+    }
+
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func configure(
+        zones: MakeupFaceZone,
+        palette: MakeupFaceIconPalette
+    ) {
+        self.zones = zones
+        self.palette = palette
+        setNeedsDisplay()
+    }
+
+    func configure(look: MakeupLook) {
+        configure(
+            zones: .fullLook,
+            palette: MakeupFaceIconPalette(
+                lips: look.lipstick.baseColor,
+                blush: look.blush.baseColor,
+                glow: look.glow?.color ?? CosmeticTheme.softGold,
+                contour: look.contour?.color ?? UIColor(red: 0.42, green: 0.28, blue: 0.22, alpha: 1.0),
+                eyes: look.eyes.baseColor
+            )
+        )
+    }
+
+    override func draw(_ rect: CGRect) {
+        guard rect.width > 4, rect.height > 4 else { return }
+
+        let scale = min(rect.width / 48, rect.height / 46)
+        let width = 48 * scale
+        let height = 46 * scale
+        let origin = CGPoint(x: rect.midX - width * 0.5, y: rect.midY - height * 0.5)
+
+        guard let context = UIGraphicsGetCurrentContext() else { return }
+        context.saveGState()
+        context.translateBy(x: origin.x, y: origin.y)
+        context.scaleBy(x: scale, y: scale)
+
+        drawFaceOutline()
+        if zones.contains(.contour) { drawContour() }
+        if zones.contains(.glow) { drawGlow() }
+        if zones.contains(.blush) { drawBlush() }
+        if zones.contains(.eyes) { drawEyes() }
+        if zones.contains(.lips) { drawLips() }
+
+        context.restoreGState()
+    }
+
+    private func drawFaceOutline() {
+        let facePath = UIBezierPath(ovalIn: CGRect(x: 11, y: 3, width: 26, height: 38))
+        UIColor.white.withAlphaComponent(0.24).setStroke()
+        facePath.lineWidth = 1.15
+        facePath.stroke()
+
+        UIColor.white.withAlphaComponent(0.16).setStroke()
+        let nose = UIBezierPath()
+        nose.move(to: CGPoint(x: 24, y: 17))
+        nose.addQuadCurve(to: CGPoint(x: 23.3, y: 26), controlPoint: CGPoint(x: 25.6, y: 22))
+        nose.lineWidth = 0.75
+        nose.lineCapStyle = .round
+        nose.stroke()
+    }
+
+    private func drawContour() {
+        palette.contour.withAlphaComponent(0.34).setStroke()
+        drawCurve(from: CGPoint(x: 14, y: 18), to: CGPoint(x: 16, y: 31), control: CGPoint(x: 12, y: 25), width: 2.0)
+        drawCurve(from: CGPoint(x: 34, y: 18), to: CGPoint(x: 32, y: 31), control: CGPoint(x: 36, y: 25), width: 2.0)
+        drawCurve(from: CGPoint(x: 17, y: 27), to: CGPoint(x: 23, y: 30), control: CGPoint(x: 19, y: 30), width: 1.6)
+        drawCurve(from: CGPoint(x: 31, y: 27), to: CGPoint(x: 25, y: 30), control: CGPoint(x: 29, y: 30), width: 1.6)
+    }
+
+    private func drawGlow() {
+        palette.glow.withAlphaComponent(0.62).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 17.5, y: 21, width: 3, height: 3)).fill()
+        UIBezierPath(ovalIn: CGRect(x: 27.5, y: 21, width: 3, height: 3)).fill()
+        UIBezierPath(ovalIn: CGRect(x: 23, y: 13.5, width: 2, height: 5)).fill()
+    }
+
+    private func drawBlush() {
+        palette.blush.withAlphaComponent(0.50).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 15.5, y: 25, width: 6, height: 5)).fill()
+        UIBezierPath(ovalIn: CGRect(x: 26.5, y: 25, width: 6, height: 5)).fill()
+    }
+
+    private func drawEyes() {
+        palette.eyes.withAlphaComponent(0.62).setStroke()
+        drawCurve(from: CGPoint(x: 16.5, y: 17.5), to: CGPoint(x: 22.5, y: 17.5), control: CGPoint(x: 19.5, y: 15.4), width: 1.9)
+        drawCurve(from: CGPoint(x: 25.5, y: 17.5), to: CGPoint(x: 31.5, y: 17.5), control: CGPoint(x: 28.5, y: 15.4), width: 1.9)
+
+        UIColor.white.withAlphaComponent(0.34).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 19.1, y: 17.1, width: 1.1, height: 1.1)).fill()
+        UIBezierPath(ovalIn: CGRect(x: 28.1, y: 17.1, width: 1.1, height: 1.1)).fill()
+    }
+
+    private func drawLips() {
+        palette.lips.withAlphaComponent(0.82).setFill()
+        let lips = UIBezierPath()
+        lips.move(to: CGPoint(x: 18.5, y: 32))
+        lips.addCurve(to: CGPoint(x: 29.5, y: 32), controlPoint1: CGPoint(x: 21, y: 29.7), controlPoint2: CGPoint(x: 27, y: 29.7))
+        lips.addCurve(to: CGPoint(x: 18.5, y: 32), controlPoint1: CGPoint(x: 27, y: 34.8), controlPoint2: CGPoint(x: 21, y: 34.8))
+        lips.close()
+        lips.fill()
+    }
+
+    private func drawCurve(from start: CGPoint, to end: CGPoint, control: CGPoint, width: CGFloat) {
+        let path = UIBezierPath()
+        path.move(to: start)
+        path.addQuadCurve(to: end, controlPoint: control)
+        path.lineWidth = width
+        path.lineCapStyle = .round
+        path.stroke()
     }
 }
