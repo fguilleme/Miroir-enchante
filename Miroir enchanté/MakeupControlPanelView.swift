@@ -375,7 +375,6 @@ final class MakeupControlPanelView: UIStackView {
         debugControlRows = [hairOffsetYRow, hairOffsetZRow, hairScaleRow, visibilityRow]
 
         addArrangedSubview(looksRow)
-        addArrangedSubview(controlsSegmentedControl)
         addArrangedSubview(faceSegmentedControl)
         addArrangedSubview(lipstickSelectorRow)
         addArrangedSubview(lipstickIntensityRow)
@@ -396,6 +395,7 @@ final class MakeupControlPanelView: UIStackView {
         addArrangedSubview(hairOffsetZRow)
         addArrangedSubview(hairScaleRow)
         addArrangedSubview(visibilityRow)
+        addArrangedSubview(controlsSegmentedControl)
         setSelectedMainCategory(.looks)
     }
 
