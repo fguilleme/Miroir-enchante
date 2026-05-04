@@ -61,3 +61,11 @@
 "finish.matte" = "哑光";
 "finish.satin" = "缎光";
 "finish.glossy" = "水光";
+"bug.report.title" = "报告问题";
+"bug.report.header" = "错误报告 - Miroir enchanté";
+"bug.report.email_hint" = "请将此报告发送给%@。";
+"bug.report.description" = "请在此描述问题:";
+"bug.report.device" = "设备";
+"bug.report.ios" = "iOS";
+"bug.report.app_version" = "App 版本";
+"bug.report.screenshot_attached" = "已附上截图。";

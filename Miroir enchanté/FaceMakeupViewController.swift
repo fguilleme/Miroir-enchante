@@ -214,7 +214,7 @@ final class FaceMakeupViewController: UIViewController {
         bugReportButton.imageView?.contentMode = .scaleAspectFit
         bugReportButton.tintColor = CosmeticTheme.softGold
         bugReportButton.addTarget(self, action: #selector(presentBugReport), for: .touchUpInside)
-        bugReportButton.accessibilityLabel = "Signaler un problème"
+        bugReportButton.accessibilityLabel = L10n.text("bug.report.title")
         styleFloatingButton(bugReportButton)
 
         view.addSubview(bugReportButton)

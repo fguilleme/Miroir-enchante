@@ -61,3 +61,11 @@
 "finish.matte" = "Matte";
 "finish.satin" = "Satin";
 "finish.glossy" = "Glossy";
+"bug.report.title" = "Report an issue";
+"bug.report.header" = "Bug report - Miroir enchanté";
+"bug.report.email_hint" = "Send this report to %@.";
+"bug.report.description" = "Describe the issue here:";
+"bug.report.device" = "Device";
+"bug.report.ios" = "iOS";
+"bug.report.app_version" = "App version";
+"bug.report.screenshot_attached" = "Screenshot attached.";

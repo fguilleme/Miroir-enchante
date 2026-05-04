@@ -61,3 +61,11 @@
 "finish.matte" = "매트";
 "finish.satin" = "새틴";
 "finish.glossy" = "글로시";
+"bug.report.title" = "문제 신고";
+"bug.report.header" = "버그 리포트 - Miroir enchanté";
+"bug.report.email_hint" = "이 리포트를 %@에 보내세요.";
+"bug.report.description" = "문제를 여기에 설명하세요:";
+"bug.report.device" = "기기";
+"bug.report.ios" = "iOS";
+"bug.report.app_version" = "앱 버전";
+"bug.report.screenshot_attached" = "스크린샷이 첨부되었습니다.";

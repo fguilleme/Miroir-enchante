@@ -61,3 +61,11 @@
 "finish.matte" = "Матовый";
 "finish.satin" = "Сатин";
 "finish.glossy" = "Глянец";
+"bug.report.title" = "Сообщить о проблеме";
+"bug.report.header" = "Отчет об ошибке - Miroir enchanté";
+"bug.report.email_hint" = "Отправьте этот отчет в %@.";
+"bug.report.description" = "Опишите проблему здесь:";
+"bug.report.device" = "Устройство";
+"bug.report.ios" = "iOS";
+"bug.report.app_version" = "Версия приложения";
+"bug.report.screenshot_attached" = "Скриншот приложен.";

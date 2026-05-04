@@ -6,6 +6,8 @@
 import UIKit
 
 final class BugReportPresenter {
+    private static let reportRecipient = "Miroir enchanté support"
+
     static func captureScreenshot() -> UIImage? {
         guard let window = UIApplication.shared.connectedScenes
             .compactMap({ $0 as? UIWindowScene })
@@ -22,19 +24,29 @@ final class BugReportPresenter {
 
     static func present(from viewController: UIViewController, sourceView: UIView? = nil) {
         let device = UIDevice.current
+        let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "-"
+        let buildNumber = Bundle.main.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "-"
+        let screenshot = captureScreenshot()
 
-        let text = """
-        Bug report - Miroir enchanté
+        var textLines = [
+            L10n.text("bug.report.header"),
+            "",
+            String(format: L10n.text("bug.report.email_hint"), reportRecipient),
+            "",
+            L10n.text("bug.report.description"),
+            "",
+            "\(L10n.text("bug.report.device")): \(device.model)",
+            "\(L10n.text("bug.report.ios")): \(device.systemVersion)",
+            "\(L10n.text("bug.report.app_version")): \(appVersion) (\(buildNumber))"
+        ]
 
-        Décris le problème ici:
+        if screenshot != nil {
+            textLines.append(L10n.text("bug.report.screenshot_attached"))
+        }
 
-        Device: \(device.model)
-        iOS: \(device.systemVersion)
-        """
+        var items: [Any] = [textLines.joined(separator: "\n")]
 
-        var items: [Any] = [text]
-
-        if let screenshot = captureScreenshot() {
+        if let screenshot {
             items.insert(screenshot, at: 0)
         }
 

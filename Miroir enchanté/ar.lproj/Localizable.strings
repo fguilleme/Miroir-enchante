@@ -61,3 +61,11 @@
 "finish.matte" = "مطفي";
 "finish.satin" = "ساتان";
 "finish.glossy" = "لامع";
+"bug.report.title" = "الإبلاغ عن مشكلة";
+"bug.report.header" = "تقرير خطأ - Miroir enchanté";
+"bug.report.email_hint" = "أرسل هذا التقرير إلى %@.";
+"bug.report.description" = "صف المشكلة هنا:";
+"bug.report.device" = "الجهاز";
+"bug.report.ios" = "iOS";
+"bug.report.app_version" = "إصدار التطبيق";
+"bug.report.screenshot_attached" = "تم إرفاق لقطة شاشة.";

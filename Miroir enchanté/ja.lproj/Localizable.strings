@@ -61,3 +61,11 @@
 "finish.matte" = "マット";
 "finish.satin" = "サテン";
 "finish.glossy" = "ツヤ";
+"bug.report.title" = "問題を報告";
+"bug.report.header" = "バグレポート - Miroir enchanté";
+"bug.report.email_hint" = "%@ にこのレポートを送信してください。";
+"bug.report.description" = "問題の内容をここに記入してください:";
+"bug.report.device" = "デバイス";
+"bug.report.ios" = "iOS";
+"bug.report.app_version" = "アプリバージョン";
+"bug.report.screenshot_attached" = "スクリーンショットを添付しました。";
