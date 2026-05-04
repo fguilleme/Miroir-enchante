@@ -25,6 +25,7 @@ final class FaceMakeupViewController: UIViewController {
     private let experienceModeButton = UIButton(type: .system)
     private let hairStyleButton = UIButton(type: .system)
     private let arAutoFramingButton = UIButton(type: .system)
+    private let arAutoFramingBadgeLabel = UILabel()
     private let beforeAfterButton = UIButton(type: .system)
     private let bugReportButton = UIButton(type: .system)
     private let controlPanel = MakeupControlPanelView()
@@ -234,12 +235,27 @@ final class FaceMakeupViewController: UIViewController {
         arAutoFramingButton.addTarget(self, action: #selector(toggleARAutoFraming), for: .touchUpInside)
         arAutoFramingButton.accessibilityLabel = "Auto framing"
         styleIconFloatingButton(arAutoFramingButton)
+
+        arAutoFramingBadgeLabel.translatesAutoresizingMaskIntoConstraints = false
+        arAutoFramingBadgeLabel.text = "A"
+        arAutoFramingBadgeLabel.font = .systemFont(ofSize: 11, weight: .heavy)
+        arAutoFramingBadgeLabel.textAlignment = .center
+        arAutoFramingBadgeLabel.isUserInteractionEnabled = false
+        arAutoFramingButton.addSubview(arAutoFramingBadgeLabel)
+
+        NSLayoutConstraint.activate([
+            arAutoFramingBadgeLabel.centerXAnchor.constraint(equalTo: arAutoFramingButton.centerXAnchor),
+            arAutoFramingBadgeLabel.centerYAnchor.constraint(equalTo: arAutoFramingButton.centerYAnchor),
+            arAutoFramingBadgeLabel.widthAnchor.constraint(equalToConstant: 14),
+            arAutoFramingBadgeLabel.heightAnchor.constraint(equalToConstant: 14)
+        ])
+
         updateARAutoFramingButton()
         arAutoFramingButton.isHidden = experienceMode != .ar
 
         view.addSubview(arAutoFramingButton)
         NSLayoutConstraint.activate([
-            arAutoFramingButton.trailingAnchor.constraint(equalTo: beforeAfterButton.leadingAnchor, constant: -10),
+            arAutoFramingButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             arAutoFramingButton.centerYAnchor.constraint(equalTo: beforeAfterButton.centerYAnchor),
             arAutoFramingButton.widthAnchor.constraint(equalToConstant: 42),
             arAutoFramingButton.heightAnchor.constraint(equalToConstant: 42)
@@ -361,6 +377,7 @@ final class FaceMakeupViewController: UIViewController {
     private func updateARAutoFramingButton() {
         arAutoFramingButton.isSelected = settingsState.isARAutoFramingEnabled
         arAutoFramingButton.tintColor = settingsState.isARAutoFramingEnabled ? CosmeticTheme.softGold : UIColor.white.withAlphaComponent(0.62)
+        arAutoFramingBadgeLabel.textColor = settingsState.isARAutoFramingEnabled ? UIColor.white : UIColor.white.withAlphaComponent(0.72)
         arAutoFramingButton.layer.borderColor = (settingsState.isARAutoFramingEnabled ? CosmeticTheme.gold : UIColor.white.withAlphaComponent(0.08)).cgColor
         arAutoFramingButton.backgroundColor = settingsState.isARAutoFramingEnabled
             ? CosmeticTheme.gold.withAlphaComponent(0.18)

@@ -1104,7 +1104,7 @@ final class MakeupZoneFaceIconView: UIView {
         context.translateBy(x: origin.x, y: origin.y)
         context.scaleBy(x: scale, y: scale)
 
-        drawFaceOutline()
+        drawBasePortrait()
         if zones.contains(.contour) { drawContour() }
         if zones.contains(.glow) { drawGlow() }
         if zones.contains(.blush) { drawBlush() }
@@ -1114,50 +1114,79 @@ final class MakeupZoneFaceIconView: UIView {
         context.restoreGState()
     }
 
-    private func drawFaceOutline() {
-        let facePath = UIBezierPath(ovalIn: CGRect(x: 11, y: 3, width: 26, height: 38))
-        UIColor.white.withAlphaComponent(0.24).setStroke()
-        facePath.lineWidth = 1.15
+    private func drawBasePortrait() {
+        let hairPath = UIBezierPath()
+        hairPath.move(to: CGPoint(x: 12.5, y: 19))
+        hairPath.addCurve(to: CGPoint(x: 16.5, y: 5.5), controlPoint1: CGPoint(x: 11.7, y: 13), controlPoint2: CGPoint(x: 12.8, y: 8.6))
+        hairPath.addCurve(to: CGPoint(x: 24, y: 2.2), controlPoint1: CGPoint(x: 18.3, y: 3.8), controlPoint2: CGPoint(x: 21.1, y: 2.6))
+        hairPath.addCurve(to: CGPoint(x: 35.5, y: 19), controlPoint1: CGPoint(x: 32.2, y: 2.7), controlPoint2: CGPoint(x: 37.1, y: 9.4))
+        hairPath.addCurve(to: CGPoint(x: 33.3, y: 29), controlPoint1: CGPoint(x: 36.2, y: 23.5), controlPoint2: CGPoint(x: 35.4, y: 27.1))
+        hairPath.addCurve(to: CGPoint(x: 34.5, y: 12), controlPoint1: CGPoint(x: 33.6, y: 21.6), controlPoint2: CGPoint(x: 35, y: 16.7))
+        hairPath.addCurve(to: CGPoint(x: 24, y: 6.2), controlPoint1: CGPoint(x: 32, y: 7.2), controlPoint2: CGPoint(x: 28.6, y: 5.8))
+        hairPath.addCurve(to: CGPoint(x: 13.5, y: 12), controlPoint1: CGPoint(x: 19.4, y: 5.8), controlPoint2: CGPoint(x: 16, y: 7.2))
+        hairPath.addCurve(to: CGPoint(x: 14.7, y: 29), controlPoint1: CGPoint(x: 13, y: 16.7), controlPoint2: CGPoint(x: 14.4, y: 21.6))
+        hairPath.addCurve(to: CGPoint(x: 12.5, y: 19), controlPoint1: CGPoint(x: 12.6, y: 27.1), controlPoint2: CGPoint(x: 11.8, y: 23.5))
+        hairPath.close()
+        UIColor(red: 0.10, green: 0.08, blue: 0.07, alpha: 0.78).setFill()
+        hairPath.fill()
+
+        let facePath = UIBezierPath()
+        facePath.move(to: CGPoint(x: 24, y: 5.6))
+        facePath.addCurve(to: CGPoint(x: 36, y: 19.5), controlPoint1: CGPoint(x: 31.5, y: 5.8), controlPoint2: CGPoint(x: 36.4, y: 11.7))
+        facePath.addCurve(to: CGPoint(x: 24, y: 41), controlPoint1: CGPoint(x: 35.5, y: 31.4), controlPoint2: CGPoint(x: 30.6, y: 40.2))
+        facePath.addCurve(to: CGPoint(x: 12, y: 19.5), controlPoint1: CGPoint(x: 17.4, y: 40.2), controlPoint2: CGPoint(x: 12.5, y: 31.4))
+        facePath.addCurve(to: CGPoint(x: 24, y: 5.6), controlPoint1: CGPoint(x: 11.6, y: 11.7), controlPoint2: CGPoint(x: 16.5, y: 5.8))
+        facePath.close()
+        UIColor(red: 0.78, green: 0.53, blue: 0.41, alpha: 0.84).setFill()
+        facePath.fill()
+
+        UIColor.white.withAlphaComponent(0.22).setStroke()
+        facePath.lineWidth = 0.9
         facePath.stroke()
 
-        UIColor.white.withAlphaComponent(0.16).setStroke()
+        UIColor(red: 0.46, green: 0.30, blue: 0.24, alpha: 0.28).setStroke()
         let nose = UIBezierPath()
-        nose.move(to: CGPoint(x: 24, y: 17))
-        nose.addQuadCurve(to: CGPoint(x: 23.3, y: 26), controlPoint: CGPoint(x: 25.6, y: 22))
+        nose.move(to: CGPoint(x: 24, y: 18))
+        nose.addQuadCurve(to: CGPoint(x: 23.4, y: 26), controlPoint: CGPoint(x: 25.2, y: 22))
         nose.lineWidth = 0.75
         nose.lineCapStyle = .round
         nose.stroke()
     }
 
     private func drawContour() {
-        palette.contour.withAlphaComponent(0.34).setStroke()
-        drawCurve(from: CGPoint(x: 14, y: 18), to: CGPoint(x: 16, y: 31), control: CGPoint(x: 12, y: 25), width: 2.0)
-        drawCurve(from: CGPoint(x: 34, y: 18), to: CGPoint(x: 32, y: 31), control: CGPoint(x: 36, y: 25), width: 2.0)
-        drawCurve(from: CGPoint(x: 17, y: 27), to: CGPoint(x: 23, y: 30), control: CGPoint(x: 19, y: 30), width: 1.6)
-        drawCurve(from: CGPoint(x: 31, y: 27), to: CGPoint(x: 25, y: 30), control: CGPoint(x: 29, y: 30), width: 1.6)
+        palette.contour.withAlphaComponent(0.24).setStroke()
+        drawCurve(from: CGPoint(x: 15, y: 22.5), to: CGPoint(x: 20.5, y: 30.5), control: CGPoint(x: 16, y: 27.8), width: 2.2)
+        drawCurve(from: CGPoint(x: 33, y: 22.5), to: CGPoint(x: 27.5, y: 30.5), control: CGPoint(x: 32, y: 27.8), width: 2.2)
+        drawCurve(from: CGPoint(x: 21.9, y: 19), to: CGPoint(x: 21.4, y: 25), control: CGPoint(x: 21.1, y: 22), width: 0.9)
+        drawCurve(from: CGPoint(x: 26.1, y: 19), to: CGPoint(x: 26.6, y: 25), control: CGPoint(x: 26.9, y: 22), width: 0.9)
     }
 
     private func drawGlow() {
-        palette.glow.withAlphaComponent(0.62).setFill()
-        UIBezierPath(ovalIn: CGRect(x: 17.5, y: 21, width: 3, height: 3)).fill()
-        UIBezierPath(ovalIn: CGRect(x: 27.5, y: 21, width: 3, height: 3)).fill()
-        UIBezierPath(ovalIn: CGRect(x: 23, y: 13.5, width: 2, height: 5)).fill()
+        palette.glow.withAlphaComponent(0.58).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 17.8, y: 23.3, width: 2.8, height: 2.8)).fill()
+        UIBezierPath(ovalIn: CGRect(x: 27.4, y: 23.3, width: 2.8, height: 2.8)).fill()
+        UIBezierPath(roundedRect: CGRect(x: 23, y: 13.3, width: 2, height: 5.2), cornerRadius: 1).fill()
+        UIBezierPath(ovalIn: CGRect(x: 23, y: 34.2, width: 2, height: 1.4)).fill()
     }
 
     private func drawBlush() {
-        palette.blush.withAlphaComponent(0.50).setFill()
-        UIBezierPath(ovalIn: CGRect(x: 15.5, y: 25, width: 6, height: 5)).fill()
-        UIBezierPath(ovalIn: CGRect(x: 26.5, y: 25, width: 6, height: 5)).fill()
+        palette.blush.withAlphaComponent(0.46).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 15.2, y: 25.4, width: 7.2, height: 5.6)).fill()
+        UIBezierPath(ovalIn: CGRect(x: 25.6, y: 25.4, width: 7.2, height: 5.6)).fill()
     }
 
     private func drawEyes() {
-        palette.eyes.withAlphaComponent(0.62).setStroke()
-        drawCurve(from: CGPoint(x: 16.5, y: 17.5), to: CGPoint(x: 22.5, y: 17.5), control: CGPoint(x: 19.5, y: 15.4), width: 1.9)
-        drawCurve(from: CGPoint(x: 25.5, y: 17.5), to: CGPoint(x: 31.5, y: 17.5), control: CGPoint(x: 28.5, y: 15.4), width: 1.9)
+        palette.eyes.withAlphaComponent(0.46).setStroke()
+        drawCurve(from: CGPoint(x: 16.1, y: 17.2), to: CGPoint(x: 22.4, y: 17.2), control: CGPoint(x: 19.2, y: 14.9), width: 2.4)
+        drawCurve(from: CGPoint(x: 25.6, y: 17.2), to: CGPoint(x: 31.9, y: 17.2), control: CGPoint(x: 28.8, y: 14.9), width: 2.4)
 
-        UIColor.white.withAlphaComponent(0.34).setFill()
-        UIBezierPath(ovalIn: CGRect(x: 19.1, y: 17.1, width: 1.1, height: 1.1)).fill()
-        UIBezierPath(ovalIn: CGRect(x: 28.1, y: 17.1, width: 1.1, height: 1.1)).fill()
+        UIColor(red: 0.22, green: 0.14, blue: 0.11, alpha: 0.72).setStroke()
+        drawCurve(from: CGPoint(x: 16.7, y: 18), to: CGPoint(x: 22.1, y: 18), control: CGPoint(x: 19.4, y: 19.1), width: 0.85)
+        drawCurve(from: CGPoint(x: 25.9, y: 18), to: CGPoint(x: 31.3, y: 18), control: CGPoint(x: 28.6, y: 19.1), width: 0.85)
+
+        UIColor(red: 0.18, green: 0.12, blue: 0.10, alpha: 0.80).setFill()
+        UIBezierPath(ovalIn: CGRect(x: 18.9, y: 17.6, width: 1.2, height: 1.2)).fill()
+        UIBezierPath(ovalIn: CGRect(x: 27.9, y: 17.6, width: 1.2, height: 1.2)).fill()
     }
 
     private func drawLips() {
