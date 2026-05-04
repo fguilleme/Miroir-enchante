@@ -6,7 +6,7 @@
 import UIKit
 
 final class BugReportPresenter {
-    private static let reportRecipient = "Miroir enchanté support"
+    private static let reportRecipient = "miroir.enchante@gmail.com"
 
     static func captureScreenshot() -> UIImage? {
         guard let window = UIApplication.shared.connectedScenes
