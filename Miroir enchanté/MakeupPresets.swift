@@ -67,6 +67,7 @@ enum FaceSubCategory: Int {
 
 struct GlowPreset {
     let name: String
+    let titleKey: String
     let color: UIColor
     let intensity: Float
     let radius: Float
@@ -75,6 +76,7 @@ struct GlowPreset {
 
 struct ContourPreset {
     let name: String
+    let titleKey: String
     let color: UIColor
     let intensity: Float
     let softness: Float
@@ -111,17 +113,17 @@ enum MakeupPresets {
     ]
 
     static let glow: [GlowPreset] = [
-        GlowPreset(name: "Natural Glow", color: UIColor(red: 1.0, green: 0.86, blue: 0.68, alpha: 1.0), intensity: 0.34, radius: 1.00, specularBoost: 0.07),
-        GlowPreset(name: "Warm Gold", color: UIColor(red: 1.0, green: 0.76, blue: 0.42, alpha: 1.0), intensity: 0.38, radius: 1.04, specularBoost: 0.09),
-        GlowPreset(name: "Pearl", color: UIColor(red: 0.92, green: 0.90, blue: 1.0, alpha: 1.0), intensity: 0.30, radius: 0.96, specularBoost: 0.10),
-        GlowPreset(name: "Rosy Light", color: UIColor(red: 1.0, green: 0.72, blue: 0.78, alpha: 1.0), intensity: 0.32, radius: 1.02, specularBoost: 0.08)
+        GlowPreset(name: "Natural Glow", titleKey: "glow.natural", color: UIColor(red: 1.0, green: 0.86, blue: 0.68, alpha: 1.0), intensity: 0.34, radius: 1.00, specularBoost: 0.07),
+        GlowPreset(name: "Warm Gold", titleKey: "glow.gold", color: UIColor(red: 1.0, green: 0.76, blue: 0.42, alpha: 1.0), intensity: 0.38, radius: 1.04, specularBoost: 0.09),
+        GlowPreset(name: "Pearl", titleKey: "glow.pearl", color: UIColor(red: 0.92, green: 0.90, blue: 1.0, alpha: 1.0), intensity: 0.30, radius: 0.96, specularBoost: 0.10),
+        GlowPreset(name: "Rosy Light", titleKey: "glow.rosy", color: UIColor(red: 1.0, green: 0.72, blue: 0.78, alpha: 1.0), intensity: 0.32, radius: 1.02, specularBoost: 0.08)
     ]
 
     static let contour: [ContourPreset] = [
-        ContourPreset(name: "Soft Sculpt", color: UIColor(red: 0.38, green: 0.25, blue: 0.20, alpha: 1.0), intensity: 0.20, softness: 0.88),
-        ContourPreset(name: "Warm Shadow", color: UIColor(red: 0.47, green: 0.29, blue: 0.18, alpha: 1.0), intensity: 0.24, softness: 0.84),
-        ContourPreset(name: "Defined", color: UIColor(red: 0.31, green: 0.20, blue: 0.17, alpha: 1.0), intensity: 0.28, softness: 0.78),
-        ContourPreset(name: "Natural", color: UIColor(red: 0.43, green: 0.31, blue: 0.26, alpha: 1.0), intensity: 0.18, softness: 0.90)
+        ContourPreset(name: "Soft Sculpt", titleKey: "contour.soft_sculpt", color: UIColor(red: 0.38, green: 0.25, blue: 0.20, alpha: 1.0), intensity: 0.20, softness: 0.88),
+        ContourPreset(name: "Warm Shadow", titleKey: "contour.warm_shadow", color: UIColor(red: 0.47, green: 0.29, blue: 0.18, alpha: 1.0), intensity: 0.24, softness: 0.84),
+        ContourPreset(name: "Defined", titleKey: "contour.defined", color: UIColor(red: 0.31, green: 0.20, blue: 0.17, alpha: 1.0), intensity: 0.28, softness: 0.78),
+        ContourPreset(name: "Natural", titleKey: "contour.natural", color: UIColor(red: 0.43, green: 0.31, blue: 0.26, alpha: 1.0), intensity: 0.18, softness: 0.90)
     ]
 }
 

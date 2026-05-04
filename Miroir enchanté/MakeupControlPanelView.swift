@@ -6,8 +6,17 @@
 import UIKit
 
 final class MakeupControlPanelView: UIStackView {
-    let controlsSegmentedControl = UISegmentedControl(items: ["Looks", "Lips", "Face", "Eyes"])
-    let faceSegmentedControl = UISegmentedControl(items: ["Blush", "Glow", "Contour"])
+    let controlsSegmentedControl = UISegmentedControl(items: [
+        L10n.text("tab.looks"),
+        L10n.text("tab.lips"),
+        L10n.text("tab.face"),
+        L10n.text("tab.eyes")
+    ])
+    let faceSegmentedControl = UISegmentedControl(items: [
+        L10n.text("face_tab.blush"),
+        L10n.text("face_tab.glow"),
+        L10n.text("face_tab.contour")
+    ])
     let looksCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -24,7 +33,11 @@ final class MakeupControlPanelView: UIStackView {
         return collectionView
     }()
     let lipstickIntensitySlider = UISlider()
-    let lipstickFinishSegmentedControl = UISegmentedControl(items: ["Mat", "Satiné", "Brillant"])
+    let lipstickFinishSegmentedControl = UISegmentedControl(items: [
+        L10n.text("finish.matte"),
+        L10n.text("finish.satin"),
+        L10n.text("finish.glossy")
+    ])
     let lipstickCollectionView: UICollectionView = {
         let layout = MakeupLipstickSnapFlowLayout()
         layout.scrollDirection = .horizontal
@@ -584,7 +597,7 @@ final class MakeupControlPanelView: UIStackView {
         glowPresetButtons.append(button)
 
         let label = UILabel()
-        label.text = preset.name
+        label.text = L10n.text(preset.titleKey)
         label.textColor = UIColor.white.withAlphaComponent(0.66)
         label.font = .preferredFont(forTextStyle: .caption2)
         label.textAlignment = .center
@@ -631,7 +644,7 @@ final class MakeupControlPanelView: UIStackView {
         contourPresetButtons.append(button)
 
         let label = UILabel()
-        label.text = preset.name
+        label.text = L10n.text(preset.titleKey)
         label.textColor = UIColor.white.withAlphaComponent(0.66)
         label.font = .preferredFont(forTextStyle: .caption2)
         label.textAlignment = .center
