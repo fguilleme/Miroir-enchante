@@ -6,7 +6,7 @@
 import UIKit
 
 final class MakeupControlPanelView: UIStackView {
-    let controlsSegmentedControl = UISegmentedControl(items: ["Lipstick", "Blush", "Eyes", "Hair", "Debug"])
+    let controlsSegmentedControl = UISegmentedControl(items: ["Lips", "Blush", "Eyes", "Glow", "Hair", "Debug"])
     let looksCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -42,6 +42,8 @@ final class MakeupControlPanelView: UIStackView {
     let blushSizeSlider = UISlider()
     let blushPositionSlider = UISlider()
     let eyeshadowIntensitySlider = UISlider()
+    let glowIntensitySlider = UISlider()
+    let glowRadiusSlider = UISlider()
     let hairHueSlider = UISlider()
     let hairStrengthSlider = UISlider()
     let hairOffsetYSlider = UISlider()
@@ -56,12 +58,14 @@ final class MakeupControlPanelView: UIStackView {
     private var lipstickControlRows: [UIView] = []
     private var blushControlRows: [UIView] = []
     private var eyeshadowControlRows: [UIView] = []
+    private var glowControlRows: [UIView] = []
     private(set) var blushPresetButtons: [UIButton] = []
     private(set) var eyeshadowPresetButtons: [UIButton] = []
+    private(set) var glowPresetButtons: [UIButton] = []
     private var hairControlRows: [UIView] = []
     private var debugControlRows: [UIView] = []
     private(set) var selectedControlTab: MakeupControlTab = .lipstick
-    private(set) var visibleControlTabs: [MakeupControlTab] = [.lipstick, .blush, .eyeshadow, .hair, .debug]
+    private(set) var visibleControlTabs: [MakeupControlTab] = [.lipstick, .blush, .eyeshadow, .glow, .hair, .debug]
     private var isDemoMode = true
 
     override init(frame: CGRect) {
@@ -82,6 +86,8 @@ final class MakeupControlPanelView: UIStackView {
         blushSizeSlider.value = Float(state.blushSettings.size)
         blushPositionSlider.value = Float(state.blushSettings.position)
         eyeshadowIntensitySlider.value = Float(state.eyeshadowSettings.intensity)
+        glowIntensitySlider.value = Float(state.glowSettings.intensity)
+        glowRadiusSlider.value = Float(state.glowSettings.radius)
         hairHueSlider.value = Float(state.hairHueValue)
         hairStrengthSlider.value = Float(state.hairStrengthValue)
         hairOffsetYSlider.value = state.hairOffsetYValue
@@ -92,11 +98,12 @@ final class MakeupControlPanelView: UIStackView {
         updateHairOffsetValueLabels()
         updateBlushPresetSelection(selectedIndex: state.selectedBlushPresetIndex, animated: false)
         updateEyeshadowPresetSelection(selectedIndex: state.selectedEyeshadowPresetIndex, animated: false)
+        updateGlowPresetSelection(selectedIndex: state.selectedGlowPresetIndex, animated: false)
     }
 
     func configureTabs(isDemoMode: Bool, selectedTab: MakeupControlTab) -> MakeupControlTab {
         self.isDemoMode = isDemoMode
-        let nextTabs: [MakeupControlTab] = isDemoMode ? [.lipstick, .blush, .eyeshadow, .hair, .debug] : [.lipstick, .blush, .eyeshadow]
+        let nextTabs: [MakeupControlTab] = isDemoMode ? [.lipstick, .blush, .eyeshadow, .glow, .hair, .debug] : [.lipstick, .blush, .eyeshadow, .glow]
         var nextSelectedTab = selectedTab
         if !isDemoMode && (nextSelectedTab == .hair || nextSelectedTab == .debug) {
             nextSelectedTab = .lipstick
@@ -133,35 +140,37 @@ final class MakeupControlPanelView: UIStackView {
 
     func updateBlushPresetSelection(selectedIndex: Int, animated: Bool) {
         for button in blushPresetButtons {
-            let isSelected = button.tag == selectedIndex
-            let updates = {
-                button.transform = isSelected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
-                button.layer.borderWidth = isSelected ? 1.4 : 0
-                button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
-            }
-
-            if animated {
-                UIView.animate(withDuration: 0.18, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
-            } else {
-                updates()
-            }
+            updatePresetButtonSelection(button, isSelected: button.tag == selectedIndex, animated: animated)
         }
     }
 
     func updateEyeshadowPresetSelection(selectedIndex: Int, animated: Bool) {
         for button in eyeshadowPresetButtons {
-            let isSelected = button.tag == selectedIndex
-            let updates = {
-                button.transform = isSelected ? CGAffineTransform(scaleX: 1.08, y: 1.08) : .identity
-                button.layer.borderWidth = isSelected ? 1.4 : 0
-                button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
-            }
+            updatePresetButtonSelection(button, isSelected: button.tag == selectedIndex, animated: animated)
+        }
+    }
 
-            if animated {
-                UIView.animate(withDuration: 0.18, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
-            } else {
-                updates()
-            }
+    func updateGlowPresetSelection(selectedIndex: Int, animated: Bool) {
+        for button in glowPresetButtons {
+            updatePresetButtonSelection(button, isSelected: button.tag == selectedIndex, animated: animated)
+        }
+    }
+
+    private func updatePresetButtonSelection(_ button: UIButton, isSelected: Bool, animated: Bool) {
+        let updates = {
+            button.transform = isSelected ? CGAffineTransform(scaleX: 1.12, y: 1.12) : .identity
+            button.layer.borderWidth = isSelected ? 3.0 : 0.7
+            button.layer.borderColor = isSelected ? UIColor.white.cgColor : UIColor.white.withAlphaComponent(0.18).cgColor
+            button.layer.shadowColor = CosmeticTheme.gold.cgColor
+            button.layer.shadowOpacity = isSelected ? 0.55 : 0
+            button.layer.shadowRadius = isSelected ? 8 : 0
+            button.layer.shadowOffset = .zero
+        }
+
+        if animated {
+            UIView.animate(withDuration: 0.18, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: updates)
+        } else {
+            updates()
         }
     }
 
@@ -238,6 +247,14 @@ final class MakeupControlPanelView: UIStackView {
         eyeshadowIntensitySlider.maximumValue = 1.0
         eyeshadowIntensitySlider.isContinuous = true
 
+        glowIntensitySlider.minimumValue = 0.0
+        glowIntensitySlider.maximumValue = 1.0
+        glowIntensitySlider.isContinuous = true
+
+        glowRadiusSlider.minimumValue = 0.75
+        glowRadiusSlider.maximumValue = 1.25
+        glowRadiusSlider.isContinuous = true
+
         hairHueSlider.minimumValue = 0.0
         hairHueSlider.maximumValue = 1.0
         hairHueSlider.isContinuous = true
@@ -264,6 +281,8 @@ final class MakeupControlPanelView: UIStackView {
             blushSizeSlider,
             blushPositionSlider,
             eyeshadowIntensitySlider,
+            glowIntensitySlider,
+            glowRadiusSlider,
             hairHueSlider,
             hairStrengthSlider,
             hairOffsetYSlider,
@@ -286,6 +305,9 @@ final class MakeupControlPanelView: UIStackView {
         let blushPositionRow = makeSliderRow(title: L10n.text("control.position"), slider: blushPositionSlider)
         let eyeshadowSelectorRow = makeEyeshadowSelectorRow()
         let eyeshadowIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: eyeshadowIntensitySlider)
+        let glowSelectorRow = makeGlowSelectorRow()
+        let glowIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: glowIntensitySlider)
+        let glowRadiusRow = makeSliderRow(title: L10n.text("control.size"), slider: glowRadiusSlider)
         let visibilityRow = makeDoubleSwitchRow(
             leftTitle: L10n.text("control.hide_head"),
             leftToggle: hideHeadSwitch,
@@ -305,6 +327,7 @@ final class MakeupControlPanelView: UIStackView {
         lipstickControlRows = [lipstickSelectorRow, lipstickIntensityRow, lipstickFinishRow]
         blushControlRows = [blushSelectorRow, blushIntensityRow, blushSizeRow, blushPositionRow]
         eyeshadowControlRows = [eyeshadowSelectorRow, eyeshadowIntensityRow]
+        glowControlRows = [glowSelectorRow, glowIntensityRow, glowRadiusRow]
         hairControlRows = [hairRow]
         debugControlRows = [hairOffsetYRow, hairOffsetZRow, hairScaleRow, visibilityRow]
 
@@ -319,6 +342,9 @@ final class MakeupControlPanelView: UIStackView {
         addArrangedSubview(blushPositionRow)
         addArrangedSubview(eyeshadowSelectorRow)
         addArrangedSubview(eyeshadowIntensityRow)
+        addArrangedSubview(glowSelectorRow)
+        addArrangedSubview(glowIntensityRow)
+        addArrangedSubview(glowRadiusRow)
         addArrangedSubview(hairRow)
         addArrangedSubview(hairOffsetYRow)
         addArrangedSubview(hairOffsetZRow)
@@ -346,6 +372,7 @@ final class MakeupControlPanelView: UIStackView {
         lipstickControlRows.forEach { $0.isHidden = selectedControlTab != .lipstick }
         blushControlRows.forEach { $0.isHidden = selectedControlTab != .blush }
         eyeshadowControlRows.forEach { $0.isHidden = selectedControlTab != .eyeshadow }
+        glowControlRows.forEach { $0.isHidden = selectedControlTab != .glow }
         hairControlRows.forEach { $0.isHidden = selectedControlTab != .hair || !isDemoMode }
         debugControlRows.forEach { $0.isHidden = selectedControlTab != .debug || !isDemoMode }
     }
@@ -358,6 +385,8 @@ final class MakeupControlPanelView: UIStackView {
             return "Blush"
         case .eyeshadow:
             return "Eyes"
+        case .glow:
+            return "Glow"
         case .hair:
             return "Hair"
         case .debug:
@@ -489,6 +518,53 @@ final class MakeupControlPanelView: UIStackView {
 
         let label = UILabel()
         label.text = L10n.text(preset.titleKey)
+        label.textColor = UIColor.white.withAlphaComponent(0.66)
+        label.font = .preferredFont(forTextStyle: .caption2)
+        label.textAlignment = .center
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.65
+
+        let item = UIStackView(arrangedSubviews: [button, label])
+        item.axis = .vertical
+        item.spacing = 5
+        item.alignment = .center
+        return item
+    }
+
+    private func makeGlowSelectorRow() -> UIView {
+        let container = UIStackView()
+        container.axis = .vertical
+        container.spacing = 6
+        container.alignment = .fill
+
+        let presetsRow = UIStackView()
+        presetsRow.axis = .horizontal
+        presetsRow.spacing = 10
+        presetsRow.distribution = .fillEqually
+        presetsRow.alignment = .top
+
+        glowPresetButtons = []
+        for (index, preset) in GlowSettings.presets.enumerated() {
+            let item = makeGlowPresetItem(preset: preset, index: index)
+            presetsRow.addArrangedSubview(item)
+        }
+
+        container.addArrangedSubview(presetsRow)
+        return container
+    }
+
+    private func makeGlowPresetItem(preset: GlowPreset, index: Int) -> UIStackView {
+        let button = UIButton(type: .system)
+        button.tag = index
+        button.backgroundColor = preset.color
+        button.layer.cornerRadius = 19
+        button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
+        button.widthAnchor.constraint(equalToConstant: 38).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 38).isActive = true
+        glowPresetButtons.append(button)
+
+        let label = UILabel()
+        label.text = preset.name
         label.textColor = UIColor.white.withAlphaComponent(0.66)
         label.font = .preferredFont(forTextStyle: .caption2)
         label.textAlignment = .center
@@ -784,7 +860,7 @@ final class MakeupLookCell: UICollectionViewCell {
 
     private let titleLabel = UILabel()
     private let swatchStack = UIStackView()
-    private let swatchViews: [UIView] = (0..<3).map { _ in UIView() }
+    private let swatchViews: [UIView] = (0..<4).map { _ in UIView() }
 
     override init(frame: CGRect) {
         super.init(frame: frame)

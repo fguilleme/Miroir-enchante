@@ -2,143 +2,110 @@
 
 ## Resume rapide
 
-- Projet iOS UIKit + ARKit/SceneKit: prototype miroir maquillage.
-- Deux modes:
-  - AR: `ARSCNView`, `ARFaceTrackingConfiguration`, rendu via `FaceRenderer`.
-  - Demo: `SCNView`, tete/cheveux/yeux/levres depuis assets locaux, rendu via `DemoHeadRenderer`.
-- Etat courant: refactor UI/state/rendering en cours mais compile. `FaceMakeupViewController` ne construit plus le panneau controle ligne par ligne et parle directement a `MakeupSettingsState`.
-- Decisions recentes: reglages maquillage centralises dans `MakeupSettingsState`; panneau UI extrait dans `MakeupControlPanelView`; contrat rendu commun ajoute via `MakeupRendering`; geometries AR sorties de `FaceRenderer`; presets/modeles sortis de `MakeupMaterialFactory`; bridge computed-properties du controleur supprime; fallback, classification geometry et logique hair extraits de `DemoHeadRenderer`.
+- App iOS UIKit + ARKit/SceneKit: miroir maquillage local.
+- Features actuelles: lipstick, blush, eyeshadow, complete looks, AR auto-framing, demo Debug.
+- Work en cours non commit: ajout Glow / Highlighter.
+- Glow ajoute un rendu subtil par petits plans `SCNPlane` face-local, crees une fois dans `GlowRenderer`, sans travail par frame dans `renderer(_:didUpdate:for:)`.
+- Builds verifies apres Glow:
+  - Debug iphonesimulator: `BUILD SUCCEEDED`
+  - Release iphonesimulator: `BUILD SUCCEEDED`
 
 ## Fichiers importants
 
-- `Miroir enchanté/SceneDelegate.swift`
-  - Point entree UI. Installe `FaceMakeupViewController`.
 - `Miroir enchanté/FaceMakeupViewController.swift`
-  - Controleur principal. Gere cycle AR/demo, boutons flottants, actions UI, persistence via `MakeupSettingsState`, appels renderers.
-- `Miroir enchanté/MakeupControlPanelView.swift`
-  - Nouveau panneau controle: tabs lipstick/blush/hair/debug, sliders, switches, presets blush, collection lipstick.
-  - Contient `MakeupLipstickSnapFlowLayout`, `MakeupLipstickPresetCell`, `MakeupLipstickIconView`.
-- `Miroir enchanté/MakeupSettingsState.swift`
-  - Nouveau state central: load/persist `UserDefaults`, indices presets, lipstick finish, blush, hair placement/color, switches head/hair, AR auto framing.
-- `Miroir enchanté/MakeupSettings.swift`
-  - Modeles `LipstickSettings` et `BlushSettings` + valeurs par defaut.
-- `Miroir enchanté/MakeupPresets.swift`
-  - Presets lipstick/blush et compat `LipstickSettings.presets` / `BlushSettings.presets`.
-- `Miroir enchanté/CosmeticTheme.swift`
-  - Nouveau theme couleur commun.
-- `Miroir enchanté/MakeupUIExtensions.swift`
-  - Nouveau helper couleur pour icone lipstick (`withBrightnessMultiplier`).
-- `Miroir enchanté/MakeupRendering.swift`
-  - Nouveau protocole commun AR/Demo: lipstick, blush, makeup enabled.
+  - Controleur principal. Branche UI -> `MakeupSettingsState` -> renderers.
+  - Ajoute handlers Glow: preset, intensity, size.
 - `Miroir enchanté/FaceRenderer.swift`
-  - Rendu AR face makeup. Orchestre ARKit + SceneKit; geometries AR extraites.
-- `Miroir enchanté/ARLipMeshGeometry.swift`
-  - Geometrie AR des levres + debug points.
-- `Miroir enchanté/ARCheekMeshGeometry.swift`
-  - Geometrie AR joues + masque blush vertex colors.
+  - Rendu AR. Cree `ARSCNFaceGeometry` une fois par anchor, reuse materials/nodes.
+  - Integre `GlowRenderer` comme child du face node.
+- `Miroir enchanté/GlowRenderer.swift`
+  - Nouveau. Cree highlights statiques: upper cheekbones, bridge nose, cupid bow, forehead, chin.
+  - `applyGlowPreset(_:intensity:)`, `update(settings:)`, `setGlowEnabled(_:)`.
+  - Pas de creation texture/material dans `didUpdate`.
+- `Miroir enchanté/MakeupTextureCache.swift`
+  - Cache lip noise, blush/eye gradients, glow radial gradients.
+- `Miroir enchanté/MakeupSettings.swift`
+  - Ajoute `GlowSettings`.
+- `Miroir enchanté/MakeupPresets.swift`
+  - Ajoute `MakeupCategory`, `GlowPreset`, presets: Natural Glow, Warm Gold, Pearl, Rosy Light.
+- `Miroir enchanté/MakeupSettingsState.swift`
+  - Persiste selected glow preset, intensity, radius.
+- `Miroir enchanté/MakeupControlPanelView.swift`
+  - Ajoute tab `Glow`, preset row, intensity slider, size slider.
+- `Miroir enchanté/MakeupLooks.swift`
+  - Looks incluent `glow: GlowPreset?` + `glowIntensity`.
+- `Miroir enchanté/MakeupRendering.swift`
+  - Ajoute `updateGlowSettings(_:)`.
 - `Miroir enchanté/DemoHeadRenderer.swift`
-  - Rendu demo SceneKit principal: scene/camera, tete, yeux, levres, joues, inclinaison, orchestration.
-- `Miroir enchanté/DemoHeadRenderer+Hair.swift`
-  - Nouvelle extension: style cheveux, chargement OBJ/GLB/USDZ, materials, tint, placement, pruning hair.
-- `Miroir enchanté/DemoFallbackFactory.swift`
-  - Nouveau factory pour tete primitive fallback et overlays proceduraux des levres.
-- `Miroir enchanté/DemoGeometryClassifier.swift`
-  - Nouveau classifier pur pour noms/materials hair/eye et pruning de geometrie demo.
-- `Miroir enchanté/MakeupMaterialFactory.swift`
-  - Materiaux SceneKit communs maquillage uniquement. Ne contient plus settings/presets.
-- `Miroir enchanté/ModelAssets/`
-  - Assets bundle OBJ/MTL/textures utilises par app.
-- `Miroir enchanté/*.lproj/Localizable.strings`
-  - Localisation UI.
+  - Conforme au nouveau protocole via stockage `glowSettings`; rendu demo Glow reel non implemente.
 
 ## Etat Git recent
 
-Derniers commits verifies:
+Commits recents:
 
-- `c018407 Extract demo fallback helpers`
-- `e58378e Use settings state directly in makeup controller`
-- `7921148 Separate makeup settings and presets`
-- `9e7dced Separate makeup rendering geometry`
-- `e743332 Refactor makeup controls`
-- `eaf223c Refactor demo asset loading`
-- `eff4132 Persist makeup settings`
-- `a3ad15e Add AR auto framing toggle and refine blush mask`
-- `0ecce34 Add blush controls and refine makeup UI`
+- `d41b313 Reduce AR frame update work`
+- `3122361 Optimize AR makeup rendering`
+- `ce603c4 Move AR auto framing button next to Avant/Apres`
+- `ab3cc83 Polish makeup panel for premium feel`
+- `b2f88a1 Improve lipstick material realism`
+- `7bab8d4 Add complete look one-tap presets`
+- `ab880b7 remobe debug build from release`
+- `d0da2d9 Add eyeshadow makeup support`
 
-Dirty tree actuel, non commit:
+Dirty tree verifie:
 
-- Modifies:
-  - `Miroir enchanté/DemoHeadRenderer.swift`
+- Modified:
   - `HANDOFF.md`
-  - `Miroir enchanté/ModelAssets/Lower Lip.mtl`
-  - `Miroir enchanté/ModelAssets/Lower Lip.obj`
-- Non suivis:
-  - `Miroir enchanté/DemoHeadRenderer+Hair.swift`
-  - `assets/complet.blend`
-  - `assets/complet.blend1`
-
-Attention: `Lower Lip.*` et `assets/complet.blend*` existaient comme changements avant ce handoff. Ne pas revert sans demande explicite.
-
-## Architecture actuelle
-
-- `FaceMakeupViewController`:
-  - Possede `sceneView`, `demoSceneView`, `faceRenderer`, `demoHeadRenderer`, boutons flottants et `controlPanel`.
-  - Charge `settingsState = MakeupSettingsState.load()`.
-  - Lit/mute `settingsState` directement dans les actions UI, puis propage aux renderers.
-  - Configure `MakeupControlPanelView`, branche targets UIKit, reste `UICollectionViewDataSource/Delegate` pour lipstick presets.
-- `MakeupControlPanelView`:
-  - Construit UI panneau et gere visibilite tabs selon mode demo/AR.
-  - En AR: tabs visibles `lipstick`, `blush`.
-  - En demo: tabs visibles `lipstick`, `blush`, `hair`, `debug`.
-- `MakeupSettingsState`:
-  - Source de verite persistante.
-  - `rebuildLipstickSettings()` applique preset + intensite + finish.
-  - `rebuildBlushSettings()` applique preset + sliders blush.
-- `MakeupSettings` / `MakeupPresets`:
-  - Donnees pures separees du factory SceneKit.
-  - Les call sites existants continuent d'utiliser `LipstickSettings.presets` et `BlushSettings.presets`.
-- `MakeupRendering`:
-  - `FaceRenderer` et `DemoHeadRenderer` conformes.
-  - `FaceMakeupViewController` propage lipstick/blush/makeup-enabled via `makeupRenderers`.
-- `FaceRenderer`:
-  - Ne contient plus `LipMeshGeometry` / `CheekMeshGeometry`.
-  - Reste centre sur callbacks ARKit, nodes, modes rendu, orchestration materiaux.
-- `DemoHeadRenderer`:
-  - Fallback primitive head/lip overlay delegue a `DemoFallbackFactory`.
-  - Detection hair/eye deleguee a `DemoGeometryClassifier`.
-  - Toute la logique cheveux est maintenant dans `DemoHeadRenderer+Hair.swift`.
-  - Code cheveux procedural mort retire; les cheveux demo passent par assets OBJ/GLB/USDZ.
-  - A un helper local `clampedCGFloat` car les extensions `CGFloat.clamped` existantes sont `private` dans autres fichiers.
+  - `Miroir enchanté.xcodeproj/xcuserdata/francois.xcuserdatad/xcschemes/xcschememanagement.plist`
+  - `Miroir enchanté/DemoHeadRenderer.swift`
+  - `Miroir enchanté/FaceMakeupViewController.swift`
+  - `Miroir enchanté/FaceRenderer.swift`
+  - `Miroir enchanté/MakeupControlPanelView.swift`
+  - `Miroir enchanté/MakeupLooks.swift`
+  - `Miroir enchanté/MakeupPresets.swift`
+  - `Miroir enchanté/MakeupRendering.swift`
+  - `Miroir enchanté/MakeupSettings.swift`
+  - `Miroir enchanté/MakeupSettingsState.swift`
+  - `Miroir enchanté/MakeupState.swift`
+  - `Miroir enchanté/MakeupTextureCache.swift`
+- Untracked:
+  - `.gitignore`
+  - `Miroir enchanté.xcodeproj/xcshareddata/xcschemes/Miroir enchanté (release).xcscheme`
+  - `Miroir enchanté/GlowRenderer.swift`
 
 ## Build/Test
 
-Commande verifiee apres refactor:
+Commandes verifiees le 2026-05-03:
 
 ```sh
-xcodebuild -project 'Miroir enchanté.xcodeproj' -scheme 'Miroir enchanté' -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
+xcodebuild -project 'Miroir enchanté.xcodeproj' -configuration Debug -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
 ```
 
-Dernier resultat: `BUILD SUCCEEDED`.
+Resultat: `BUILD SUCCEEDED`.
 
-Commande avec `-destination 'generic/platform=iOS Simulator'` a rencontre problemes CoreSimulator locaux (`simdiskimaged`), puis build OK avec `-sdk iphonesimulator`.
+```sh
+xcodebuild -project 'Miroir enchanté.xcodeproj' -configuration Release -sdk iphonesimulator CODE_SIGNING_ALLOWED=NO build
+```
+
+Resultat: `BUILD SUCCEEDED`.
+
+Warnings connus:
+
+- `Metadata extraction skipped. No AppIntents.framework dependency found.`
+- Debug simulator: `ONLY_ACTIVE_ARCH=YES requested with multiple ARCHS...`
 
 ## Points d'attention
 
-- Ne pas ajouter une extension globale `CGFloat.clamped(to:)`: deja presente comme `private extension` dans `ARCheekMeshGeometry.swift` et `MakeupMaterialFactory.swift`; redeclaration casse build.
-- Les nouveaux fichiers Swift sont deja inclus par projet Xcode via groupe synchronized/file-system sync; build les compile.
-- UI refactor vise comportement identique. A verifier sur device/sim:
-  - persistance sliders/presets;
-  - tabs AR vs demo;
-  - selection lipstick carousel;
-  - switches hide head/hair en demo;
-  - bouton Avant / Apres;
-  - auto framing AR.
-- Path repo contient accent: `/Volumes/XTRA/Dev/Miroir enchanté`.
-- Pas de tests unitaires connus. Validation actuelle = build Xcode.
+- Ne pas recreer nodes/materials/textures dans `renderer(_:didUpdate:for:)`.
+- Glow actuel utilise des plans statiques child du face node. C'est perf-safe mais a verifier visuellement sur device TrueDepth pour placement exact.
+- Demo renderer stocke Glow mais ne dessine pas encore highlighter.
+- `HANDOFF.md` est modifie parce que skill project-handoff demande MAJ.
+- `.gitignore` et release scheme sont untracked; verifier avant commit.
+- Path repo avec accent: `/Volumes/XTRA/Dev/Miroir enchanté`.
 
 ## Prochaines pistes
 
-1. Tester app visuellement sur simulateur/device: panneau, tabs, sliders, presets.
-2. Continuer decoupe `DemoHeadRenderer` par responsabilite (`Eyes`, `Lips`, `Blush`) avec prudence: certains membres partages sont maintenant internal pour extensions.
-3. Ajouter petits tests purs pour `MakeupSettingsState` si target tests creee plus tard.
-4. Nettoyer/clarifier changements assets `Lower Lip.*` seulement apres confirmation utilisateur.
+1. Tester Glow sur iPhone TrueDepth: placement cheekbones/nose/cupid bow/forehead/chin.
+2. Ajuster opacites dans `GlowRenderer` si patches trop visibles.
+3. Option suivante: implementer Glow demo sur model OBJ avec memes plans/positions.
+4. Commit Glow dans un commit separe si visuel OK.

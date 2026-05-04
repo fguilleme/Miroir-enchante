@@ -10,8 +10,9 @@ enum MakeupControlTab: Int {
     case lipstick = 0
     case blush = 1
     case eyeshadow = 2
-    case hair = 3
-    case debug = 4
+    case glow = 3
+    case hair = 4
+    case debug = 5
 }
 
 enum LipstickFinish: Int {
@@ -30,6 +31,8 @@ struct MakeupSettingsState {
     var blushSettings: BlushSettings = .default
     var selectedEyeshadowPresetIndex: Int = 1
     var eyeshadowSettings: EyeshadowSettings = .default
+    var selectedGlowPresetIndex: Int = 0
+    var glowSettings: GlowSettings = .default
     var hairHueValue: CGFloat = 0.24
     var hairStrengthValue: CGFloat = 0.84
     var hairOffsetYValue: Float = -0.08
@@ -50,6 +53,9 @@ struct MakeupSettingsState {
             SettingsKey.blushPosition: Double(BlushSettings.default.position),
             SettingsKey.selectedEyeshadowPresetIndex: 1,
             SettingsKey.eyeshadowIntensity: Double(EyeshadowSettings.default.intensity),
+            SettingsKey.selectedGlowPresetIndex: 0,
+            SettingsKey.glowIntensity: Double(GlowSettings.default.intensity),
+            SettingsKey.glowRadius: Double(GlowSettings.default.radius),
             SettingsKey.hairHue: 0.24,
             SettingsKey.hairStrength: 0.84,
             SettingsKey.hairOffsetY: -0.08,
@@ -70,6 +76,9 @@ struct MakeupSettingsState {
         state.blushSettings.position = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushPosition)), to: 0...1)
         state.selectedEyeshadowPresetIndex = defaults.integer(forKey: SettingsKey.selectedEyeshadowPresetIndex)
         state.eyeshadowSettings.intensity = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.eyeshadowIntensity)), to: 0...1)
+        state.selectedGlowPresetIndex = defaults.integer(forKey: SettingsKey.selectedGlowPresetIndex)
+        state.glowSettings.intensity = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.glowIntensity)), to: 0...1)
+        state.glowSettings.radius = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.glowRadius)), to: 0.75...1.25)
         state.hairHueValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairHue)), to: 0...1)
         state.hairStrengthValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairStrength)), to: 0...1)
         state.hairOffsetYValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetY)), to: -3...1))
@@ -81,6 +90,7 @@ struct MakeupSettingsState {
         state.rebuildLipstickSettings()
         state.rebuildBlushSettings()
         state.rebuildEyeshadowSettings()
+        state.rebuildGlowSettings()
         return state
     }
 
@@ -95,6 +105,9 @@ struct MakeupSettingsState {
         defaults.set(Double(blushSettings.position), forKey: SettingsKey.blushPosition)
         defaults.set(selectedEyeshadowPresetIndex, forKey: SettingsKey.selectedEyeshadowPresetIndex)
         defaults.set(Double(eyeshadowSettings.intensity), forKey: SettingsKey.eyeshadowIntensity)
+        defaults.set(selectedGlowPresetIndex, forKey: SettingsKey.selectedGlowPresetIndex)
+        defaults.set(Double(glowSettings.intensity), forKey: SettingsKey.glowIntensity)
+        defaults.set(Double(glowSettings.radius), forKey: SettingsKey.glowRadius)
         defaults.set(Double(hairHueValue), forKey: SettingsKey.hairHue)
         defaults.set(Double(hairStrengthValue), forKey: SettingsKey.hairStrength)
         defaults.set(Double(hairOffsetYValue), forKey: SettingsKey.hairOffsetY)
@@ -138,6 +151,29 @@ struct MakeupSettingsState {
         eyeshadowSettings.shimmerIntensity = CGFloat(preset.shimmer)
     }
 
+    mutating func rebuildGlowSettings() {
+        guard GlowSettings.presets.indices.contains(selectedGlowPresetIndex) else { return }
+
+        let preset = GlowSettings.presets[selectedGlowPresetIndex]
+        let intensity = clampedCGFloat(glowSettings.intensity, to: 0...1)
+        let radius = clampedCGFloat(glowSettings.radius, to: 0.75...1.25)
+        glowSettings.color = preset.color
+        glowSettings.opacity = 0.18
+        glowSettings.intensity = intensity
+        glowSettings.radius = radius
+        glowSettings.specularBoost = CGFloat(preset.specularBoost)
+        glowSettings.isEnabled = intensity > 0.01
+    }
+
+    mutating func applyGlowPreset(_ preset: GlowPreset, intensity: CGFloat) {
+        glowSettings.color = preset.color
+        glowSettings.opacity = 0.18
+        glowSettings.intensity = clampedCGFloat(intensity, to: 0...1)
+        glowSettings.radius = clampedCGFloat(CGFloat(preset.radius), to: 0.75...1.25)
+        glowSettings.specularBoost = CGFloat(preset.specularBoost)
+        glowSettings.isEnabled = glowSettings.intensity > 0.01
+    }
+
     private mutating func sanitizePresetIndices() {
         if !LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) {
             selectedLipstickPresetIndex = 3
@@ -149,6 +185,10 @@ struct MakeupSettingsState {
 
         if !EyeshadowSettings.presets.indices.contains(selectedEyeshadowPresetIndex) {
             selectedEyeshadowPresetIndex = 1
+        }
+
+        if !GlowSettings.presets.indices.contains(selectedGlowPresetIndex) {
+            selectedGlowPresetIndex = 0
         }
     }
 
@@ -186,6 +226,9 @@ struct MakeupSettingsState {
         static let blushPosition = prefix + "blushPosition"
         static let selectedEyeshadowPresetIndex = prefix + "selectedEyeshadowPresetIndex"
         static let eyeshadowIntensity = prefix + "eyeshadowIntensity"
+        static let selectedGlowPresetIndex = prefix + "selectedGlowPresetIndex"
+        static let glowIntensity = prefix + "glowIntensity"
+        static let glowRadius = prefix + "glowRadius"
         static let hairHue = prefix + "hairHue"
         static let hairStrength = prefix + "hairStrength"
         static let hairOffsetY = prefix + "hairOffsetY"

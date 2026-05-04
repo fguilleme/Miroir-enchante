@@ -74,6 +74,7 @@ final class FaceMakeupViewController: UIViewController {
         applyLipstickSettings()
         applyBlushSettings()
         applyEyeshadowSettings()
+        applyGlowSettings()
 
         selectionFeedback.prepare()
         lookFeedback.prepare()
@@ -278,6 +279,8 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.blushSizeSlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
         controlPanel.blushPositionSlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
         controlPanel.eyeshadowIntensitySlider.addTarget(self, action: #selector(eyeshadowSliderChanged), for: .valueChanged)
+        controlPanel.glowIntensitySlider.addTarget(self, action: #selector(glowSliderChanged), for: .valueChanged)
+        controlPanel.glowRadiusSlider.addTarget(self, action: #selector(glowSliderChanged), for: .valueChanged)
         controlPanel.hairHueSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
         controlPanel.hairStrengthSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
         controlPanel.hairOffsetYSlider.addTarget(self, action: #selector(hairOffsetSliderChanged), for: .valueChanged)
@@ -290,6 +293,9 @@ final class FaceMakeupViewController: UIViewController {
         }
         controlPanel.eyeshadowPresetButtons.forEach {
             $0.addTarget(self, action: #selector(eyeshadowPresetTapped(_:)), for: .touchUpInside)
+        }
+        controlPanel.glowPresetButtons.forEach {
+            $0.addTarget(self, action: #selector(glowPresetTapped(_:)), for: .touchUpInside)
         }
         selectedControlTab = controlPanel.configureTabs(
             isDemoMode: Self.isDemoFeatureEnabled && experienceMode == .demo,
@@ -306,6 +312,7 @@ final class FaceMakeupViewController: UIViewController {
         applySelectedLipstickPreset(animated: false)
         applySelectedBlushPreset(animated: false)
         applySelectedEyeshadowPreset(animated: false)
+        applySelectedGlowPreset(animated: false)
     }
 
     @objc private func toggleRenderMode() {
@@ -416,6 +423,25 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
+    @objc private func glowPresetTapped(_ sender: UIButton) {
+        guard GlowSettings.presets.indices.contains(sender.tag) else { return }
+        if settingsState.selectedGlowPresetIndex != sender.tag {
+            selectionFeedback.selectionChanged()
+        }
+        clearLookSelection()
+        settingsState.selectedGlowPresetIndex = sender.tag
+        applySelectedGlowPreset(animated: true)
+    }
+
+    @objc private func glowSliderChanged() {
+        clearLookSelection()
+        settingsState.glowSettings.intensity = CGFloat(controlPanel.glowIntensitySlider.value)
+        settingsState.glowSettings.radius = CGFloat(controlPanel.glowRadiusSlider.value)
+        settingsState.rebuildGlowSettings()
+        applyGlowSettings()
+        persistSettings()
+    }
+
     @objc private func hairSliderChanged() {
         settingsState.hairHueValue = CGFloat(controlPanel.hairHueSlider.value)
         settingsState.hairStrengthValue = CGFloat(controlPanel.hairStrengthSlider.value)
@@ -513,12 +539,28 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
+    private func applySelectedGlowPreset(animated: Bool) {
+        guard GlowSettings.presets.indices.contains(settingsState.selectedGlowPresetIndex) else { return }
+
+        settingsState.glowSettings.intensity = CGFloat(controlPanel.glowIntensitySlider.value)
+        settingsState.glowSettings.radius = CGFloat(controlPanel.glowRadiusSlider.value)
+        settingsState.rebuildGlowSettings()
+
+        applyGlowSettings()
+        updateGlowPresetSelection(animated: animated)
+        persistSettings()
+    }
+
     private func updateBlushPresetSelection(animated: Bool) {
         controlPanel.updateBlushPresetSelection(selectedIndex: settingsState.selectedBlushPresetIndex, animated: animated)
     }
 
     private func updateEyeshadowPresetSelection(animated: Bool) {
         controlPanel.updateEyeshadowPresetSelection(selectedIndex: settingsState.selectedEyeshadowPresetIndex, animated: animated)
+    }
+
+    private func updateGlowPresetSelection(animated: Bool) {
+        controlPanel.updateGlowPresetSelection(selectedIndex: settingsState.selectedGlowPresetIndex, animated: animated)
     }
 
     private func centerSelectedLipstickPreset(animated: Bool) {
@@ -649,6 +691,7 @@ final class FaceMakeupViewController: UIViewController {
         demoHeadRenderer.setMakeupEnabled(!isBeforePreviewActive)
         applyBlushSettings()
         applyEyeshadowSettings()
+        applyGlowSettings()
         startDemoTiltControl()
     }
 
@@ -834,6 +877,10 @@ final class FaceMakeupViewController: UIViewController {
         makeupRenderers.forEach { $0.updateEyeshadowSettings(settingsState.eyeshadowSettings) }
     }
 
+    private func applyGlowSettings() {
+        makeupRenderers.forEach { $0.updateGlowSettings(settingsState.glowSettings) }
+    }
+
     private func setMakeupEnabledForAllRenderers(_ enabled: Bool) {
         makeupRenderers.forEach { $0.setMakeupEnabled(enabled) }
     }
@@ -842,6 +889,7 @@ final class FaceMakeupViewController: UIViewController {
         renderer.updateLipstickSettings(settingsState.lipstickSettings)
         renderer.updateBlushSettings(settingsState.blushSettings)
         renderer.updateEyeshadowSettings(settingsState.eyeshadowSettings)
+        renderer.updateGlowSettings(settingsState.glowSettings)
     }
 
     func applyLook(_ look: MakeupLook, animated: Bool) {
@@ -856,15 +904,25 @@ final class FaceMakeupViewController: UIViewController {
         settingsState.selectedLipstickPresetIndex = lipIndex
         settingsState.selectedBlushPresetIndex = blushIndex
         settingsState.selectedEyeshadowPresetIndex = eyesIndex
+        if let glowIndex = look.glowIndex() {
+            settingsState.selectedGlowPresetIndex = glowIndex
+        }
         settingsState.lipstickFinish = look.lipstickFinish
         settingsState.lipstickIntensityValue = look.lipstickIntensity
         settingsState.blushSettings.intensity = look.blushIntensity
         settingsState.blushSettings.size = look.blushSize
         settingsState.blushSettings.position = look.blushPosition
         settingsState.eyeshadowSettings.intensity = look.eyesIntensity
+        settingsState.glowSettings.intensity = look.glowIntensity
+        settingsState.glowSettings.radius = look.glow.map { CGFloat($0.radius) } ?? GlowSettings.default.radius
         settingsState.rebuildLipstickSettings()
         settingsState.rebuildBlushSettings()
         settingsState.rebuildEyeshadowSettings()
+        if let glow = look.glow {
+            settingsState.applyGlowPreset(glow, intensity: look.glowIntensity)
+        } else {
+            settingsState.rebuildGlowSettings()
+        }
 
         syncControlPanelToState()
 
@@ -877,6 +935,7 @@ final class FaceMakeupViewController: UIViewController {
         applyLipstickSettings()
         applyBlushSettings()
         applyEyeshadowSettings()
+        applyGlowSettings()
         SCNTransaction.commit()
 
         persistSettings()
@@ -889,8 +948,11 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.blushSizeSlider.setValue(Float(settingsState.blushSettings.size), animated: true)
         controlPanel.blushPositionSlider.setValue(Float(settingsState.blushSettings.position), animated: true)
         controlPanel.eyeshadowIntensitySlider.setValue(Float(settingsState.eyeshadowSettings.intensity), animated: true)
+        controlPanel.glowIntensitySlider.setValue(Float(settingsState.glowSettings.intensity), animated: true)
+        controlPanel.glowRadiusSlider.setValue(Float(settingsState.glowSettings.radius), animated: true)
         controlPanel.updateBlushPresetSelection(selectedIndex: settingsState.selectedBlushPresetIndex, animated: true)
         controlPanel.updateEyeshadowPresetSelection(selectedIndex: settingsState.selectedEyeshadowPresetIndex, animated: true)
+        controlPanel.updateGlowPresetSelection(selectedIndex: settingsState.selectedGlowPresetIndex, animated: true)
         updateVisibleLipstickCells(animated: true)
         centerSelectedLipstickPreset(animated: true)
     }

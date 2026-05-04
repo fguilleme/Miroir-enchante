@@ -58,3 +58,21 @@ struct EyeshadowSettings {
         shimmerIntensity: 0.18
     )
 }
+
+struct GlowSettings {
+    var color: UIColor
+    var opacity: CGFloat
+    var intensity: CGFloat
+    var radius: CGFloat
+    var specularBoost: CGFloat
+    var isEnabled: Bool
+
+    static let `default` = GlowSettings(
+        color: UIColor(red: 1.0, green: 0.86, blue: 0.68, alpha: 1.0),
+        opacity: 0.18,
+        intensity: 0.36,
+        radius: 1.0,
+        specularBoost: 0.08,
+        isEnabled: true
+    )
+}

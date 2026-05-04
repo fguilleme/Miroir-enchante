@@ -14,6 +14,10 @@ enum MakeupTextureCache {
         case softLid
     }
 
+    enum GlowStyle: Hashable {
+        case softHighlight
+    }
+
     struct BlushKey: Hashable {
         var color: ColorKey
         var intensity: Int
@@ -25,6 +29,13 @@ enum MakeupTextureCache {
         var color: ColorKey
         var intensity: Int
         var style: EyeStyle
+    }
+
+    struct GlowKey: Hashable {
+        var color: ColorKey
+        var intensity: Int
+        var radius: Int
+        var style: GlowStyle
     }
 
     struct ColorKey: Hashable {
@@ -51,6 +62,7 @@ enum MakeupTextureCache {
     private static var lipNoiseImage: UIImage?
     private static var blushImages: [BlushKey: UIImage] = [:]
     private static var eyeImages: [EyeKey: UIImage] = [:]
+    private static var glowImages: [GlowKey: UIImage] = [:]
 
     static func lipVerticalNoise() -> UIImage {
         lock.lock()
@@ -78,6 +90,16 @@ enum MakeupTextureCache {
     static func eyeGradient(key: EyeKey) -> UIImage {
         cachedImage(for: key, in: &eyeImages) {
             makeEyeGradient(color: key.color.uiColor, alpha: CGFloat(key.intensity) / 100)
+        }
+    }
+
+    static func glowGradient(key: GlowKey) -> UIImage {
+        cachedImage(for: key, in: &glowImages) {
+            makeRadialGradient(
+                color: key.color.uiColor,
+                alpha: CGFloat(key.intensity) / 100,
+                falloff: CGFloat(key.radius) / 100
+            )
         }
     }
 
@@ -133,17 +155,18 @@ enum MakeupTextureCache {
         }
     }
 
-    private static func makeRadialGradient(color: UIColor, alpha: CGFloat) -> UIImage {
+    private static func makeRadialGradient(color: UIColor, alpha: CGFloat, falloff: CGFloat = 1.0) -> UIImage {
         let size = CGSize(width: 128, height: 128)
         let renderer = UIGraphicsImageRenderer(size: size)
         return renderer.image { context in
             let cg = context.cgContext
+            let midStop = min(max(0.48 * falloff, 0.34), 0.68)
             let colors = [
                 color.withAlphaComponent(alpha).cgColor,
                 color.withAlphaComponent(alpha * 0.45).cgColor,
                 UIColor.clear.cgColor
             ] as CFArray
-            let locations: [CGFloat] = [0, 0.56, 1]
+            let locations: [CGFloat] = [0, midStop, 1]
             guard let gradient = CGGradient(
                 colorsSpace: CGColorSpaceCreateDeviceRGB(),
                 colors: colors,

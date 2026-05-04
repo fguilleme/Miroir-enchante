@@ -94,6 +94,7 @@ final class DemoHeadRenderer: MakeupRendering {
     private var lipstickSettings = LipstickSettings.default
     private var blushSettings = BlushSettings.default
     private var eyeshadowSettings = EyeshadowSettings.default
+    private var glowSettings = GlowSettings.default
     var currentHairStyle: DemoHairStyle = .none
     var hairHueValue: CGFloat = 0.24
     var hairStrengthValue: CGFloat = 0.84
@@ -140,6 +141,10 @@ final class DemoHeadRenderer: MakeupRendering {
     func updateEyeshadowSettings(_ settings: EyeshadowSettings) {
         eyeshadowSettings = settings
         applyEyeshadowMaterial(settings: settings)
+    }
+
+    func updateGlowSettings(_ settings: GlowSettings) {
+        glowSettings = settings
     }
 
     func setHeadHidden(_ hidden: Bool) {
@@ -220,7 +225,7 @@ final class DemoHeadRenderer: MakeupRendering {
         camera.exposureOffset = -2.15
 
         cameraNode.camera = camera
-        cameraNode.position = SCNVector3(0, -0.3, 6.0)
+        cameraNode.position = SCNVector3(0, -0.6, 6.0)
         scene.rootNode.addChildNode(cameraNode)
 
         let keyLight = SCNNode()

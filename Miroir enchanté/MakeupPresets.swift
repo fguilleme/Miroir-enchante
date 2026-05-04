@@ -45,6 +45,22 @@ struct EyeshadowPreset {
     let shimmer: Float
 }
 
+enum MakeupCategory {
+    case looks
+    case lips
+    case blush
+    case eyes
+    case glow
+}
+
+struct GlowPreset {
+    let name: String
+    let color: UIColor
+    let intensity: Float
+    let radius: Float
+    let specularBoost: Float
+}
+
 enum MakeupPresets {
     static let lipstick: [LipstickPreset] = [
         LipstickPreset(titleKey: "preset.nude", baseColor: UIColor(red: 0.63, green: 0.36, blue: 0.29, alpha: 1.0), roughness: 0.38, opacity: 0.54, specularIntensity: 0.42, colorVariation: 0.30),
@@ -74,6 +90,13 @@ enum MakeupPresets {
         EyeshadowPreset(titleKey: "eyeshadow.copper", baseColor: UIColor(red: 0.78, green: 0.42, blue: 0.20, alpha: 1.0), roughness: 0.46, opacity: 0.42, shimmer: 0.34),
         EyeshadowPreset(titleKey: "eyeshadow.smoke", baseColor: UIColor(red: 0.18, green: 0.17, blue: 0.20, alpha: 1.0), roughness: 0.50, opacity: 0.48, shimmer: 0.12)
     ]
+
+    static let glow: [GlowPreset] = [
+        GlowPreset(name: "Natural Glow", color: UIColor(red: 1.0, green: 0.86, blue: 0.68, alpha: 1.0), intensity: 0.34, radius: 1.00, specularBoost: 0.07),
+        GlowPreset(name: "Warm Gold", color: UIColor(red: 1.0, green: 0.76, blue: 0.42, alpha: 1.0), intensity: 0.38, radius: 1.04, specularBoost: 0.09),
+        GlowPreset(name: "Pearl", color: UIColor(red: 0.92, green: 0.90, blue: 1.0, alpha: 1.0), intensity: 0.30, radius: 0.96, specularBoost: 0.10),
+        GlowPreset(name: "Rosy Light", color: UIColor(red: 1.0, green: 0.72, blue: 0.78, alpha: 1.0), intensity: 0.32, radius: 1.02, specularBoost: 0.08)
+    ]
 }
 
 extension LipstickSettings {
@@ -86,4 +109,8 @@ extension BlushSettings {
 
 extension EyeshadowSettings {
     static var presets: [EyeshadowPreset] { MakeupPresets.eyeshadow }
+}
+
+extension GlowSettings {
+    static var presets: [GlowPreset] { MakeupPresets.glow }
 }
