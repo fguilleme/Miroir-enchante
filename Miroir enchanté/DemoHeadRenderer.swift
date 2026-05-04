@@ -95,6 +95,7 @@ final class DemoHeadRenderer: MakeupRendering {
     private var blushSettings = BlushSettings.default
     private var eyeshadowSettings = EyeshadowSettings.default
     private var glowSettings = GlowSettings.default
+    private var contourSettings = ContourSettings.default
     var currentHairStyle: DemoHairStyle = .none
     var hairHueValue: CGFloat = 0.24
     var hairStrengthValue: CGFloat = 0.84
@@ -145,6 +146,10 @@ final class DemoHeadRenderer: MakeupRendering {
 
     func updateGlowSettings(_ settings: GlowSettings) {
         glowSettings = settings
+    }
+
+    func updateContourSettings(_ settings: ContourSettings) {
+        contourSettings = settings
     }
 
     func setHeadHidden(_ hidden: Bool) {

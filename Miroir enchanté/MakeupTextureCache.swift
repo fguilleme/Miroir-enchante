@@ -18,6 +18,10 @@ enum MakeupTextureCache {
         case softHighlight
     }
 
+    enum ContourStyle: Hashable {
+        case softShadow
+    }
+
     struct BlushKey: Hashable {
         var color: ColorKey
         var intensity: Int
@@ -36,6 +40,13 @@ enum MakeupTextureCache {
         var intensity: Int
         var radius: Int
         var style: GlowStyle
+    }
+
+    struct ContourKey: Hashable {
+        var color: ColorKey
+        var intensity: Int
+        var softness: Int
+        var style: ContourStyle
     }
 
     struct ColorKey: Hashable {
@@ -63,6 +74,7 @@ enum MakeupTextureCache {
     private static var blushImages: [BlushKey: UIImage] = [:]
     private static var eyeImages: [EyeKey: UIImage] = [:]
     private static var glowImages: [GlowKey: UIImage] = [:]
+    private static var contourImages: [ContourKey: UIImage] = [:]
 
     static func lipVerticalNoise() -> UIImage {
         lock.lock()
@@ -99,6 +111,16 @@ enum MakeupTextureCache {
                 color: key.color.uiColor,
                 alpha: CGFloat(key.intensity) / 100,
                 falloff: CGFloat(key.radius) / 100
+            )
+        }
+    }
+
+    static func contourGradient(key: ContourKey) -> UIImage {
+        cachedImage(for: key, in: &contourImages) {
+            makeRadialGradient(
+                color: key.color.uiColor,
+                alpha: CGFloat(key.intensity) / 100,
+                falloff: CGFloat(key.softness) / 100
             )
         }
     }

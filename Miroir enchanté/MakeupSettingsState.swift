@@ -6,15 +6,6 @@
 import Foundation
 import UIKit
 
-enum MakeupControlTab: Int {
-    case lipstick = 0
-    case blush = 1
-    case eyeshadow = 2
-    case glow = 3
-    case hair = 4
-    case debug = 5
-}
-
 enum LipstickFinish: Int {
     case matte = 0
     case satin = 1
@@ -33,6 +24,8 @@ struct MakeupSettingsState {
     var eyeshadowSettings: EyeshadowSettings = .default
     var selectedGlowPresetIndex: Int = 0
     var glowSettings: GlowSettings = .default
+    var selectedContourPresetIndex: Int = 0
+    var contourSettings: ContourSettings = .default
     var hairHueValue: CGFloat = 0.24
     var hairStrengthValue: CGFloat = 0.84
     var hairOffsetYValue: Float = -0.08
@@ -56,6 +49,8 @@ struct MakeupSettingsState {
             SettingsKey.selectedGlowPresetIndex: 0,
             SettingsKey.glowIntensity: Double(GlowSettings.default.intensity),
             SettingsKey.glowRadius: Double(GlowSettings.default.radius),
+            SettingsKey.selectedContourPresetIndex: 0,
+            SettingsKey.contourIntensity: Double(ContourSettings.default.intensity),
             SettingsKey.hairHue: 0.24,
             SettingsKey.hairStrength: 0.84,
             SettingsKey.hairOffsetY: -0.08,
@@ -79,6 +74,8 @@ struct MakeupSettingsState {
         state.selectedGlowPresetIndex = defaults.integer(forKey: SettingsKey.selectedGlowPresetIndex)
         state.glowSettings.intensity = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.glowIntensity)), to: 0...1)
         state.glowSettings.radius = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.glowRadius)), to: 0.75...1.25)
+        state.selectedContourPresetIndex = defaults.integer(forKey: SettingsKey.selectedContourPresetIndex)
+        state.contourSettings.intensity = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.contourIntensity)), to: 0...1)
         state.hairHueValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairHue)), to: 0...1)
         state.hairStrengthValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairStrength)), to: 0...1)
         state.hairOffsetYValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetY)), to: -3...1))
@@ -91,6 +88,7 @@ struct MakeupSettingsState {
         state.rebuildBlushSettings()
         state.rebuildEyeshadowSettings()
         state.rebuildGlowSettings()
+        state.rebuildContourSettings()
         return state
     }
 
@@ -108,6 +106,8 @@ struct MakeupSettingsState {
         defaults.set(selectedGlowPresetIndex, forKey: SettingsKey.selectedGlowPresetIndex)
         defaults.set(Double(glowSettings.intensity), forKey: SettingsKey.glowIntensity)
         defaults.set(Double(glowSettings.radius), forKey: SettingsKey.glowRadius)
+        defaults.set(selectedContourPresetIndex, forKey: SettingsKey.selectedContourPresetIndex)
+        defaults.set(Double(contourSettings.intensity), forKey: SettingsKey.contourIntensity)
         defaults.set(Double(hairHueValue), forKey: SettingsKey.hairHue)
         defaults.set(Double(hairStrengthValue), forKey: SettingsKey.hairStrength)
         defaults.set(Double(hairOffsetYValue), forKey: SettingsKey.hairOffsetY)
@@ -174,6 +174,25 @@ struct MakeupSettingsState {
         glowSettings.isEnabled = glowSettings.intensity > 0.01
     }
 
+    mutating func rebuildContourSettings() {
+        guard ContourSettings.presets.indices.contains(selectedContourPresetIndex) else { return }
+
+        let preset = ContourSettings.presets[selectedContourPresetIndex]
+        contourSettings.color = preset.color
+        contourSettings.opacity = 0.16
+        contourSettings.intensity = clampedCGFloat(contourSettings.intensity, to: 0...1)
+        contourSettings.softness = CGFloat(preset.softness)
+        contourSettings.isEnabled = contourSettings.intensity > 0.01
+    }
+
+    mutating func applyContourPreset(_ preset: ContourPreset, intensity: CGFloat) {
+        contourSettings.color = preset.color
+        contourSettings.opacity = 0.16
+        contourSettings.intensity = clampedCGFloat(intensity, to: 0...1)
+        contourSettings.softness = CGFloat(preset.softness)
+        contourSettings.isEnabled = contourSettings.intensity > 0.01
+    }
+
     private mutating func sanitizePresetIndices() {
         if !LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) {
             selectedLipstickPresetIndex = 3
@@ -189,6 +208,10 @@ struct MakeupSettingsState {
 
         if !GlowSettings.presets.indices.contains(selectedGlowPresetIndex) {
             selectedGlowPresetIndex = 0
+        }
+
+        if !ContourSettings.presets.indices.contains(selectedContourPresetIndex) {
+            selectedContourPresetIndex = 0
         }
     }
 
@@ -229,6 +252,8 @@ struct MakeupSettingsState {
         static let selectedGlowPresetIndex = prefix + "selectedGlowPresetIndex"
         static let glowIntensity = prefix + "glowIntensity"
         static let glowRadius = prefix + "glowRadius"
+        static let selectedContourPresetIndex = prefix + "selectedContourPresetIndex"
+        static let contourIntensity = prefix + "contourIntensity"
         static let hairHue = prefix + "hairHue"
         static let hairStrength = prefix + "hairStrength"
         static let hairOffsetY = prefix + "hairOffsetY"

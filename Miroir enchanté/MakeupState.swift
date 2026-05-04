@@ -10,6 +10,7 @@ struct MakeupStateSnapshot {
     var blush: BlushSettings
     var eyeshadow: EyeshadowSettings
     var glow: GlowSettings
+    var contour: ContourSettings
     var isMakeupEnabled: Bool
 }
 
@@ -20,6 +21,7 @@ final class MakeupState {
         blush: .default,
         eyeshadow: .default,
         glow: .default,
+        contour: .default,
         isMakeupEnabled: true
     )
     private var revision: UInt64 = 0
@@ -45,6 +47,12 @@ final class MakeupState {
     func updateGlow(_ settings: GlowSettings) {
         mutate {
             value.glow = settings
+        }
+    }
+
+    func updateContour(_ settings: ContourSettings) {
+        mutate {
+            value.contour = settings
         }
     }
 

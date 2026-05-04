@@ -48,9 +48,21 @@ struct EyeshadowPreset {
 enum MakeupCategory {
     case looks
     case lips
-    case blush
+    case face
     case eyes
-    case glow
+}
+
+enum MakeupMainCategory: Int {
+    case looks = 0
+    case lips = 1
+    case face = 2
+    case eyes = 3
+}
+
+enum FaceSubCategory: Int {
+    case blush = 0
+    case glow = 1
+    case contour = 2
 }
 
 struct GlowPreset {
@@ -59,6 +71,13 @@ struct GlowPreset {
     let intensity: Float
     let radius: Float
     let specularBoost: Float
+}
+
+struct ContourPreset {
+    let name: String
+    let color: UIColor
+    let intensity: Float
+    let softness: Float
 }
 
 enum MakeupPresets {
@@ -97,6 +116,13 @@ enum MakeupPresets {
         GlowPreset(name: "Pearl", color: UIColor(red: 0.92, green: 0.90, blue: 1.0, alpha: 1.0), intensity: 0.30, radius: 0.96, specularBoost: 0.10),
         GlowPreset(name: "Rosy Light", color: UIColor(red: 1.0, green: 0.72, blue: 0.78, alpha: 1.0), intensity: 0.32, radius: 1.02, specularBoost: 0.08)
     ]
+
+    static let contour: [ContourPreset] = [
+        ContourPreset(name: "Soft Sculpt", color: UIColor(red: 0.38, green: 0.25, blue: 0.20, alpha: 1.0), intensity: 0.20, softness: 0.88),
+        ContourPreset(name: "Warm Shadow", color: UIColor(red: 0.47, green: 0.29, blue: 0.18, alpha: 1.0), intensity: 0.24, softness: 0.84),
+        ContourPreset(name: "Defined", color: UIColor(red: 0.31, green: 0.20, blue: 0.17, alpha: 1.0), intensity: 0.28, softness: 0.78),
+        ContourPreset(name: "Natural", color: UIColor(red: 0.43, green: 0.31, blue: 0.26, alpha: 1.0), intensity: 0.18, softness: 0.90)
+    ]
 }
 
 extension LipstickSettings {
@@ -113,4 +139,8 @@ extension EyeshadowSettings {
 
 extension GlowSettings {
     static var presets: [GlowPreset] { MakeupPresets.glow }
+}
+
+extension ContourSettings {
+    static var presets: [ContourPreset] { MakeupPresets.contour }
 }

@@ -32,7 +32,8 @@ final class FaceMakeupViewController: UIViewController {
     private var experienceMode: ExperienceMode = FaceMakeupViewController.initialExperienceMode()
     private var settingsState = MakeupSettingsState.load()
     private var didCenterInitialLipstickPreset = false
-    private var selectedControlTab: MakeupControlTab = .lipstick
+    private var selectedMainCategory: MakeupMainCategory = .looks
+    private var selectedFaceSubCategory: FaceSubCategory = .blush
     private var selectedLookID: String?
     private let selectionFeedback = UISelectionFeedbackGenerator()
     private let lookFeedback = UIImpactFeedbackGenerator(style: .light)
@@ -75,6 +76,7 @@ final class FaceMakeupViewController: UIViewController {
         applyBlushSettings()
         applyEyeshadowSettings()
         applyGlowSettings()
+        applyContourSettings()
 
         selectionFeedback.prepare()
         lookFeedback.prepare()
@@ -272,7 +274,8 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.lipstickCollectionView.delegate = self
         controlPanel.looksCollectionView.dataSource = self
         controlPanel.looksCollectionView.delegate = self
-        controlPanel.controlsSegmentedControl.addTarget(self, action: #selector(controlTabChanged), for: .valueChanged)
+        controlPanel.controlsSegmentedControl.addTarget(self, action: #selector(mainCategoryChanged), for: .valueChanged)
+        controlPanel.faceSegmentedControl.addTarget(self, action: #selector(faceSubCategoryChanged), for: .valueChanged)
         controlPanel.lipstickIntensitySlider.addTarget(self, action: #selector(lipstickIntensityChanged), for: .valueChanged)
         controlPanel.lipstickFinishSegmentedControl.addTarget(self, action: #selector(lipstickFinishChanged), for: .valueChanged)
         controlPanel.blushIntensitySlider.addTarget(self, action: #selector(blushSliderChanged), for: .valueChanged)
@@ -281,6 +284,7 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.eyeshadowIntensitySlider.addTarget(self, action: #selector(eyeshadowSliderChanged), for: .valueChanged)
         controlPanel.glowIntensitySlider.addTarget(self, action: #selector(glowSliderChanged), for: .valueChanged)
         controlPanel.glowRadiusSlider.addTarget(self, action: #selector(glowSliderChanged), for: .valueChanged)
+        controlPanel.contourIntensitySlider.addTarget(self, action: #selector(contourSliderChanged), for: .valueChanged)
         controlPanel.hairHueSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
         controlPanel.hairStrengthSlider.addTarget(self, action: #selector(hairSliderChanged), for: .valueChanged)
         controlPanel.hairOffsetYSlider.addTarget(self, action: #selector(hairOffsetSliderChanged), for: .valueChanged)
@@ -297,9 +301,12 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.glowPresetButtons.forEach {
             $0.addTarget(self, action: #selector(glowPresetTapped(_:)), for: .touchUpInside)
         }
-        selectedControlTab = controlPanel.configureTabs(
-            isDemoMode: Self.isDemoFeatureEnabled && experienceMode == .demo,
-            selectedTab: selectedControlTab
+        controlPanel.contourPresetButtons.forEach {
+            $0.addTarget(self, action: #selector(contourPresetTapped(_:)), for: .touchUpInside)
+        }
+        (selectedMainCategory, selectedFaceSubCategory) = controlPanel.configureMainCategories(
+            selected: selectedMainCategory,
+            faceSubCategory: selectedFaceSubCategory
         )
 
         view.addSubview(controlPanel)
@@ -313,6 +320,7 @@ final class FaceMakeupViewController: UIViewController {
         applySelectedBlushPreset(animated: false)
         applySelectedEyeshadowPreset(animated: false)
         applySelectedGlowPreset(animated: false)
+        applySelectedContourPreset(animated: false)
     }
 
     @objc private func toggleRenderMode() {
@@ -442,6 +450,24 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
+    @objc private func contourPresetTapped(_ sender: UIButton) {
+        guard ContourSettings.presets.indices.contains(sender.tag) else { return }
+        if settingsState.selectedContourPresetIndex != sender.tag {
+            selectionFeedback.selectionChanged()
+        }
+        clearLookSelection()
+        settingsState.selectedContourPresetIndex = sender.tag
+        applySelectedContourPreset(animated: true)
+    }
+
+    @objc private func contourSliderChanged() {
+        clearLookSelection()
+        settingsState.contourSettings.intensity = CGFloat(controlPanel.contourIntensitySlider.value)
+        settingsState.rebuildContourSettings()
+        applyContourSettings()
+        persistSettings()
+    }
+
     @objc private func hairSliderChanged() {
         settingsState.hairHueValue = CGFloat(controlPanel.hairHueSlider.value)
         settingsState.hairStrengthValue = CGFloat(controlPanel.hairStrengthSlider.value)
@@ -462,15 +488,20 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
-    @objc private func controlTabChanged() {
-        selectedControlTab = controlPanel.selectedTabFromSegment()
-        controlPanel.setSelectedTab(selectedControlTab)
+    @objc private func mainCategoryChanged() {
+        selectedMainCategory = controlPanel.selectedMainCategoryFromSegment()
+        controlPanel.setSelectedMainCategory(selectedMainCategory)
+    }
+
+    @objc private func faceSubCategoryChanged() {
+        selectedFaceSubCategory = controlPanel.selectedFaceSubCategoryFromSegment()
+        controlPanel.setSelectedFaceSubCategory(selectedFaceSubCategory)
     }
 
     private func updateControlPanelForExperienceMode() {
-        selectedControlTab = controlPanel.configureTabs(
-            isDemoMode: Self.isDemoFeatureEnabled && experienceMode == .demo,
-            selectedTab: selectedControlTab
+        (selectedMainCategory, selectedFaceSubCategory) = controlPanel.configureMainCategories(
+            selected: selectedMainCategory,
+            faceSubCategory: selectedFaceSubCategory
         )
     }
 
@@ -551,6 +582,17 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
+    private func applySelectedContourPreset(animated: Bool) {
+        guard ContourSettings.presets.indices.contains(settingsState.selectedContourPresetIndex) else { return }
+
+        settingsState.contourSettings.intensity = CGFloat(controlPanel.contourIntensitySlider.value)
+        settingsState.rebuildContourSettings()
+
+        applyContourSettings()
+        updateContourPresetSelection(animated: animated)
+        persistSettings()
+    }
+
     private func updateBlushPresetSelection(animated: Bool) {
         controlPanel.updateBlushPresetSelection(selectedIndex: settingsState.selectedBlushPresetIndex, animated: animated)
     }
@@ -561,6 +603,10 @@ final class FaceMakeupViewController: UIViewController {
 
     private func updateGlowPresetSelection(animated: Bool) {
         controlPanel.updateGlowPresetSelection(selectedIndex: settingsState.selectedGlowPresetIndex, animated: animated)
+    }
+
+    private func updateContourPresetSelection(animated: Bool) {
+        controlPanel.updateContourPresetSelection(selectedIndex: settingsState.selectedContourPresetIndex, animated: animated)
     }
 
     private func centerSelectedLipstickPreset(animated: Bool) {
@@ -881,6 +927,10 @@ final class FaceMakeupViewController: UIViewController {
         makeupRenderers.forEach { $0.updateGlowSettings(settingsState.glowSettings) }
     }
 
+    private func applyContourSettings() {
+        makeupRenderers.forEach { $0.updateContourSettings(settingsState.contourSettings) }
+    }
+
     private func setMakeupEnabledForAllRenderers(_ enabled: Bool) {
         makeupRenderers.forEach { $0.setMakeupEnabled(enabled) }
     }
@@ -890,6 +940,7 @@ final class FaceMakeupViewController: UIViewController {
         renderer.updateBlushSettings(settingsState.blushSettings)
         renderer.updateEyeshadowSettings(settingsState.eyeshadowSettings)
         renderer.updateGlowSettings(settingsState.glowSettings)
+        renderer.updateContourSettings(settingsState.contourSettings)
     }
 
     func applyLook(_ look: MakeupLook, animated: Bool) {
@@ -907,6 +958,9 @@ final class FaceMakeupViewController: UIViewController {
         if let glowIndex = look.glowIndex() {
             settingsState.selectedGlowPresetIndex = glowIndex
         }
+        if let contourIndex = look.contourIndex() {
+            settingsState.selectedContourPresetIndex = contourIndex
+        }
         settingsState.lipstickFinish = look.lipstickFinish
         settingsState.lipstickIntensityValue = look.lipstickIntensity
         settingsState.blushSettings.intensity = look.blushIntensity
@@ -915,6 +969,7 @@ final class FaceMakeupViewController: UIViewController {
         settingsState.eyeshadowSettings.intensity = look.eyesIntensity
         settingsState.glowSettings.intensity = look.glowIntensity
         settingsState.glowSettings.radius = look.glow.map { CGFloat($0.radius) } ?? GlowSettings.default.radius
+        settingsState.contourSettings.intensity = look.contourIntensity
         settingsState.rebuildLipstickSettings()
         settingsState.rebuildBlushSettings()
         settingsState.rebuildEyeshadowSettings()
@@ -922,6 +977,11 @@ final class FaceMakeupViewController: UIViewController {
             settingsState.applyGlowPreset(glow, intensity: look.glowIntensity)
         } else {
             settingsState.rebuildGlowSettings()
+        }
+        if let contour = look.contour {
+            settingsState.applyContourPreset(contour, intensity: look.contourIntensity)
+        } else {
+            settingsState.rebuildContourSettings()
         }
 
         syncControlPanelToState()
@@ -936,6 +996,7 @@ final class FaceMakeupViewController: UIViewController {
         applyBlushSettings()
         applyEyeshadowSettings()
         applyGlowSettings()
+        applyContourSettings()
         SCNTransaction.commit()
 
         persistSettings()
@@ -950,9 +1011,11 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.eyeshadowIntensitySlider.setValue(Float(settingsState.eyeshadowSettings.intensity), animated: true)
         controlPanel.glowIntensitySlider.setValue(Float(settingsState.glowSettings.intensity), animated: true)
         controlPanel.glowRadiusSlider.setValue(Float(settingsState.glowSettings.radius), animated: true)
+        controlPanel.contourIntensitySlider.setValue(Float(settingsState.contourSettings.intensity), animated: true)
         controlPanel.updateBlushPresetSelection(selectedIndex: settingsState.selectedBlushPresetIndex, animated: true)
         controlPanel.updateEyeshadowPresetSelection(selectedIndex: settingsState.selectedEyeshadowPresetIndex, animated: true)
         controlPanel.updateGlowPresetSelection(selectedIndex: settingsState.selectedGlowPresetIndex, animated: true)
+        controlPanel.updateContourPresetSelection(selectedIndex: settingsState.selectedContourPresetIndex, animated: true)
         updateVisibleLipstickCells(animated: true)
         centerSelectedLipstickPreset(animated: true)
     }

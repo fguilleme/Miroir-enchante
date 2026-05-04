@@ -6,7 +6,8 @@
 import UIKit
 
 final class MakeupControlPanelView: UIStackView {
-    let controlsSegmentedControl = UISegmentedControl(items: ["Lips", "Blush", "Eyes", "Glow", "Hair", "Debug"])
+    let controlsSegmentedControl = UISegmentedControl(items: ["Looks", "Lips", "Face", "Eyes"])
+    let faceSegmentedControl = UISegmentedControl(items: ["Blush", "Glow", "Contour"])
     let looksCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
@@ -44,6 +45,7 @@ final class MakeupControlPanelView: UIStackView {
     let eyeshadowIntensitySlider = UISlider()
     let glowIntensitySlider = UISlider()
     let glowRadiusSlider = UISlider()
+    let contourIntensitySlider = UISlider()
     let hairHueSlider = UISlider()
     let hairStrengthSlider = UISlider()
     let hairOffsetYSlider = UISlider()
@@ -55,18 +57,20 @@ final class MakeupControlPanelView: UIStackView {
     private let hairOffsetYValueLabel = UILabel()
     private let hairOffsetZValueLabel = UILabel()
     private let hairScaleValueLabel = UILabel()
+    private var looksControlRows: [UIView] = []
     private var lipstickControlRows: [UIView] = []
     private var blushControlRows: [UIView] = []
     private var eyeshadowControlRows: [UIView] = []
     private var glowControlRows: [UIView] = []
+    private var contourControlRows: [UIView] = []
     private(set) var blushPresetButtons: [UIButton] = []
     private(set) var eyeshadowPresetButtons: [UIButton] = []
     private(set) var glowPresetButtons: [UIButton] = []
+    private(set) var contourPresetButtons: [UIButton] = []
     private var hairControlRows: [UIView] = []
     private var debugControlRows: [UIView] = []
-    private(set) var selectedControlTab: MakeupControlTab = .lipstick
-    private(set) var visibleControlTabs: [MakeupControlTab] = [.lipstick, .blush, .eyeshadow, .glow, .hair, .debug]
-    private var isDemoMode = true
+    private(set) var selectedMainCategory: MakeupMainCategory = .looks
+    private(set) var selectedFaceSubCategory: FaceSubCategory = .blush
 
     override init(frame: CGRect) {
         super.init(frame: frame)
@@ -88,6 +92,7 @@ final class MakeupControlPanelView: UIStackView {
         eyeshadowIntensitySlider.value = Float(state.eyeshadowSettings.intensity)
         glowIntensitySlider.value = Float(state.glowSettings.intensity)
         glowRadiusSlider.value = Float(state.glowSettings.radius)
+        contourIntensitySlider.value = Float(state.contourSettings.intensity)
         hairHueSlider.value = Float(state.hairHueValue)
         hairStrengthSlider.value = Float(state.hairStrengthValue)
         hairOffsetYSlider.value = state.hairOffsetYValue
@@ -99,37 +104,36 @@ final class MakeupControlPanelView: UIStackView {
         updateBlushPresetSelection(selectedIndex: state.selectedBlushPresetIndex, animated: false)
         updateEyeshadowPresetSelection(selectedIndex: state.selectedEyeshadowPresetIndex, animated: false)
         updateGlowPresetSelection(selectedIndex: state.selectedGlowPresetIndex, animated: false)
+        updateContourPresetSelection(selectedIndex: state.selectedContourPresetIndex, animated: false)
     }
 
-    func configureTabs(isDemoMode: Bool, selectedTab: MakeupControlTab) -> MakeupControlTab {
-        self.isDemoMode = isDemoMode
-        let nextTabs: [MakeupControlTab] = isDemoMode ? [.lipstick, .blush, .eyeshadow, .glow, .hair, .debug] : [.lipstick, .blush, .eyeshadow, .glow]
-        var nextSelectedTab = selectedTab
-        if !isDemoMode && (nextSelectedTab == .hair || nextSelectedTab == .debug) {
-            nextSelectedTab = .lipstick
-        }
-
-        if visibleControlTabs != nextTabs {
-            controlsSegmentedControl.removeAllSegments()
-            for (index, tab) in nextTabs.enumerated() {
-                controlsSegmentedControl.insertSegment(withTitle: controlTabTitle(tab), at: index, animated: false)
-            }
-            visibleControlTabs = nextTabs
-        }
-
-        setSelectedTab(nextSelectedTab)
-        return nextSelectedTab
+    func configureMainCategories(
+        selected category: MakeupMainCategory,
+        faceSubCategory: FaceSubCategory
+    ) -> (MakeupMainCategory, FaceSubCategory) {
+        setSelectedFaceSubCategory(faceSubCategory)
+        setSelectedMainCategory(category)
+        return (selectedMainCategory, selectedFaceSubCategory)
     }
 
-    func setSelectedTab(_ tab: MakeupControlTab) {
-        selectedControlTab = tab
-        controlsSegmentedControl.selectedSegmentIndex = visibleControlTabs.firstIndex(of: tab) ?? 0
+    func setSelectedMainCategory(_ category: MakeupMainCategory) {
+        selectedMainCategory = category
+        controlsSegmentedControl.selectedSegmentIndex = category.rawValue
         updateControlTabVisibility()
     }
 
-    func selectedTabFromSegment() -> MakeupControlTab {
-        let selectedIndex = controlsSegmentedControl.selectedSegmentIndex
-        return visibleControlTabs.indices.contains(selectedIndex) ? visibleControlTabs[selectedIndex] : .lipstick
+    func setSelectedFaceSubCategory(_ subCategory: FaceSubCategory) {
+        selectedFaceSubCategory = subCategory
+        faceSegmentedControl.selectedSegmentIndex = subCategory.rawValue
+        updateControlTabVisibility()
+    }
+
+    func selectedMainCategoryFromSegment() -> MakeupMainCategory {
+        MakeupMainCategory(rawValue: controlsSegmentedControl.selectedSegmentIndex) ?? .looks
+    }
+
+    func selectedFaceSubCategoryFromSegment() -> FaceSubCategory {
+        FaceSubCategory(rawValue: faceSegmentedControl.selectedSegmentIndex) ?? .blush
     }
 
     func updateHairOffsetValueLabels() {
@@ -152,6 +156,12 @@ final class MakeupControlPanelView: UIStackView {
 
     func updateGlowPresetSelection(selectedIndex: Int, animated: Bool) {
         for button in glowPresetButtons {
+            updatePresetButtonSelection(button, isSelected: button.tag == selectedIndex, animated: animated)
+        }
+    }
+
+    func updateContourPresetSelection(selectedIndex: Int, animated: Bool) {
+        for button in contourPresetButtons {
             updatePresetButtonSelection(button, isSelected: button.tag == selectedIndex, animated: animated)
         }
     }
@@ -255,6 +265,10 @@ final class MakeupControlPanelView: UIStackView {
         glowRadiusSlider.maximumValue = 1.25
         glowRadiusSlider.isContinuous = true
 
+        contourIntensitySlider.minimumValue = 0.0
+        contourIntensitySlider.maximumValue = 1.0
+        contourIntensitySlider.isContinuous = true
+
         hairHueSlider.minimumValue = 0.0
         hairHueSlider.maximumValue = 1.0
         hairHueSlider.isContinuous = true
@@ -283,6 +297,7 @@ final class MakeupControlPanelView: UIStackView {
             eyeshadowIntensitySlider,
             glowIntensitySlider,
             glowRadiusSlider,
+            contourIntensitySlider,
             hairHueSlider,
             hairStrengthSlider,
             hairOffsetYSlider,
@@ -293,6 +308,16 @@ final class MakeupControlPanelView: UIStackView {
         controlsSegmentedControl.selectedSegmentTintColor = CosmeticTheme.gold.withAlphaComponent(0.22)
         controlsSegmentedControl.setTitleTextAttributes([.foregroundColor: CosmeticTheme.dimText], for: .normal)
         controlsSegmentedControl.setTitleTextAttributes([.foregroundColor: UIColor.white], for: .selected)
+
+        faceSegmentedControl.selectedSegmentTintColor = CosmeticTheme.gold.withAlphaComponent(0.14)
+        faceSegmentedControl.setTitleTextAttributes([
+            .foregroundColor: CosmeticTheme.dimText,
+            .font: UIFont.preferredFont(forTextStyle: .caption1)
+        ], for: .normal)
+        faceSegmentedControl.setTitleTextAttributes([
+            .foregroundColor: UIColor.white.withAlphaComponent(0.92),
+            .font: UIFont.preferredFont(forTextStyle: .caption1)
+        ], for: .selected)
     }
 
     private func buildRows() {
@@ -308,6 +333,8 @@ final class MakeupControlPanelView: UIStackView {
         let glowSelectorRow = makeGlowSelectorRow()
         let glowIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: glowIntensitySlider)
         let glowRadiusRow = makeSliderRow(title: L10n.text("control.size"), slider: glowRadiusSlider)
+        let contourSelectorRow = makeContourSelectorRow()
+        let contourIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: contourIntensitySlider)
         let visibilityRow = makeDoubleSwitchRow(
             leftTitle: L10n.text("control.hide_head"),
             leftToggle: hideHeadSwitch,
@@ -324,15 +351,19 @@ final class MakeupControlPanelView: UIStackView {
         let hairOffsetZRow = makeHairOffsetRow(title: "Z", slider: hairOffsetZSlider, valueLabel: hairOffsetZValueLabel)
         let hairScaleRow = makeHairOffsetRow(title: "S", slider: hairScaleSlider, valueLabel: hairScaleValueLabel)
 
+        let looksRow = makeLooksRow()
+        looksControlRows = [looksRow]
         lipstickControlRows = [lipstickSelectorRow, lipstickIntensityRow, lipstickFinishRow]
         blushControlRows = [blushSelectorRow, blushIntensityRow, blushSizeRow, blushPositionRow]
         eyeshadowControlRows = [eyeshadowSelectorRow, eyeshadowIntensityRow]
         glowControlRows = [glowSelectorRow, glowIntensityRow, glowRadiusRow]
+        contourControlRows = [contourSelectorRow, contourIntensityRow]
         hairControlRows = [hairRow]
         debugControlRows = [hairOffsetYRow, hairOffsetZRow, hairScaleRow, visibilityRow]
 
-        addArrangedSubview(makeLooksRow())
+        addArrangedSubview(looksRow)
         addArrangedSubview(controlsSegmentedControl)
+        addArrangedSubview(faceSegmentedControl)
         addArrangedSubview(lipstickSelectorRow)
         addArrangedSubview(lipstickIntensityRow)
         addArrangedSubview(lipstickFinishRow)
@@ -345,12 +376,14 @@ final class MakeupControlPanelView: UIStackView {
         addArrangedSubview(glowSelectorRow)
         addArrangedSubview(glowIntensityRow)
         addArrangedSubview(glowRadiusRow)
+        addArrangedSubview(contourSelectorRow)
+        addArrangedSubview(contourIntensityRow)
         addArrangedSubview(hairRow)
         addArrangedSubview(hairOffsetYRow)
         addArrangedSubview(hairOffsetZRow)
         addArrangedSubview(hairScaleRow)
         addArrangedSubview(visibilityRow)
-        setSelectedTab(.lipstick)
+        setSelectedMainCategory(.looks)
     }
 
     private func makeLooksRow() -> UIView {
@@ -369,29 +402,16 @@ final class MakeupControlPanelView: UIStackView {
     }
 
     private func updateControlTabVisibility() {
-        lipstickControlRows.forEach { $0.isHidden = selectedControlTab != .lipstick }
-        blushControlRows.forEach { $0.isHidden = selectedControlTab != .blush }
-        eyeshadowControlRows.forEach { $0.isHidden = selectedControlTab != .eyeshadow }
-        glowControlRows.forEach { $0.isHidden = selectedControlTab != .glow }
-        hairControlRows.forEach { $0.isHidden = selectedControlTab != .hair || !isDemoMode }
-        debugControlRows.forEach { $0.isHidden = selectedControlTab != .debug || !isDemoMode }
-    }
-
-    private func controlTabTitle(_ tab: MakeupControlTab) -> String {
-        switch tab {
-        case .lipstick:
-            return "Lipstick"
-        case .blush:
-            return "Blush"
-        case .eyeshadow:
-            return "Eyes"
-        case .glow:
-            return "Glow"
-        case .hair:
-            return "Hair"
-        case .debug:
-            return "Debug"
-        }
+        let isFace = selectedMainCategory == .face
+        looksControlRows.forEach { $0.isHidden = selectedMainCategory != .looks }
+        lipstickControlRows.forEach { $0.isHidden = selectedMainCategory != .lips }
+        faceSegmentedControl.isHidden = !isFace
+        blushControlRows.forEach { $0.isHidden = !isFace || selectedFaceSubCategory != .blush }
+        glowControlRows.forEach { $0.isHidden = !isFace || selectedFaceSubCategory != .glow }
+        contourControlRows.forEach { $0.isHidden = !isFace || selectedFaceSubCategory != .contour }
+        eyeshadowControlRows.forEach { $0.isHidden = selectedMainCategory != .eyes }
+        hairControlRows.forEach { $0.isHidden = true }
+        debugControlRows.forEach { $0.isHidden = true }
     }
 
     private func styleSlider(_ slider: UISlider) {
@@ -562,6 +582,53 @@ final class MakeupControlPanelView: UIStackView {
         button.widthAnchor.constraint(equalToConstant: 38).isActive = true
         button.heightAnchor.constraint(equalToConstant: 38).isActive = true
         glowPresetButtons.append(button)
+
+        let label = UILabel()
+        label.text = preset.name
+        label.textColor = UIColor.white.withAlphaComponent(0.66)
+        label.font = .preferredFont(forTextStyle: .caption2)
+        label.textAlignment = .center
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.65
+
+        let item = UIStackView(arrangedSubviews: [button, label])
+        item.axis = .vertical
+        item.spacing = 5
+        item.alignment = .center
+        return item
+    }
+
+    private func makeContourSelectorRow() -> UIView {
+        let container = UIStackView()
+        container.axis = .vertical
+        container.spacing = 6
+        container.alignment = .fill
+
+        let presetsRow = UIStackView()
+        presetsRow.axis = .horizontal
+        presetsRow.spacing = 10
+        presetsRow.distribution = .fillEqually
+        presetsRow.alignment = .top
+
+        contourPresetButtons = []
+        for (index, preset) in ContourSettings.presets.enumerated() {
+            let item = makeContourPresetItem(preset: preset, index: index)
+            presetsRow.addArrangedSubview(item)
+        }
+
+        container.addArrangedSubview(presetsRow)
+        return container
+    }
+
+    private func makeContourPresetItem(preset: ContourPreset, index: Int) -> UIStackView {
+        let button = UIButton(type: .system)
+        button.tag = index
+        button.backgroundColor = preset.color
+        button.layer.cornerRadius = 19
+        button.layer.borderColor = CosmeticTheme.gold.withAlphaComponent(0.85).cgColor
+        button.widthAnchor.constraint(equalToConstant: 38).isActive = true
+        button.heightAnchor.constraint(equalToConstant: 38).isActive = true
+        contourPresetButtons.append(button)
 
         let label = UILabel()
         label.text = preset.name
@@ -860,7 +927,7 @@ final class MakeupLookCell: UICollectionViewCell {
 
     private let titleLabel = UILabel()
     private let swatchStack = UIStackView()
-    private let swatchViews: [UIView] = (0..<4).map { _ in UIView() }
+    private let swatchViews: [UIView] = (0..<5).map { _ in UIView() }
 
     override init(frame: CGRect) {
         super.init(frame: frame)

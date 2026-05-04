@@ -76,3 +76,19 @@ struct GlowSettings {
         isEnabled: true
     )
 }
+
+struct ContourSettings {
+    var color: UIColor
+    var opacity: CGFloat
+    var intensity: CGFloat
+    var softness: CGFloat
+    var isEnabled: Bool
+
+    static let `default` = ContourSettings(
+        color: UIColor(red: 0.42, green: 0.25, blue: 0.19, alpha: 1.0),
+        opacity: 0.16,
+        intensity: 0.22,
+        softness: 0.82,
+        isEnabled: true
+    )
+}
