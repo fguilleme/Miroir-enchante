@@ -97,7 +97,7 @@ final class MakeupControlPanelView: UIStackView {
     }
 
     func configureInitialValues(from state: MakeupSettingsState) {
-        lipstickIntensitySlider.value = Float(clampedCGFloat(state.lipstickIntensityValue, to: 0.4...1.0))
+        lipstickIntensitySlider.value = Float(clampedCGFloat(state.lipstickIntensityValue, to: 0.1...1.0))
         lipstickFinishSegmentedControl.selectedSegmentIndex = state.lipstickFinish.rawValue
         blushIntensitySlider.value = Float(state.blushSettings.intensity)
         blushSizeSlider.value = Float(state.blushSettings.size)
@@ -244,7 +244,7 @@ final class MakeupControlPanelView: UIStackView {
     }
 
     private func configureControls() {
-        lipstickIntensitySlider.minimumValue = 0.4
+        lipstickIntensitySlider.minimumValue = 0.1
         lipstickIntensitySlider.maximumValue = 1.0
         lipstickIntensitySlider.isContinuous = true
 
@@ -259,7 +259,7 @@ final class MakeupControlPanelView: UIStackView {
         blushIntensitySlider.isContinuous = true
 
         blushSizeSlider.minimumValue = 0.65
-        blushSizeSlider.maximumValue = 1.45
+        blushSizeSlider.maximumValue = 1.20
         blushSizeSlider.isContinuous = true
 
         blushPositionSlider.minimumValue = 0.0

@@ -67,7 +67,7 @@ enum MakeupMaterialFactory {
             color: settings.color.withIntensity(settings.colorIntensity),
             baseOpacity: settings.opacity,
             roughness: settings.roughness,
-            specularStrength: settings.specularIntensity,
+            specularStrength: settings.glossIntensity,
             colorVariation: settings.colorVariation,
             overlayMode: false
         )
@@ -106,10 +106,7 @@ enum MakeupMaterialFactory {
         colorVariation: CGFloat,
         overlayMode: Bool
     ) {
-        // Cap final opacity below 1: fully opaque lipstick looks painted on,
-        // not stained. The cap leaves the underlying lip texture readable
-        // through alpha blending — that *is* the blend with the underlying face.
-        let finalOpacity = Swift.min(0.72, baseOpacity).clamped(to: 0...1)
+        let finalOpacity = Swift.min(0.92, baseOpacity).clamped(to: 0...1)
         _ = colorVariation
 
         material.metalness.contents = 0.0
@@ -123,18 +120,17 @@ enum MakeupMaterialFactory {
         material.fillMode = .fill
 
         if overlayMode {
-            // AR overlay path. ARLipMeshGeometry has no texCoord/UV channel,
-            // so UV-bound textures cannot be used. PBR + emission also fights
-            // the alpha blend (emission paints color regardless of opacity),
-            // which makes the intensity slider read as flat. A constant
-            // lighting model + plain alpha blend produces a clean tint that
-            // honors transparency directly.
-            material.lightingModel = .constant
+            // AR overlay path. ARLipMeshGeometry has no texCoord/UV channel.
+            // Use blinn lighting so finish (matte/satin/glossy) drives a real
+            // specular highlight without the emission/PBR alpha-blend conflict.
+            // Specular strength is a fixed function of finish only — the
+            // intensity slider must remain a pure diffuse-coverage control.
+            material.lightingModel = .blinn
             material.diffuse.contents = color
             material.diffuse.intensity = 1.0
             material.roughness.contents = roughness
-            material.specular.contents = UIColor.clear
-            material.shininess = 0
+            material.specular.contents = UIColor.white.withAlphaComponent(specularStrength)
+            material.shininess = specularStrength
             material.emission.contents = UIColor.clear
             material.readsFromDepthBuffer = false
         } else {
@@ -236,8 +232,10 @@ enum MakeupMaterialFactory {
     }
 
     static func configureAREyeshadowMaterial(_ material: SCNMaterial, settings: EyeshadowSettings = .default) {
-        let opacity = (settings.opacity * settings.intensity).clamped(to: 0...0.56)
-        let color = settings.color.withIntensity(0.72 + settings.intensity * 0.32)
+        let intensity = settings.intensity.clamped(to: 0...1)
+        let visibleIntensity = pow(intensity, 0.60)
+        let opacity = (settings.opacity * (0.24 + visibleIntensity * 1.45)).clamped(to: 0...0.72)
+        let color = settings.color.withIntensity(0.88 + visibleIntensity * 0.34)
 
         material.lightingModel = .constant
         material.diffuse.contents = color
@@ -263,7 +261,7 @@ enum MakeupMaterialFactory {
             color: settings.color.withIntensity(settings.colorIntensity),
             baseOpacity: settings.opacity,
             roughness: settings.roughness,
-            specularStrength: settings.specularIntensity,
+            specularStrength: settings.glossIntensity,
             colorVariation: settings.colorVariation,
             overlayMode: true
         )

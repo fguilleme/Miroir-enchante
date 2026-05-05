@@ -104,23 +104,24 @@ final class CheekMeshGeometry {
             capacity: sourceVertexIndices.count
         )
         let opacity = Float((settings.opacity * settings.intensity).clamped(to: 0...0.6))
-        let size = Float(settings.size.clamped(to: 0.65...1.45))
+        let size = Float(settings.size.clamped(to: 0.65...1.20))
         let position = Float(settings.position.clamped(to: 0...1))
         let rgba = Self.rgbaComponents(from: settings.color, intensity: 0.82 + settings.intensity * 0.28)
-        let centerY = Float(0.48 + (CGFloat(position) - 0.5) * 0.12)
+        let centerY = Float(0.44 + (CGFloat(position) - 0.5) * 0.08)
 
         for (index, point) in normalizedCoordinates.enumerated() {
             let x = Float(point.x)
             let y = Float(point.y)
             let isMouthBand = abs(x) < 0.20 && y < 0.45
-            guard !isMouthBand, abs(x) > 0.12, y >= 0.34 else {
+            let isEyeBand = y > 0.56
+            guard !isMouthBand, !isEyeBand, abs(x) > 0.12, y >= 0.34 else {
                 colorPointer[index] = SIMD4<Float>(rgba.x, rgba.y, rgba.z, 0)
                 continue
             }
 
             let sideCenterX: Float = point.x < 0 ? -0.28 : 0.28
-            let dx = (x - sideCenterX) / (0.19 * size)
-            let dy = (y - centerY) / (0.13 * size)
+            let dx = (x - sideCenterX) / (0.18 * size)
+            let dy = (y - centerY) / (0.10 * size)
             let distance = sqrt(dx * dx + dy * dy)
             let feather = 1.0 - Self.smoothstep(edge0: 0.50, edge1: 1.0, x: distance)
             let alpha = max(0, min(1, feather)) * opacity
@@ -198,7 +199,7 @@ final class CheekMeshGeometry {
                   abs(x) > 0.12,
                   !isMouthBand,
                   y >= 0.34,
-                  y <= 0.68 else { continue }
+                  y <= 0.56 else { continue }
 
             alphaByIndex[index] = 1.0 - smoothstep(edge0: 0.72, edge1: 1.15, x: distance)
             normalizedCoordinateByIndex[index] = CGPoint(x: CGFloat(x), y: CGFloat(y))

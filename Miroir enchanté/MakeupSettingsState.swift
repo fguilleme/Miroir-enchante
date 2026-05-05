@@ -63,11 +63,11 @@ struct MakeupSettingsState {
         var state = MakeupSettingsState()
         state.isARAutoFramingEnabled = defaults.bool(forKey: SettingsKey.arAutoFramingEnabled)
         state.selectedLipstickPresetIndex = defaults.integer(forKey: SettingsKey.selectedLipstickPresetIndex)
-        state.lipstickIntensityValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.lipstickIntensity)), to: 0.4...1.0)
+        state.lipstickIntensityValue = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.lipstickIntensity)), to: 0.1...1.0)
         state.lipstickFinish = LipstickFinish(rawValue: defaults.integer(forKey: SettingsKey.lipstickFinish)) ?? .satin
         state.selectedBlushPresetIndex = defaults.integer(forKey: SettingsKey.selectedBlushPresetIndex)
         state.blushSettings.intensity = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushIntensity)), to: 0...1)
-        state.blushSettings.size = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushSize)), to: 0.65...1.45)
+        state.blushSettings.size = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushSize)), to: 0.65...1.20)
         state.blushSettings.position = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.blushPosition)), to: 0...1)
         state.selectedEyeshadowPresetIndex = defaults.integer(forKey: SettingsKey.selectedEyeshadowPresetIndex)
         state.eyeshadowSettings.intensity = clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.eyeshadowIntensity)), to: 0...1)
@@ -121,10 +121,10 @@ struct MakeupSettingsState {
         guard LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) else { return }
 
         let preset = LipstickSettings.presets[selectedLipstickPresetIndex]
-        let intensity = clampedCGFloat(lipstickIntensityValue, to: 0.2...1.0)
+        let intensity = clampedCGFloat(lipstickIntensityValue, to: 0.1...1.0)
         lipstickIntensityValue = intensity
         lipstickSettings.color = preset.baseColor
-        lipstickSettings.opacity = CGFloat(preset.opacity) * intensity
+        lipstickSettings.opacity = CGFloat(preset.opacity) * (0.30 + intensity * 0.70)
         lipstickSettings.roughness = lipstickRoughness(for: preset)
         lipstickSettings.glossIntensity = lipstickGlossIntensity(for: preset)
         lipstickSettings.colorIntensity = 1.0
@@ -179,7 +179,7 @@ struct MakeupSettingsState {
 
         let preset = ContourSettings.presets[selectedContourPresetIndex]
         contourSettings.color = preset.color
-        contourSettings.opacity = 0.16
+        contourSettings.opacity = 0.32
         contourSettings.intensity = clampedCGFloat(contourSettings.intensity, to: 0...1)
         contourSettings.softness = CGFloat(preset.softness)
         contourSettings.isEnabled = contourSettings.intensity > 0.01
@@ -187,7 +187,7 @@ struct MakeupSettingsState {
 
     mutating func applyContourPreset(_ preset: ContourPreset, intensity: CGFloat) {
         contourSettings.color = preset.color
-        contourSettings.opacity = 0.16
+        contourSettings.opacity = 0.32
         contourSettings.intensity = clampedCGFloat(intensity, to: 0...1)
         contourSettings.softness = CGFloat(preset.softness)
         contourSettings.isEnabled = contourSettings.intensity > 0.01

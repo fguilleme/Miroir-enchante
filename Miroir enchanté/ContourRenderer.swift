@@ -57,12 +57,12 @@ final class ContourRenderer {
         let centerX = (bounds.minX + bounds.maxX) * 0.5
 
         let regions = [
-            ContourRegion(normalizedCenter: CGPoint(x: -0.24, y: 0.43), normalizedSize: CGSize(width: 0.22, height: 0.07), opacityScale: 1.00, zLift: 0.004, rotation: -0.18),
-            ContourRegion(normalizedCenter: CGPoint(x: 0.24, y: 0.43), normalizedSize: CGSize(width: 0.22, height: 0.07), opacityScale: 1.00, zLift: 0.004, rotation: 0.18),
-            ContourRegion(normalizedCenter: CGPoint(x: -0.25, y: 0.24), normalizedSize: CGSize(width: 0.18, height: 0.055), opacityScale: 0.44, zLift: 0.004, rotation: 0.20),
-            ContourRegion(normalizedCenter: CGPoint(x: 0.25, y: 0.24), normalizedSize: CGSize(width: 0.18, height: 0.055), opacityScale: 0.44, zLift: 0.004, rotation: -0.20),
-            ContourRegion(normalizedCenter: CGPoint(x: -0.055, y: 0.55), normalizedSize: CGSize(width: 0.035, height: 0.18), opacityScale: 0.34, zLift: 0.008, rotation: 0.03),
-            ContourRegion(normalizedCenter: CGPoint(x: 0.055, y: 0.55), normalizedSize: CGSize(width: 0.035, height: 0.18), opacityScale: 0.34, zLift: 0.008, rotation: -0.03)
+            ContourRegion(normalizedCenter: CGPoint(x: -0.24, y: 0.43), normalizedSize: CGSize(width: 0.22, height: 0.07), opacityScale: 1.00, zLift: 0.012, rotation: -0.18),
+            ContourRegion(normalizedCenter: CGPoint(x: 0.24, y: 0.43), normalizedSize: CGSize(width: 0.22, height: 0.07), opacityScale: 1.00, zLift: 0.012, rotation: 0.18),
+            ContourRegion(normalizedCenter: CGPoint(x: -0.25, y: 0.24), normalizedSize: CGSize(width: 0.18, height: 0.055), opacityScale: 0.55, zLift: 0.012, rotation: 0.20),
+            ContourRegion(normalizedCenter: CGPoint(x: 0.25, y: 0.24), normalizedSize: CGSize(width: 0.18, height: 0.055), opacityScale: 0.55, zLift: 0.012, rotation: -0.20),
+            ContourRegion(normalizedCenter: CGPoint(x: -0.055, y: 0.55), normalizedSize: CGSize(width: 0.035, height: 0.18), opacityScale: 0.45, zLift: 0.016, rotation: 0.03),
+            ContourRegion(normalizedCenter: CGPoint(x: 0.055, y: 0.55), normalizedSize: CGSize(width: 0.035, height: 0.18), opacityScale: 0.45, zLift: 0.016, rotation: -0.03)
         ]
 
         for region in regions {
@@ -92,7 +92,7 @@ final class ContourRenderer {
         rootNode.isHidden = !settings.isEnabled
         let intensity = settings.intensity.clamped(to: 0...1)
         let softness = settings.softness.clamped(to: 0.65...0.95)
-        let alpha = min(0.24, settings.opacity * intensity * 1.35)
+        let alpha = min(0.62, settings.opacity * intensity * 2.35)
         let key = MakeupTextureCache.ContourKey(
             color: MakeupTextureCache.ColorKey(settings.color),
             intensity: Int((alpha * 100).rounded()),
