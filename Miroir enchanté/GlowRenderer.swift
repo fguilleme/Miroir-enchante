@@ -93,7 +93,7 @@ final class GlowRenderer {
         rootNode.isHidden = !settings.isEnabled
         let intensity = settings.intensity.clamped(to: 0...1)
         let radius = settings.radius.clamped(to: 0.75...1.25)
-        let alpha = min(0.34, settings.opacity * intensity * 1.85)
+        let alpha = min(0.42, settings.opacity * intensity * 2.55)
         let key = MakeupTextureCache.GlowKey(
             color: MakeupTextureCache.ColorKey(settings.color),
             intensity: Int((alpha * 100).rounded()),

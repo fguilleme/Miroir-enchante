@@ -202,7 +202,8 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
 
         let (snapshot, _) = makeupState.snapshot()
         switch renderMode {
-        case .lipsOnly where snapshot.isMakeupEnabled:
+        case .lipsOnly where snapshot.isMakeupEnabled,
+             .fullFace where snapshot.isMakeupEnabled:
             lipMesh?.update(from: faceAnchor.geometry)
             cheekMesh?.update(from: faceAnchor.geometry)
             eyeshadowMesh?.update(from: faceAnchor.geometry)
@@ -334,12 +335,15 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
             lipDebugNode?.isHidden = true
 
         case .fullFace:
-            baseFaceGeometry?.firstMaterial = fullFaceMaterial
-            lipsNode?.isHidden = true
-            cheeksNode?.isHidden = true
-            eyeshadowNode?.isHidden = true
-            glowRenderer?.setGlowEnabled(false)
-            contourRenderer?.setContourEnabled(false)
+            baseFaceGeometry?.firstMaterial = invisibleFaceMaterial
+            lipsNode?.isHidden = !snapshot.isMakeupEnabled
+            setSingleMaterial(lipsOnlyMaterial, on: lipsNode?.geometry)
+            cheeksNode?.isHidden = !snapshot.isMakeupEnabled
+            setSingleMaterial(blushMaterial, on: cheeksNode?.geometry)
+            eyeshadowNode?.isHidden = !snapshot.isMakeupEnabled
+            setSingleMaterial(eyeshadowMaterial, on: eyeshadowNode?.geometry)
+            glowRenderer?.setGlowEnabled(snapshot.isMakeupEnabled && snapshot.glow.isEnabled)
+            contourRenderer?.setContourEnabled(snapshot.isMakeupEnabled && snapshot.contour.isEnabled)
             lipDebugNode?.isHidden = true
 
         case .wireframe:

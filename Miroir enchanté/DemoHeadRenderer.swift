@@ -106,7 +106,7 @@ final class DemoHeadRenderer: MakeupRendering {
     private var isHairHidden = false
     private var isMakeupEnabled = true
     private let frontFacingYaw: Float = 0
-    private let demoRotationLimit: Float = 135 * .pi / 180
+    private let demoRotationLimit: Float = 85 * .pi / 180
     // The separated hair OBJ is in the same Blender space as the head, but the
     // visible strands sit a little too far back/high in SceneKit. Keep this as
     // a single local tweak so it is easy to tune after the next device pass.
@@ -510,7 +510,6 @@ final class DemoHeadRenderer: MakeupRendering {
         hairRootNode.isHidden = isHairHidden
         cheekRootNode.isHidden = isHeadHidden || !isMakeupEnabled
         eyelidRootNode.isHidden = isHeadHidden || !isMakeupEnabled
-
         for node in lipNodes {
             node.isHidden = !isMakeupEnabled
         }

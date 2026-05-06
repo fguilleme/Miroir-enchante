@@ -575,7 +575,7 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     private func applySelectedLipstickPreset(animated: Bool, updatesSelector: Bool = true) {
-        let intensity = clampedCGFloat(CGFloat(controlPanel.lipstickIntensitySlider.value), to: 0.2...1.0)
+        let intensity = clampedCGFloat(CGFloat(controlPanel.lipstickIntensitySlider.value), to: 0.1...1.0)
         settingsState.lipstickIntensityValue = intensity
         settingsState.rebuildLipstickSettings()
 
@@ -931,12 +931,11 @@ final class FaceMakeupViewController: UIViewController {
         motionManager.startDeviceMotionUpdates(to: .main) { [weak self] motion, _ in
             guard let self, self.experienceMode == .demo, let motion else { return }
 
-            // In portrait, gravity.x behaves like a simple inclinometer. The
-            // multiplier makes the model reach a near-back view without
-            // requiring an exaggerated physical tilt of the phone.
-            let amplifiedTilt = CGFloat(motion.gravity.x) * 1.75
+            // In portrait, gravity.x behaves like a simple inclinometer.
+            // Keep demo movement calm so small hand tilts do not swing the head.
+            let amplifiedTilt = CGFloat(motion.gravity.x) * 0.95
             let rawTilt = min(1, max(-1, amplifiedTilt))
-            self.smoothedInspectionTilt = self.smoothedInspectionTilt * 0.82 + rawTilt * 0.18
+            self.smoothedInspectionTilt = self.smoothedInspectionTilt * 0.90 + rawTilt * 0.10
             self.demoHeadRenderer.updateInspectionTilt(horizontal: self.smoothedInspectionTilt)
         }
     }

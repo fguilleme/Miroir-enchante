@@ -103,8 +103,10 @@ final class EyeshadowMeshGeometry {
             to: SIMD4<Float>.self,
             capacity: sourceVertexIndices.count
         )
-        let opacity = Float((settings.opacity * settings.intensity).clamped(to: 0...0.7))
-        let rgba = Self.rgbaComponents(from: settings.color, intensity: 0.76 + settings.intensity * 0.30)
+        let intensity = settings.intensity.clamped(to: 0...1)
+        let visibleIntensity = pow(intensity, 0.60)
+        let opacity = Float((settings.opacity * (0.24 + visibleIntensity * 1.45)).clamped(to: 0...0.76))
+        let rgba = Self.rgbaComponents(from: settings.color, intensity: 0.88 + visibleIntensity * 0.34)
 
         for (index, point) in normalizedCoordinates.enumerated() {
             let x = Float(point.x)
