@@ -20,6 +20,17 @@ private extension Float {
         Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
+
+private struct MeshEdge: Hashable {
+    let a: Int
+    let b: Int
+
+    init(_ first: Int, _ second: Int) {
+        self.a = min(first, second)
+        self.b = max(first, second)
+    }
+}
+
 final class LipMeshGeometry {
     let geometry: SCNGeometry
     let debugPointGeometry: SCNGeometry
@@ -168,49 +179,52 @@ final class LipMeshGeometry {
         let faceWidth = max(maxX - minX, 0.001)
         let faceHeight = max(maxY - minY, 0.001)
         let centerX = (minX + maxX) * 0.5
+        let fallbackMouthCenterY = 0.265 + calibration.verticalOffset.clamped(to: -0.045...0.045)
+        let normalizedVertices: [(x: Float, y: Float)] = vertices.map { vertex in
+            (
+                x: (vertex.x - centerX) / faceWidth,
+                y: (vertex.y - minY) / faceHeight
+            )
+        }
+        let mouthBoundary = mouthBoundaryIndices(
+            in: faceGeometry,
+            normalizedVertices: normalizedVertices,
+            fallbackCenterY: fallbackMouthCenterY
+        )
+        let mouthCenterY = mouthBoundary.isEmpty
+            ? fallbackMouthCenterY
+            : mouthBoundary.reduce(Float(0)) { $0 + normalizedVertices[$1].y } / Float(mouthBoundary.count)
+        let widthScale = calibration.widthScale.clamped(to: 0.70...1.25)
+        let heightScale = calibration.heightScale.clamped(to: 0.60...1.30)
+        let allowedLipIndices = Set(normalizedVertices.enumerated().compactMap { index, point -> Int? in
+            let yDelta = point.y - mouthCenterY
+            let lipRadius = yDelta >= 0 ? 0.070 * heightScale : 0.145 * heightScale
+            let normalizedVertical = abs(yDelta) / lipRadius
+            guard normalizedVertical <= 1 else { return nil }
 
+            let halfWidth = (0.085 + (1 - pow(normalizedVertical, 1.35)) * 0.120) * widthScale
+            let cornerTaper = max(0, (abs(point.x) - 0.130 * widthScale) / (0.060 * widthScale))
+            let taperedHalfHeight = lipRadius * (1 - min(cornerTaper, 0.70) * 0.50)
+
+            guard abs(point.x) <= halfWidth,
+                  abs(yDelta) <= taperedHalfHeight else { return nil }
+            return index
+        })
+
+        let seedIndices = mouthBoundary.isEmpty ? allowedLipIndices : mouthBoundary.intersection(allowedLipIndices)
         var upper = Set<Int>()
         var lower = Set<Int>()
 
-        for (index, vertex) in vertices.enumerated() {
-            let xRatio = (vertex.x - centerX) / faceWidth
-            let absXRatio = abs(xRatio)
-            let yRatio = (vertex.y - minY) / faceHeight
-
-            // Shape the prototype AR lip mask like a tapered mouth instead of
-            // selecting a rectangular mouth band. This keeps the live overlay
-            // from spilling onto cheeks, smile lines, and the lower face.
-            let widthScale = calibration.widthScale.clamped(to: 0.70...1.25)
-            let heightScale = calibration.heightScale.clamped(to: 0.60...1.30)
-            let mouthCenterY = 0.265 + calibration.verticalOffset.clamped(to: -0.045...0.045)
-            let upperRadius = 0.052 * heightScale
-            let lowerRadius = 0.098 * heightScale
-            let verticalDistance = abs(yRatio - mouthCenterY)
-            let lipRadius = yRatio >= mouthCenterY ? upperRadius : lowerRadius
-            let normalizedVertical = verticalDistance / lipRadius
-            guard normalizedVertical <= 1 else { continue }
-
-            let halfWidth = (0.060 + (1 - pow(normalizedVertical, 1.45)) * 0.105) * widthScale
-            let cornerTaper = max(0, (absXRatio - 0.115 * widthScale) / (0.050 * widthScale))
-            let taperedHalfHeight = lipRadius * (1 - min(cornerTaper, 0.65) * 0.58)
-            let openingHalfWidth = max(0.025, halfWidth - 0.045 * widthScale)
-            let openingHalfHeight = 0.010 * heightScale
-            let isMouthOpening = absXRatio < openingHalfWidth
-                && abs(yRatio - mouthCenterY) < openingHalfHeight
-
-            guard absXRatio <= halfWidth,
-                  verticalDistance <= taperedHalfHeight,
-                  !isMouthOpening else { continue }
-
-            if yRatio >= mouthCenterY {
+        for index in seedIndices {
+            if normalizedVertices[index].y >= mouthCenterY {
                 upper.insert(index)
             } else {
                 lower.insert(index)
             }
         }
 
-        let expandedUpper = expand(indices: upper, faceGeometry: faceGeometry, steps: 0)
-        let expandedLower = expand(indices: lower, faceGeometry: faceGeometry, steps: 0)
+        let expandedUpper = expand(indices: upper, faceGeometry: faceGeometry, steps: 3, allowedIndices: allowedLipIndices)
+        let expandedLower = expand(indices: lower, faceGeometry: faceGeometry, steps: 5, allowedIndices: allowedLipIndices)
 
         return (
             Array(expandedUpper).sorted(),
@@ -218,7 +232,45 @@ final class LipMeshGeometry {
         )
     }
 
-    private static func expand(indices: Set<Int>, faceGeometry: ARFaceGeometry, steps: Int) -> Set<Int> {
+    private static func mouthBoundaryIndices(
+        in faceGeometry: ARFaceGeometry,
+        normalizedVertices: [(x: Float, y: Float)],
+        fallbackCenterY: Float
+    ) -> Set<Int> {
+        let triangles = faceGeometry.triangleIndices.map { Int($0) }
+        var edgeCounts: [MeshEdge: Int] = [:]
+
+        for triangleStart in stride(from: 0, to: triangles.count, by: 3) {
+            let i0 = triangles[triangleStart]
+            let i1 = triangles[triangleStart + 1]
+            let i2 = triangles[triangleStart + 2]
+            edgeCounts[MeshEdge(i0, i1), default: 0] += 1
+            edgeCounts[MeshEdge(i1, i2), default: 0] += 1
+            edgeCounts[MeshEdge(i2, i0), default: 0] += 1
+        }
+
+        var boundary = Set<Int>()
+        for (edge, count) in edgeCounts where count == 1 {
+            let p0 = normalizedVertices[edge.a]
+            let p1 = normalizedVertices[edge.b]
+            let midX = (p0.x + p1.x) * 0.5
+            let midY = (p0.y + p1.y) * 0.5
+
+            guard abs(midX) < 0.26,
+                  midY >= fallbackCenterY - 0.075,
+                  midY <= fallbackCenterY + 0.075 else { continue }
+            boundary.insert(edge.a)
+            boundary.insert(edge.b)
+        }
+        return boundary
+    }
+
+    private static func expand(
+        indices: Set<Int>,
+        faceGeometry: ARFaceGeometry,
+        steps: Int,
+        allowedIndices: Set<Int>
+    ) -> Set<Int> {
         guard steps > 0, !indices.isEmpty else { return indices }
 
         var expanded = indices
@@ -235,7 +287,11 @@ final class LipMeshGeometry {
                 ]
 
                 guard triangle.contains(where: expanded.contains) else { continue }
-                triangle.forEach { next.insert($0) }
+                triangle.forEach {
+                    if allowedIndices.contains($0) {
+                        next.insert($0)
+                    }
+                }
             }
 
             expanded = next
