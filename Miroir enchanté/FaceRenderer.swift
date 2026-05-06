@@ -128,6 +128,12 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
         return renderMode
     }
 
+    func setRenderMode(_ mode: RenderMode) {
+        guard renderMode != mode else { return }
+        renderMode = mode
+        applyCurrentMode()
+    }
+
     func renderer(_ renderer: SCNSceneRenderer, nodeFor anchor: ARAnchor) -> SCNNode? {
         guard let faceAnchor = anchor as? ARFaceAnchor else { return nil }
         guard let device = sceneView?.device else { return nil }

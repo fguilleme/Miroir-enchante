@@ -164,17 +164,22 @@ final class FaceMakeupViewController: UIViewController {
 
     private func configureModeButton() {
         modeButton.translatesAutoresizingMaskIntoConstraints = false
-        modeButton.setTitle(faceRenderer.renderMode.buttonTitle, for: .normal)
-        styleFloatingButton(modeButton)
+        let faceMeshIcon = makeFaceMeshIcon()
+        modeButton.setImage(faceMeshIcon, for: .normal)
+        modeButton.setImage(faceMeshIcon, for: .selected)
+        modeButton.imageView?.contentMode = .scaleAspectFit
+        modeButton.accessibilityLabel = L10n.text("render.mesh")
+        styleIconFloatingButton(modeButton)
         modeButton.addTarget(self, action: #selector(toggleRenderMode), for: .touchUpInside)
-        modeButton.isHidden = !Self.isDemoFeatureEnabled
+        updateModeButtonAppearance()
+        modeButton.isHidden = experienceMode != .ar
 
         view.addSubview(modeButton)
         NSLayoutConstraint.activate([
             modeButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
             modeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 68),
-            modeButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 84),
-            modeButton.heightAnchor.constraint(equalToConstant: 44)
+            modeButton.widthAnchor.constraint(equalToConstant: 42),
+            modeButton.heightAnchor.constraint(equalToConstant: 42)
         ])
     }
 
@@ -305,6 +310,49 @@ final class FaceMakeupViewController: UIViewController {
         )
     }
 
+    private func makeFaceMeshIcon(size: CGSize = CGSize(width: 24, height: 24)) -> UIImage {
+        let renderer = UIGraphicsImageRenderer(size: size)
+        let image = renderer.image { context in
+            let faceRect = CGRect(x: 5.2, y: 2.4, width: 13.6, height: 19.2)
+            let facePath = UIBezierPath(ovalIn: faceRect)
+            let meshPath = UIBezierPath()
+
+            meshPath.lineCapStyle = .round
+            meshPath.lineJoinStyle = .round
+            meshPath.lineWidth = 1.25
+
+            meshPath.move(to: CGPoint(x: 12, y: 3.4))
+            meshPath.addLine(to: CGPoint(x: 12, y: 20.6))
+
+            meshPath.move(to: CGPoint(x: 7.2, y: 7.3))
+            meshPath.addLine(to: CGPoint(x: 16.8, y: 7.3))
+
+            meshPath.move(to: CGPoint(x: 6.4, y: 12.2))
+            meshPath.addLine(to: CGPoint(x: 17.6, y: 12.2))
+
+            meshPath.move(to: CGPoint(x: 8.1, y: 17.2))
+            meshPath.addLine(to: CGPoint(x: 15.9, y: 17.2))
+
+            meshPath.move(to: CGPoint(x: 7.2, y: 7.3))
+            meshPath.addLine(to: CGPoint(x: 12, y: 12.2))
+            meshPath.addLine(to: CGPoint(x: 16.8, y: 7.3))
+
+            meshPath.move(to: CGPoint(x: 6.4, y: 12.2))
+            meshPath.addLine(to: CGPoint(x: 12, y: 17.2))
+            meshPath.addLine(to: CGPoint(x: 17.6, y: 12.2))
+
+            UIColor.white.setStroke()
+            context.cgContext.saveGState()
+            facePath.addClip()
+            meshPath.stroke()
+            context.cgContext.restoreGState()
+
+            facePath.lineWidth = 1.6
+            facePath.stroke()
+        }
+        return image.withRenderingMode(.alwaysTemplate)
+    }
+
     private func configureMakeupControls() {
         controlPanel.configureInitialValues(from: settingsState)
         controlPanel.lipstickCollectionView.dataSource = self
@@ -364,9 +412,10 @@ final class FaceMakeupViewController: UIViewController {
     }
 
     @objc private func toggleRenderMode() {
-        let mode = faceRenderer.toggleMode()
-        modeButton.setTitle(mode.buttonTitle, for: .normal)
-        controlPanel.setDebugControlsVisible(mode == .wireframe)
+        let nextMode: FaceRenderer.RenderMode = faceRenderer.renderMode == .wireframe ? .lipsOnly : .wireframe
+        faceRenderer.setRenderMode(nextMode)
+        updateModeButtonAppearance()
+        controlPanel.setDebugControlsVisible(false)
     }
 
     @objc private func toggleARAutoFraming() {
@@ -388,6 +437,17 @@ final class FaceMakeupViewController: UIViewController {
             ? CosmeticTheme.gold.withAlphaComponent(0.18)
             : CosmeticTheme.controlBackground
     }
+
+    private func updateModeButtonAppearance() {
+        let isMeshVisible = faceRenderer.renderMode == .wireframe
+        modeButton.isSelected = isMeshVisible
+        modeButton.tintColor = isMeshVisible ? CosmeticTheme.softGold : UIColor.white.withAlphaComponent(0.72)
+        modeButton.layer.borderColor = (isMeshVisible ? CosmeticTheme.gold : UIColor.white.withAlphaComponent(0.08)).cgColor
+        modeButton.backgroundColor = isMeshVisible
+            ? CosmeticTheme.gold.withAlphaComponent(0.18)
+            : CosmeticTheme.controlBackground
+    }
+
 
     @objc private func toggleExperienceMode() {
         guard Self.isDemoFeatureEnabled else { return }
@@ -558,7 +618,7 @@ final class FaceMakeupViewController: UIViewController {
             selected: selectedMainCategory,
             faceSubCategory: selectedFaceSubCategory
         )
-        controlPanel.setDebugControlsVisible(experienceMode == .ar && faceRenderer.renderMode == .wireframe)
+        controlPanel.setDebugControlsVisible(false)
     }
 
     @objc private func hideHeadSwitchChanged() {
@@ -829,7 +889,8 @@ final class FaceMakeupViewController: UIViewController {
         sceneView.delegate = faceRenderer
         sceneView.automaticallyUpdatesLighting = true
         sceneView.isPlaying = true
-        modeButton.isHidden = !Self.isDemoFeatureEnabled
+        modeButton.isHidden = false
+        updateModeButtonAppearance()
         arAutoFramingButton.isHidden = false
         updateARAutoFramingButton()
         hairStyleButton.isHidden = true
