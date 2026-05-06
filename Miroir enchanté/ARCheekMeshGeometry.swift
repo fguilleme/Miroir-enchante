@@ -103,29 +103,29 @@ final class CheekMeshGeometry {
             to: SIMD4<Float>.self,
             capacity: sourceVertexIndices.count
         )
-        let visibleIntensity = pow(settings.intensity.clamped(to: 0...1), 0.55)
-        let opacity = Float((settings.opacity * (0.12 + visibleIntensity * 1.70)).clamped(to: 0...0.68))
+        let normalizedIntensity = min(settings.intensity * 2.0, 1.0).clamped(to: 0...1)
+        let visibleIntensity = pow(normalizedIntensity, 0.75)
         let size = Float(settings.size.clamped(to: 0.65...1.20))
         let position = Float(settings.position.clamped(to: 0...1))
         let rgba = Self.rgbaComponents(from: settings.color, intensity: 0.84 + visibleIntensity * 0.34)
-        let centerY = Float(0.46 + CGFloat(position) * 0.10)
+        let centerY = Float(0.46 + CGFloat(position) * 0.08)
 
         for (index, point) in normalizedCoordinates.enumerated() {
             let x = Float(point.x)
             let y = Float(point.y)
-            let isMouthBand = abs(x) < 0.20 && y < 0.45
-            let isEyeBand = y > 0.56
+            let isMouthBand = abs(x) < 0.18 && y < 0.40
+            let isEyeBand = y > 0.62
             guard !isMouthBand, !isEyeBand, abs(x) > 0.12, y >= 0.34 else {
                 colorPointer[index] = SIMD4<Float>(rgba.x, rgba.y, rgba.z, 0)
                 continue
             }
 
             let sideCenterX: Float = point.x < 0 ? -0.28 : 0.28
-            let dx = (x - sideCenterX) / (0.18 * size)
-            let dy = (y - centerY) / (0.10 * size)
+            let dx = (x - sideCenterX) / (0.22 * size)
+            let dy = (y - centerY) / (0.12 * size)
             let distance = sqrt(dx * dx + dy * dy)
-            let feather = 1.0 - Self.smoothstep(edge0: 0.50, edge1: 1.0, x: distance)
-            let alpha = max(0, min(1, feather)) * opacity
+            let feather = 1.0 - Self.smoothstep(edge0: 0.45, edge1: 1.0, x: distance)
+            let alpha = max(0, min(1, feather)) * Float(visibleIntensity)
             colorPointer[index] = SIMD4<Float>(rgba.x, rgba.y, rgba.z, alpha)
         }
     }
@@ -202,18 +202,18 @@ final class CheekMeshGeometry {
             let x = (vertex.x - centerX) / faceWidth
             let y = (vertex.y - minY) / faceHeight
             let sideCenterX: Float = x < 0 ? -0.28 : 0.28
-            let dx = (x - sideCenterX) / 0.34
-            let dy = (y - 0.48) / 0.26
+            let dx = (x - sideCenterX) / 0.42
+            let dy = (y - 0.50) / 0.30
             let distance = sqrt(dx * dx + dy * dy)
 
-            let isMouthBand = abs(x) < 0.20 && y < 0.45
-            guard distance <= 1.15,
+            let isMouthBand = abs(x) < 0.18 && y < 0.40
+            guard distance <= 1.35,
                   abs(x) > 0.12,
                   !isMouthBand,
                   y >= 0.34,
-                  y <= 0.56 else { continue }
+                  y <= 0.62 else { continue }
 
-            alphaByIndex[index] = 1.0 - smoothstep(edge0: 0.72, edge1: 1.15, x: distance)
+            alphaByIndex[index] = 1.0 - smoothstep(edge0: 0.72, edge1: 1.35, x: distance)
             normalizedCoordinateByIndex[index] = CGPoint(x: CGFloat(x), y: CGFloat(y))
         }
 
