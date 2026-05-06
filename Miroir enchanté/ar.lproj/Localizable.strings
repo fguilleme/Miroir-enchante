@@ -11,6 +11,7 @@
 "control.hair_strength" = "القوة";
 "control.size" = "الحجم";
 "control.position" = "الموضع";
+"control.thickness" = "السماكة";
 "control.finish" = "اللمسة";
 "blush.choose" = "اختيار أحمر الخدود";
 "blush.nude" = "طبيعي";

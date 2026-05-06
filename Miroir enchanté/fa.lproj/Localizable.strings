@@ -11,6 +11,7 @@
 "control.hair_strength" = "شدت";
 "control.size" = "اندازه";
 "control.position" = "موقعیت";
+"control.thickness" = "ضخامت";
 "control.finish" = "پرداخت";
 "blush.choose" = "انتخاب رژگونه";
 "blush.nude" = "نود";

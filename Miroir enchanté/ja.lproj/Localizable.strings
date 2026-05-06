@@ -11,6 +11,7 @@
 "control.hair_strength" = "強さ";
 "control.size" = "サイズ";
 "control.position" = "位置";
+"control.thickness" = "厚み";
 "control.finish" = "質感";
 "blush.choose" = "チークを選択";
 "blush.nude" = "ヌード";

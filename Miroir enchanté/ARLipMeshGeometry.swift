@@ -7,6 +7,19 @@ import ARKit
 import Metal
 import SceneKit
 
+struct LipMeshCalibration {
+    var widthScale: Float
+    var heightScale: Float
+    var verticalOffset: Float
+
+    static let `default` = LipMeshCalibration(widthScale: 1.0, heightScale: 1.0, verticalOffset: 0.0)
+}
+
+private extension Float {
+    func clamped(to range: ClosedRange<Float>) -> Float {
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
+    }
+}
 final class LipMeshGeometry {
     let geometry: SCNGeometry
     let debugPointGeometry: SCNGeometry
@@ -18,10 +31,13 @@ final class LipMeshGeometry {
     private let sourceVertexIndices: [Int]
     private let localTriangleIndices: [UInt16]
 
-    init?(device: MTLDevice, faceGeometry: ARFaceGeometry) {
-        let lipIndexSets = Self.makeLipIndexSets(from: faceGeometry)
-        let lipIndexSet = Set(lipIndexSets.upper + lipIndexSets.lower)
-        let triangles = Self.makeLipTriangles(from: faceGeometry, lipIndexSet: lipIndexSet)
+    init?(device: MTLDevice, faceGeometry: ARFaceGeometry, calibration: LipMeshCalibration = .default) {
+        let lipIndexSets = Self.makeLipIndexSets(from: faceGeometry, calibration: calibration)
+        let triangles = Self.makeLipTriangles(
+            from: faceGeometry,
+            upperIndexSet: Set(lipIndexSets.upper),
+            lowerIndexSet: Set(lipIndexSets.lower)
+        )
 
         guard !triangles.sourceVertexIndices.isEmpty,
               !triangles.localTriangleIndices.isEmpty else {
@@ -131,7 +147,10 @@ final class LipMeshGeometry {
         }
     }
 
-    private static func makeLipIndexSets(from faceGeometry: ARFaceGeometry) -> (upper: [Int], lower: [Int]) {
+    private static func makeLipIndexSets(
+        from faceGeometry: ARFaceGeometry,
+        calibration: LipMeshCalibration
+    ) -> (upper: [Int], lower: [Int]) {
         let vertices = faceGeometry.vertices
         guard let first = vertices.first else { return ([], []) }
 
@@ -155,16 +174,27 @@ final class LipMeshGeometry {
         var lower = Set<Int>()
 
         for (index, vertex) in vertices.enumerated() {
-            let xRatio = abs(vertex.x - centerX) / faceWidth
+            let xRatio = (vertex.x - centerX) / faceWidth
+            let absXRatio = abs(xRatio)
             let yRatio = (vertex.y - minY) / faceHeight
 
-            // These bounds describe only the central mouth band in normalized
-            // face-local space. They are deliberately conservative: a beard or
-            // moustache can visually hide the real lips, but the AR mesh itself
-            // is stable, so keeping the selected band small avoids spilling onto
-            // the nose and cheeks. Production masks should replace this with
-            // curated upperLipIndices/lowerLipIndices from a mesh inspection pass.
-            guard xRatio <= 0.22, yRatio >= 0.18, yRatio <= 0.35 else { continue }
+            // Shape the prototype AR lip mask like a tapered mouth instead of
+            // selecting a rectangular mouth band. This keeps the live overlay
+            // from spilling onto cheeks, smile lines, and the lower face.
+            let widthScale = calibration.widthScale.clamped(to: 0.70...1.25)
+            let heightScale = calibration.heightScale.clamped(to: 0.60...1.30)
+            let mouthCenterY = 0.265 + calibration.verticalOffset.clamped(to: -0.045...0.045)
+            let verticalRadius = 0.065 * heightScale
+            let verticalDistance = abs(yRatio - mouthCenterY)
+            let normalizedVertical = verticalDistance / verticalRadius
+            guard normalizedVertical <= 1 else { continue }
+
+            let halfWidth = (0.060 + (1 - pow(normalizedVertical, 1.45)) * 0.105) * widthScale
+            let cornerTaper = max(0, (absXRatio - 0.115 * widthScale) / (0.050 * widthScale))
+            let taperedHalfHeight = verticalRadius * (1 - min(cornerTaper, 0.65) * 0.58)
+
+            guard absXRatio <= halfWidth,
+                  verticalDistance <= taperedHalfHeight else { continue }
 
             if yRatio >= 0.27 {
                 upper.insert(index)
@@ -210,7 +240,8 @@ final class LipMeshGeometry {
 
     private static func makeLipTriangles(
         from faceGeometry: ARFaceGeometry,
-        lipIndexSet: Set<Int>
+        upperIndexSet: Set<Int>,
+        lowerIndexSet: Set<Int>
     ) -> (sourceVertexIndices: [Int], localTriangleIndices: [UInt16]) {
         let sourceTriangles = faceGeometry.triangleIndices.map { Int($0) }
         var localIndexBySourceIndex: [Int: UInt16] = [:]
@@ -233,9 +264,14 @@ final class LipMeshGeometry {
             let i1 = sourceTriangles[triangleStart + 1]
             let i2 = sourceTriangles[triangleStart + 2]
 
-            guard lipIndexSet.contains(i0),
-                  lipIndexSet.contains(i1),
-                  lipIndexSet.contains(i2) else {
+            let isUpperTriangle = upperIndexSet.contains(i0)
+                && upperIndexSet.contains(i1)
+                && upperIndexSet.contains(i2)
+            let isLowerTriangle = lowerIndexSet.contains(i0)
+                && lowerIndexSet.contains(i1)
+                && lowerIndexSet.contains(i2)
+
+            guard isUpperTriangle || isLowerTriangle else {
                 continue
             }
 
@@ -247,4 +283,3 @@ final class LipMeshGeometry {
         return (sourceVertexIndices, localTriangleIndices)
     }
 }
-

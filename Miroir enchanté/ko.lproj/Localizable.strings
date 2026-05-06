@@ -11,6 +11,7 @@
 "control.hair_strength" = "강도";
 "control.size" = "크기";
 "control.position" = "위치";
+"control.thickness" = "두께";
 "control.finish" = "마감";
 "blush.choose" = "블러셔 선택";
 "blush.nude" = "누드";

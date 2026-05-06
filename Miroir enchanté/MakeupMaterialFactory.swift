@@ -295,10 +295,14 @@ enum MakeupMaterialFactory {
     }
 
     static func makeLipHighlightMaterial() -> SCNMaterial {
+        makeZoneWireframeMaterial(color: .systemYellow)
+    }
+
+    static func makeZoneWireframeMaterial(color: UIColor) -> SCNMaterial {
         let material = SCNMaterial()
 
         material.lightingModel = .constant
-        material.diffuse.contents = UIColor.systemYellow
+        material.diffuse.contents = color
         material.transparency = 1.0
         material.isDoubleSided = true
         material.writesToDepthBuffer = false

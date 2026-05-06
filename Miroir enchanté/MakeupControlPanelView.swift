@@ -64,12 +64,18 @@ final class MakeupControlPanelView: UIStackView {
     let hairOffsetYSlider = UISlider()
     let hairOffsetZSlider = UISlider()
     let hairScaleSlider = UISlider()
+    let lipMeshWidthSlider = UISlider()
+    let lipMeshHeightSlider = UISlider()
+    let lipMeshVerticalSlider = UISlider()
     let hideHeadSwitch = UISwitch()
     let hideHairSwitch = UISwitch()
 
     private let hairOffsetYValueLabel = UILabel()
     private let hairOffsetZValueLabel = UILabel()
     private let hairScaleValueLabel = UILabel()
+    private let lipMeshWidthValueLabel = UILabel()
+    private let lipMeshHeightValueLabel = UILabel()
+    private let lipMeshVerticalValueLabel = UILabel()
     private var looksControlRows: [UIView] = []
     private var lipstickControlRows: [UIView] = []
     private var blushControlRows: [UIView] = []
@@ -111,9 +117,13 @@ final class MakeupControlPanelView: UIStackView {
         hairOffsetYSlider.value = state.hairOffsetYValue
         hairOffsetZSlider.value = state.hairOffsetZValue
         hairScaleSlider.value = state.hairScaleValue
+        lipMeshWidthSlider.value = state.lipMeshWidthScale
+        lipMeshHeightSlider.value = state.lipMeshHeightScale
+        lipMeshVerticalSlider.value = state.lipMeshVerticalOffset
         hideHeadSwitch.isOn = state.isHeadHidden
         hideHairSwitch.isOn = state.isHairHidden
         updateHairOffsetValueLabels()
+        updateLipMeshValueLabels()
         updateBlushPresetSelection(selectedIndex: state.selectedBlushPresetIndex, animated: false)
         updateEyeshadowPresetSelection(selectedIndex: state.selectedEyeshadowPresetIndex, animated: false)
         updateGlowPresetSelection(selectedIndex: state.selectedGlowPresetIndex, animated: false)
@@ -153,6 +163,16 @@ final class MakeupControlPanelView: UIStackView {
         hairOffsetYValueLabel.text = String(format: "%.2f", hairOffsetYSlider.value)
         hairOffsetZValueLabel.text = String(format: "%.2f", hairOffsetZSlider.value)
         hairScaleValueLabel.text = String(format: "%.2f", hairScaleSlider.value)
+    }
+
+    func updateLipMeshValueLabels() {
+        lipMeshWidthValueLabel.text = String(format: "%.2f", lipMeshWidthSlider.value)
+        lipMeshHeightValueLabel.text = String(format: "%.2f", lipMeshHeightSlider.value)
+        lipMeshVerticalValueLabel.text = String(format: "%.3f", lipMeshVerticalSlider.value)
+    }
+
+    func setDebugControlsVisible(_ visible: Bool) {
+        debugControlRows.forEach { $0.isHidden = !visible }
     }
 
     func updateBlushPresetSelection(selectedIndex: Int, animated: Bool) {
@@ -302,6 +322,18 @@ final class MakeupControlPanelView: UIStackView {
         hairScaleSlider.maximumValue = 2.0
         hairScaleSlider.isContinuous = true
 
+        lipMeshWidthSlider.minimumValue = 0.70
+        lipMeshWidthSlider.maximumValue = 1.25
+        lipMeshWidthSlider.isContinuous = true
+
+        lipMeshHeightSlider.minimumValue = 0.60
+        lipMeshHeightSlider.maximumValue = 1.30
+        lipMeshHeightSlider.isContinuous = true
+
+        lipMeshVerticalSlider.minimumValue = -0.045
+        lipMeshVerticalSlider.maximumValue = 0.045
+        lipMeshVerticalSlider.isContinuous = true
+
         [
             lipstickIntensitySlider,
             blushIntensitySlider,
@@ -315,7 +347,10 @@ final class MakeupControlPanelView: UIStackView {
             hairStrengthSlider,
             hairOffsetYSlider,
             hairOffsetZSlider,
-            hairScaleSlider
+            hairScaleSlider,
+            lipMeshWidthSlider,
+            lipMeshHeightSlider,
+            lipMeshVerticalSlider
         ].forEach(styleSlider)
 
         controlsSegmentedControl.selectedSegmentTintColor = CosmeticTheme.gold.withAlphaComponent(0.22)
@@ -336,6 +371,7 @@ final class MakeupControlPanelView: UIStackView {
     private func buildRows() {
         let lipstickSelectorRow = makeLipstickSelectorRow()
         let lipstickIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: lipstickIntensitySlider)
+        let lipstickThicknessRow = makeSliderRow(title: L10n.text("control.thickness"), slider: lipMeshHeightSlider)
         let lipstickFinishRow = makeFinishRow()
         let blushSelectorRow = makeBlushSelectorRow()
         let blushIntensityRow = makeSliderRow(title: L10n.text("control.intensity"), slider: blushIntensitySlider)
@@ -363,21 +399,31 @@ final class MakeupControlPanelView: UIStackView {
         let hairOffsetYRow = makeHairOffsetRow(title: "Y", slider: hairOffsetYSlider, valueLabel: hairOffsetYValueLabel)
         let hairOffsetZRow = makeHairOffsetRow(title: "Z", slider: hairOffsetZSlider, valueLabel: hairOffsetZValueLabel)
         let hairScaleRow = makeHairOffsetRow(title: "S", slider: hairScaleSlider, valueLabel: hairScaleValueLabel)
+        let lipMeshWidthRow = makeHairOffsetRow(title: "LW", slider: lipMeshWidthSlider, valueLabel: lipMeshWidthValueLabel)
+        let lipMeshVerticalRow = makeHairOffsetRow(title: "LY", slider: lipMeshVerticalSlider, valueLabel: lipMeshVerticalValueLabel)
 
         let looksRow = makeLooksRow()
         looksControlRows = [looksRow]
-        lipstickControlRows = [lipstickSelectorRow, lipstickIntensityRow, lipstickFinishRow]
+        lipstickControlRows = [lipstickSelectorRow, lipstickIntensityRow, lipstickThicknessRow, lipstickFinishRow]
         blushControlRows = [blushSelectorRow, blushIntensityRow, blushSizeRow, blushPositionRow]
         eyeshadowControlRows = [eyeshadowSelectorRow, eyeshadowIntensityRow]
         glowControlRows = [glowSelectorRow, glowIntensityRow, glowRadiusRow]
         contourControlRows = [contourSelectorRow, contourIntensityRow]
         hairControlRows = [hairRow]
-        debugControlRows = [hairOffsetYRow, hairOffsetZRow, hairScaleRow, visibilityRow]
+        debugControlRows = [
+            lipMeshWidthRow,
+            lipMeshVerticalRow,
+            hairOffsetYRow,
+            hairOffsetZRow,
+            hairScaleRow,
+            visibilityRow
+        ]
 
         addArrangedSubview(looksRow)
         addArrangedSubview(faceSegmentedControl)
         addArrangedSubview(lipstickSelectorRow)
         addArrangedSubview(lipstickIntensityRow)
+        addArrangedSubview(lipstickThicknessRow)
         addArrangedSubview(lipstickFinishRow)
         addArrangedSubview(blushSelectorRow)
         addArrangedSubview(blushIntensityRow)
@@ -394,6 +440,8 @@ final class MakeupControlPanelView: UIStackView {
         addArrangedSubview(hairOffsetYRow)
         addArrangedSubview(hairOffsetZRow)
         addArrangedSubview(hairScaleRow)
+        addArrangedSubview(lipMeshWidthRow)
+        addArrangedSubview(lipMeshVerticalRow)
         addArrangedSubview(visibilityRow)
         addArrangedSubview(controlsSegmentedControl)
         setSelectedMainCategory(.looks)
@@ -439,7 +487,7 @@ final class MakeupControlPanelView: UIStackView {
         titleLabel.text = title
         titleLabel.textColor = .white
         titleLabel.font = .preferredFont(forTextStyle: .caption2)
-        titleLabel.widthAnchor.constraint(equalToConstant: 16).isActive = true
+        titleLabel.widthAnchor.constraint(equalToConstant: 24).isActive = true
 
         valueLabel.textColor = UIColor.white.withAlphaComponent(0.82)
         valueLabel.font = .monospacedDigitSystemFont(ofSize: 11, weight: .regular)
@@ -677,6 +725,8 @@ final class MakeupControlPanelView: UIStackView {
         label.text = title
         label.textColor = .white
         label.font = .preferredFont(forTextStyle: .caption1)
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.72
         label.widthAnchor.constraint(equalToConstant: 64).isActive = true
 
         let row = UIStackView(arrangedSubviews: [label, slider])

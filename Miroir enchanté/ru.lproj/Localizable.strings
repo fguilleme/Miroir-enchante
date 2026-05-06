@@ -11,6 +11,7 @@
 "control.hair_strength" = "Сила";
 "control.size" = "Размер";
 "control.position" = "Позиция";
+"control.thickness" = "Толщина";
 "control.finish" = "Финиш";
 "blush.choose" = "Выбрать румяна";
 "blush.nude" = "Нюд";

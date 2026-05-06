@@ -31,6 +31,9 @@ struct MakeupSettingsState {
     var hairOffsetYValue: Float = -0.08
     var hairOffsetZValue: Float = 0.15
     var hairScaleValue: Float = 1.0
+    var lipMeshWidthScale: Float = 1.0
+    var lipMeshHeightScale: Float = 1.0
+    var lipMeshVerticalOffset: Float = 0.0
     var isHeadHidden: Bool = false
     var isHairHidden: Bool = false
 
@@ -56,6 +59,9 @@ struct MakeupSettingsState {
             SettingsKey.hairOffsetY: -0.08,
             SettingsKey.hairOffsetZ: 0.15,
             SettingsKey.hairScale: 1.0,
+            SettingsKey.lipMeshWidthScale: 1.0,
+            SettingsKey.lipMeshHeightScale: 1.0,
+            SettingsKey.lipMeshVerticalOffset: 0.0,
             SettingsKey.hideHead: false,
             SettingsKey.hideHair: false
         ])
@@ -81,6 +87,9 @@ struct MakeupSettingsState {
         state.hairOffsetYValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetY)), to: -3...1))
         state.hairOffsetZValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairOffsetZ)), to: -1...5))
         state.hairScaleValue = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.hairScale)), to: 0.15...2.0))
+        state.lipMeshWidthScale = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.lipMeshWidthScale)), to: 0.70...1.25))
+        state.lipMeshHeightScale = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.lipMeshHeightScale)), to: 0.60...1.30))
+        state.lipMeshVerticalOffset = Float(clampedCGFloat(CGFloat(defaults.double(forKey: SettingsKey.lipMeshVerticalOffset)), to: -0.045...0.045))
         state.isHeadHidden = defaults.bool(forKey: SettingsKey.hideHead)
         state.isHairHidden = defaults.bool(forKey: SettingsKey.hideHair)
         state.sanitizePresetIndices()
@@ -113,6 +122,9 @@ struct MakeupSettingsState {
         defaults.set(Double(hairOffsetYValue), forKey: SettingsKey.hairOffsetY)
         defaults.set(Double(hairOffsetZValue), forKey: SettingsKey.hairOffsetZ)
         defaults.set(Double(hairScaleValue), forKey: SettingsKey.hairScale)
+        defaults.set(Double(lipMeshWidthScale), forKey: SettingsKey.lipMeshWidthScale)
+        defaults.set(Double(lipMeshHeightScale), forKey: SettingsKey.lipMeshHeightScale)
+        defaults.set(Double(lipMeshVerticalOffset), forKey: SettingsKey.lipMeshVerticalOffset)
         defaults.set(isHeadHidden, forKey: SettingsKey.hideHead)
         defaults.set(isHairHidden, forKey: SettingsKey.hideHair)
     }
@@ -259,6 +271,9 @@ struct MakeupSettingsState {
         static let hairOffsetY = prefix + "hairOffsetY"
         static let hairOffsetZ = prefix + "hairOffsetZ"
         static let hairScale = prefix + "hairScale"
+        static let lipMeshWidthScale = prefix + "lipMeshWidthScale"
+        static let lipMeshHeightScale = prefix + "lipMeshHeightScale"
+        static let lipMeshVerticalOffset = prefix + "lipMeshVerticalOffset"
         static let hideHead = prefix + "hideHead"
         static let hideHair = prefix + "hideHair"
     }

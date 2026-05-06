@@ -11,6 +11,7 @@
 "control.hair_strength" = "强度";
 "control.size" = "大小";
 "control.position" = "位置";
+"control.thickness" = "厚度";
 "control.finish" = "妆效";
 "blush.choose" = "选择腮红";
 "blush.nude" = "裸色";

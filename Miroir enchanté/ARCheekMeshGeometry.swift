@@ -129,6 +129,17 @@ final class CheekMeshGeometry {
         }
     }
 
+    func useOpaqueDebugColors() {
+        let colorPointer = colorBuffer.contents().bindMemory(
+            to: SIMD4<Float>.self,
+            capacity: sourceVertexIndices.count
+        )
+
+        for index in 0..<sourceVertexIndices.count {
+            colorPointer[index] = SIMD4<Float>(1, 1, 1, 1)
+        }
+    }
+
     private func updateNormals(vertexPointer: UnsafeMutablePointer<SIMD3<Float>>) {
         let normalPointer = normalBuffer.contents().bindMemory(
             to: SIMD3<Float>.self,

@@ -11,6 +11,7 @@
 "control.hair_strength" = "Força";
 "control.size" = "Tamanho";
 "control.position" = "Posição";
+"control.thickness" = "Espessura";
 "control.finish" = "Acabamento";
 "blush.choose" = "Escolher blush";
 "blush.nude" = "Nude";

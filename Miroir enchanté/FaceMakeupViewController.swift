@@ -127,6 +127,7 @@ final class FaceMakeupViewController: UIViewController {
         sceneView.backgroundColor = .black
 
         faceRenderer.attach(to: sceneView)
+        faceRenderer.updateLipMeshCalibration(currentLipMeshCalibration())
 
         view.addSubview(sceneView)
         view.addSubview(demoSceneView)
@@ -326,6 +327,9 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.hairOffsetYSlider.addTarget(self, action: #selector(hairOffsetSliderChanged), for: .valueChanged)
         controlPanel.hairOffsetZSlider.addTarget(self, action: #selector(hairOffsetSliderChanged), for: .valueChanged)
         controlPanel.hairScaleSlider.addTarget(self, action: #selector(hairOffsetSliderChanged), for: .valueChanged)
+        controlPanel.lipMeshWidthSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
+        controlPanel.lipMeshHeightSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
+        controlPanel.lipMeshVerticalSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
         controlPanel.hideHeadSwitch.addTarget(self, action: #selector(hideHeadSwitchChanged), for: .valueChanged)
         controlPanel.hideHairSwitch.addTarget(self, action: #selector(hideHairSwitchChanged), for: .valueChanged)
         controlPanel.blushPresetButtons.forEach {
@@ -362,6 +366,7 @@ final class FaceMakeupViewController: UIViewController {
     @objc private func toggleRenderMode() {
         let mode = faceRenderer.toggleMode()
         modeButton.setTitle(mode.buttonTitle, for: .normal)
+        controlPanel.setDebugControlsVisible(mode == .wireframe)
     }
 
     @objc private func toggleARAutoFraming() {
@@ -529,6 +534,15 @@ final class FaceMakeupViewController: UIViewController {
         persistSettings()
     }
 
+    @objc private func lipMeshCalibrationSliderChanged() {
+        settingsState.lipMeshWidthScale = controlPanel.lipMeshWidthSlider.value
+        settingsState.lipMeshHeightScale = controlPanel.lipMeshHeightSlider.value
+        settingsState.lipMeshVerticalOffset = controlPanel.lipMeshVerticalSlider.value
+        controlPanel.updateLipMeshValueLabels()
+        faceRenderer.updateLipMeshCalibration(currentLipMeshCalibration())
+        persistSettings()
+    }
+
     @objc private func mainCategoryChanged() {
         selectedMainCategory = controlPanel.selectedMainCategoryFromSegment()
         controlPanel.setSelectedMainCategory(selectedMainCategory)
@@ -544,6 +558,7 @@ final class FaceMakeupViewController: UIViewController {
             selected: selectedMainCategory,
             faceSubCategory: selectedFaceSubCategory
         )
+        controlPanel.setDebugControlsVisible(experienceMode == .ar && faceRenderer.renderMode == .wireframe)
     }
 
     @objc private func hideHeadSwitchChanged() {
@@ -955,6 +970,14 @@ final class FaceMakeupViewController: UIViewController {
         makeupRenderers.forEach { $0.updateLipstickSettings(settingsState.lipstickSettings) }
     }
 
+    private func currentLipMeshCalibration() -> LipMeshCalibration {
+        LipMeshCalibration(
+            widthScale: settingsState.lipMeshWidthScale,
+            heightScale: settingsState.lipMeshHeightScale,
+            verticalOffset: settingsState.lipMeshVerticalOffset
+        )
+    }
+
     private func applyBlushSettings() {
         makeupRenderers.forEach { $0.updateBlushSettings(settingsState.blushSettings) }
     }
@@ -981,6 +1004,9 @@ final class FaceMakeupViewController: UIViewController {
         renderer.updateEyeshadowSettings(settingsState.eyeshadowSettings)
         renderer.updateGlowSettings(settingsState.glowSettings)
         renderer.updateContourSettings(settingsState.contourSettings)
+        if renderer === faceRenderer {
+            faceRenderer.updateLipMeshCalibration(currentLipMeshCalibration())
+        }
     }
 
     func applyLook(_ look: MakeupLook, animated: Bool) {
@@ -1044,6 +1070,7 @@ final class FaceMakeupViewController: UIViewController {
 
     private func syncControlPanelToState() {
         controlPanel.lipstickIntensitySlider.setValue(Float(settingsState.lipstickIntensityValue), animated: true)
+        controlPanel.lipMeshHeightSlider.setValue(settingsState.lipMeshHeightScale, animated: true)
         controlPanel.lipstickFinishSegmentedControl.selectedSegmentIndex = settingsState.lipstickFinish.rawValue
         controlPanel.blushIntensitySlider.setValue(Float(settingsState.blushSettings.intensity), animated: true)
         controlPanel.blushSizeSlider.setValue(Float(settingsState.blushSettings.size), animated: true)
