@@ -158,7 +158,7 @@ final class FaceRenderer: NSObject, ARSCNViewDelegate, MakeupRendering {
                 self.cheekMesh = cheekMesh
 
                 let cheeksNode = SCNNode(geometry: cheekMesh.geometry)
-                cheeksNode.renderingOrder = 35
+                cheeksNode.renderingOrder = 39
                 faceNode.addChildNode(cheeksNode)
                 self.cheeksNode = cheeksNode
             }

@@ -35,8 +35,7 @@ final class LipMeshGeometry {
         let lipIndexSets = Self.makeLipIndexSets(from: faceGeometry, calibration: calibration)
         let triangles = Self.makeLipTriangles(
             from: faceGeometry,
-            upperIndexSet: Set(lipIndexSets.upper),
-            lowerIndexSet: Set(lipIndexSets.lower)
+            lipIndexSet: Set(lipIndexSets.upper).union(lipIndexSets.lower)
         )
 
         guard !triangles.sourceVertexIndices.isEmpty,
@@ -184,19 +183,26 @@ final class LipMeshGeometry {
             let widthScale = calibration.widthScale.clamped(to: 0.70...1.25)
             let heightScale = calibration.heightScale.clamped(to: 0.60...1.30)
             let mouthCenterY = 0.265 + calibration.verticalOffset.clamped(to: -0.045...0.045)
-            let verticalRadius = 0.065 * heightScale
+            let upperRadius = 0.052 * heightScale
+            let lowerRadius = 0.098 * heightScale
             let verticalDistance = abs(yRatio - mouthCenterY)
-            let normalizedVertical = verticalDistance / verticalRadius
+            let lipRadius = yRatio >= mouthCenterY ? upperRadius : lowerRadius
+            let normalizedVertical = verticalDistance / lipRadius
             guard normalizedVertical <= 1 else { continue }
 
             let halfWidth = (0.060 + (1 - pow(normalizedVertical, 1.45)) * 0.105) * widthScale
             let cornerTaper = max(0, (absXRatio - 0.115 * widthScale) / (0.050 * widthScale))
-            let taperedHalfHeight = verticalRadius * (1 - min(cornerTaper, 0.65) * 0.58)
+            let taperedHalfHeight = lipRadius * (1 - min(cornerTaper, 0.65) * 0.58)
+            let openingHalfWidth = max(0.025, halfWidth - 0.045 * widthScale)
+            let openingHalfHeight = 0.010 * heightScale
+            let isMouthOpening = absXRatio < openingHalfWidth
+                && abs(yRatio - mouthCenterY) < openingHalfHeight
 
             guard absXRatio <= halfWidth,
-                  verticalDistance <= taperedHalfHeight else { continue }
+                  verticalDistance <= taperedHalfHeight,
+                  !isMouthOpening else { continue }
 
-            if yRatio >= 0.27 {
+            if yRatio >= mouthCenterY {
                 upper.insert(index)
             } else {
                 lower.insert(index)
@@ -240,8 +246,7 @@ final class LipMeshGeometry {
 
     private static func makeLipTriangles(
         from faceGeometry: ARFaceGeometry,
-        upperIndexSet: Set<Int>,
-        lowerIndexSet: Set<Int>
+        lipIndexSet: Set<Int>
     ) -> (sourceVertexIndices: [Int], localTriangleIndices: [UInt16]) {
         let sourceTriangles = faceGeometry.triangleIndices.map { Int($0) }
         var localIndexBySourceIndex: [Int: UInt16] = [:]
@@ -264,14 +269,9 @@ final class LipMeshGeometry {
             let i1 = sourceTriangles[triangleStart + 1]
             let i2 = sourceTriangles[triangleStart + 2]
 
-            let isUpperTriangle = upperIndexSet.contains(i0)
-                && upperIndexSet.contains(i1)
-                && upperIndexSet.contains(i2)
-            let isLowerTriangle = lowerIndexSet.contains(i0)
-                && lowerIndexSet.contains(i1)
-                && lowerIndexSet.contains(i2)
-
-            guard isUpperTriangle || isLowerTriangle else {
+            guard lipIndexSet.contains(i0),
+                  lipIndexSet.contains(i1),
+                  lipIndexSet.contains(i2) else {
                 continue
             }
 

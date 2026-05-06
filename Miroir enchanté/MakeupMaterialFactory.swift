@@ -275,8 +275,9 @@ enum MakeupMaterialFactory {
 
     static func configureARBlushMaterial(_ material: SCNMaterial, settings: BlushSettings = .default) {
         let intensity = settings.intensity.clamped(to: 0...1)
-        let opacity = (settings.opacity * intensity).clamped(to: 0...0.45)
-        let color = settings.color.withIntensity(0.78 + intensity * 0.24)
+        let visibleIntensity = pow(intensity, 0.55)
+        let opacity = (settings.opacity * (0.12 + visibleIntensity * 1.70)).clamped(to: 0...0.68)
+        let color = settings.color.withIntensity(0.84 + visibleIntensity * 0.34)
 
         // Keep the AR overlay explicitly colored and alpha-blended. Some
         // devices/SceneKit paths do not reliably apply alpha from vertex color

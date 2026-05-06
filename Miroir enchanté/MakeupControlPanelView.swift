@@ -275,7 +275,7 @@ final class MakeupControlPanelView: UIStackView {
         lipstickCollectionView.register(MakeupLipstickPresetCell.self, forCellWithReuseIdentifier: MakeupLipstickPresetCell.reuseIdentifier)
 
         blushIntensitySlider.minimumValue = 0.0
-        blushIntensitySlider.maximumValue = 1.0
+        blushIntensitySlider.maximumValue = 0.5
         blushIntensitySlider.isContinuous = true
 
         blushSizeSlider.minimumValue = 0.65

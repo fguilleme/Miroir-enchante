@@ -103,11 +103,12 @@ final class CheekMeshGeometry {
             to: SIMD4<Float>.self,
             capacity: sourceVertexIndices.count
         )
-        let opacity = Float((settings.opacity * settings.intensity).clamped(to: 0...0.6))
+        let visibleIntensity = pow(settings.intensity.clamped(to: 0...1), 0.55)
+        let opacity = Float((settings.opacity * (0.12 + visibleIntensity * 1.70)).clamped(to: 0...0.68))
         let size = Float(settings.size.clamped(to: 0.65...1.20))
         let position = Float(settings.position.clamped(to: 0...1))
-        let rgba = Self.rgbaComponents(from: settings.color, intensity: 0.82 + settings.intensity * 0.28)
-        let centerY = Float(0.44 + (CGFloat(position) - 0.5) * 0.08)
+        let rgba = Self.rgbaComponents(from: settings.color, intensity: 0.84 + visibleIntensity * 0.34)
+        let centerY = Float(0.46 + CGFloat(position) * 0.10)
 
         for (index, point) in normalizedCoordinates.enumerated() {
             let x = Float(point.x)

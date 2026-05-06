@@ -113,10 +113,10 @@ final class EyeshadowMeshGeometry {
             let y = Float(point.y)
             let sideCenterX: Float = x < 0 ? -0.22 : 0.22
             let dx = (x - sideCenterX) / 0.18
-            let dy = (y - 0.665) / 0.085
+            let dy = (y - 0.675) / 0.070
             let distance = sqrt(dx * dx + dy * dy)
             let feather = 1.0 - Self.smoothstep(edge0: 0.45, edge1: 1.0, x: distance)
-            let lowerLidFade = Self.smoothstep(edge0: 0.57, edge1: 0.62, x: y)
+            let lowerLidFade = Self.smoothstep(edge0: 0.61, edge1: 0.64, x: y)
             let alpha = max(0, min(1, feather * lowerLidFade)) * opacity
             colorPointer[index] = SIMD4<Float>(rgba.x, rgba.y, rgba.z, alpha)
         }
@@ -193,17 +193,17 @@ final class EyeshadowMeshGeometry {
             let x = (vertex.x - centerX) / faceWidth
             let y = (vertex.y - minY) / faceHeight
             let sideCenterX: Float = x < 0 ? -0.22 : 0.22
-            let dx = (x - sideCenterX) / 0.23
-            let dy = (y - 0.655) / 0.12
+            let dx = (x - sideCenterX) / 0.20
+            let dy = (y - 0.675) / 0.095
             let distance = sqrt(dx * dx + dy * dy)
 
             guard abs(x) > 0.08,
-                  abs(x) < 0.43,
-                  y >= 0.54,
-                  y <= 0.79,
-                  distance <= 1.12 else { continue }
+                  abs(x) < 0.40,
+                  y >= 0.59,
+                  y <= 0.78,
+                  distance <= 1.05 else { continue }
 
-            alphaByIndex[index] = 1.0 - smoothstep(edge0: 0.62, edge1: 1.12, x: distance)
+            alphaByIndex[index] = 1.0 - smoothstep(edge0: 0.58, edge1: 1.05, x: distance)
             normalizedCoordinateByIndex[index] = CGPoint(x: CGFloat(x), y: CGFloat(y))
         }
 
