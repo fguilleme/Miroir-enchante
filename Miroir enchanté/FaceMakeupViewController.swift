@@ -164,7 +164,7 @@ final class FaceMakeupViewController: UIViewController {
 
     private func configureModeButton() {
         modeButton.translatesAutoresizingMaskIntoConstraints = false
-        let faceMeshIcon = makeFaceMeshIcon()
+        let faceMeshIcon = UIImage(named: "DebugFaceMeshIcon")?.withRenderingMode(.alwaysOriginal)
         modeButton.setImage(faceMeshIcon, for: .normal)
         modeButton.setImage(faceMeshIcon, for: .selected)
         modeButton.imageView?.contentMode = .scaleAspectFit
@@ -173,11 +173,10 @@ final class FaceMakeupViewController: UIViewController {
         modeButton.addTarget(self, action: #selector(toggleRenderMode), for: .touchUpInside)
         updateModeButtonAppearance()
         modeButton.isHidden = experienceMode != .ar
-
         view.addSubview(modeButton)
         NSLayoutConstraint.activate([
             modeButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
-            modeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 68),
+            modeButton.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
             modeButton.widthAnchor.constraint(equalToConstant: 42),
             modeButton.heightAnchor.constraint(equalToConstant: 42)
         ])
@@ -308,49 +307,6 @@ final class FaceMakeupViewController: UIViewController {
             UIImage.SymbolConfiguration(pointSize: 20, weight: .semibold),
             forImageIn: .normal
         )
-    }
-
-    private func makeFaceMeshIcon(size: CGSize = CGSize(width: 24, height: 24)) -> UIImage {
-        let renderer = UIGraphicsImageRenderer(size: size)
-        let image = renderer.image { context in
-            let faceRect = CGRect(x: 5.2, y: 2.4, width: 13.6, height: 19.2)
-            let facePath = UIBezierPath(ovalIn: faceRect)
-            let meshPath = UIBezierPath()
-
-            meshPath.lineCapStyle = .round
-            meshPath.lineJoinStyle = .round
-            meshPath.lineWidth = 1.25
-
-            meshPath.move(to: CGPoint(x: 12, y: 3.4))
-            meshPath.addLine(to: CGPoint(x: 12, y: 20.6))
-
-            meshPath.move(to: CGPoint(x: 7.2, y: 7.3))
-            meshPath.addLine(to: CGPoint(x: 16.8, y: 7.3))
-
-            meshPath.move(to: CGPoint(x: 6.4, y: 12.2))
-            meshPath.addLine(to: CGPoint(x: 17.6, y: 12.2))
-
-            meshPath.move(to: CGPoint(x: 8.1, y: 17.2))
-            meshPath.addLine(to: CGPoint(x: 15.9, y: 17.2))
-
-            meshPath.move(to: CGPoint(x: 7.2, y: 7.3))
-            meshPath.addLine(to: CGPoint(x: 12, y: 12.2))
-            meshPath.addLine(to: CGPoint(x: 16.8, y: 7.3))
-
-            meshPath.move(to: CGPoint(x: 6.4, y: 12.2))
-            meshPath.addLine(to: CGPoint(x: 12, y: 17.2))
-            meshPath.addLine(to: CGPoint(x: 17.6, y: 12.2))
-
-            UIColor.white.setStroke()
-            context.cgContext.saveGState()
-            facePath.addClip()
-            meshPath.stroke()
-            context.cgContext.restoreGState()
-
-            facePath.lineWidth = 1.6
-            facePath.stroke()
-        }
-        return image.withRenderingMode(.alwaysTemplate)
     }
 
     private func configureMakeupControls() {
