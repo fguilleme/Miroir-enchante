@@ -133,8 +133,9 @@ struct MakeupSettingsState {
         guard LipstickSettings.presets.indices.contains(selectedLipstickPresetIndex) else { return }
 
         let preset = LipstickSettings.presets[selectedLipstickPresetIndex]
-        let intensity = clampedCGFloat(lipstickIntensityValue, to: 0.1...1.0)
-        lipstickIntensityValue = intensity
+        let rawIntensity = clampedCGFloat(lipstickIntensityValue, to: 0.1...1.0)
+        let intensity = MakeupIntensityCurve.response(rawIntensity, in: 0.1...1.0)
+        lipstickIntensityValue = rawIntensity
         lipstickSettings.color = preset.baseColor
         lipstickSettings.opacity = CGFloat(preset.opacity) * (0.30 + intensity * 0.70)
         lipstickSettings.roughness = lipstickRoughness(for: preset)

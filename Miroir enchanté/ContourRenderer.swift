@@ -90,7 +90,7 @@ final class ContourRenderer {
 
     private func applyContourSettings(_ settings: ContourSettings) {
         rootNode.isHidden = !settings.isEnabled
-        let intensity = settings.intensity.clamped(to: 0...1)
+        let intensity = MakeupIntensityCurve.response(settings.intensity.clamped(to: 0...1))
         let softness = settings.softness.clamped(to: 0.65...0.95)
         let alpha = min(0.62, settings.opacity * intensity * 2.35)
         let key = MakeupTextureCache.ContourKey(

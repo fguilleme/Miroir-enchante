@@ -103,8 +103,7 @@ final class EyeshadowMeshGeometry {
             to: SIMD4<Float>.self,
             capacity: sourceVertexIndices.count
         )
-        let intensity = settings.intensity.clamped(to: 0...1)
-        let visibleIntensity = pow(intensity, 0.60)
+        let visibleIntensity = MakeupIntensityCurve.response(settings.intensity.clamped(to: 0...1))
         let opacity = Float((settings.opacity * (0.24 + visibleIntensity * 1.45)).clamped(to: 0...0.76))
         let rgba = Self.rgbaComponents(from: settings.color, intensity: 0.88 + visibleIntensity * 0.34)
 

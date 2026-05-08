@@ -174,7 +174,7 @@ enum MakeupMaterialFactory {
 
     static func makeBlushMaterial(settings: BlushSettings = .default) -> SCNMaterial {
         let material = SCNMaterial()
-        let intensity = settings.intensity.clamped(to: 0...1)
+        let intensity = MakeupIntensityCurve.response(min(settings.intensity * 2.0, 1.0).clamped(to: 0...1))
         let opacity = (settings.opacity * intensity).clamped(to: 0...0.65)
         let color = settings.color.withIntensity(0.82 + intensity * 0.34)
 
@@ -204,7 +204,7 @@ enum MakeupMaterialFactory {
     }
 
     static func configureEyeshadowMaterial(_ material: SCNMaterial, settings: EyeshadowSettings = .default) {
-        let intensity = settings.intensity.clamped(to: 0...1)
+        let intensity = MakeupIntensityCurve.response(settings.intensity.clamped(to: 0...1))
         let opacity = (settings.opacity * intensity).clamped(to: 0...0.72)
         let color = settings.color.withIntensity(0.72 + intensity * 0.42)
 
@@ -232,8 +232,7 @@ enum MakeupMaterialFactory {
     }
 
     static func configureAREyeshadowMaterial(_ material: SCNMaterial, settings: EyeshadowSettings = .default) {
-        let intensity = settings.intensity.clamped(to: 0...1)
-        let visibleIntensity = pow(intensity, 0.60)
+        let visibleIntensity = MakeupIntensityCurve.response(settings.intensity.clamped(to: 0...1))
         let opacityScale = settings.color.makeupPerceptualOpacityScale()
         let opacity = (settings.opacity * (0.24 + visibleIntensity * 1.45) * opacityScale).clamped(to: 0...0.72)
         let color = settings.color.withIntensity(0.88 + visibleIntensity * 0.34)
@@ -276,7 +275,7 @@ enum MakeupMaterialFactory {
 
     static func configureARBlushMaterial(_ material: SCNMaterial, settings: BlushSettings = .default) {
         let intensity = min(settings.intensity * 2.0, 1.0).clamped(to: 0...1)
-        let visibleIntensity = pow(intensity, 0.75)
+        let visibleIntensity = MakeupIntensityCurve.response(intensity)
         let opacityScale = settings.color.makeupPerceptualOpacityScale()
         let opacity = (settings.opacity * visibleIntensity * 1.70 * opacityScale).clamped(to: 0...0.68)
         let color = settings.color.withIntensity(0.84 + visibleIntensity * 0.34)

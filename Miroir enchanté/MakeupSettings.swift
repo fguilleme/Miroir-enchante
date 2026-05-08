@@ -92,3 +92,23 @@ struct ContourSettings {
         isEnabled: true
     )
 }
+
+enum MakeupIntensityCurve {
+    static func response(_ value: CGFloat) -> CGFloat {
+        let clampedValue = Swift.min(Swift.max(value, 0), 1)
+        guard clampedValue > 0.8 else { return clampedValue }
+
+        let normalizedTail = (clampedValue - 0.8) / 0.2
+        let exponentialTail = (exp(3.0 * normalizedTail) - 1.0) / (exp(3.0) - 1.0)
+        return 0.8 + exponentialTail * 0.2
+    }
+
+    static func response(_ value: CGFloat, in range: ClosedRange<CGFloat>) -> CGFloat {
+        let clampedValue = Swift.min(Swift.max(value, range.lowerBound), range.upperBound)
+        let span = range.upperBound - range.lowerBound
+        guard span > 0 else { return clampedValue }
+
+        let normalizedValue = (clampedValue - range.lowerBound) / span
+        return range.lowerBound + response(normalizedValue) * span
+    }
+}
