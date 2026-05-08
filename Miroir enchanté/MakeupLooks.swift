@@ -22,6 +22,7 @@ struct MakeupLook: Equatable {
     let blushPosition: CGFloat
     let eyesIntensity: CGFloat
     let glowIntensity: CGFloat
+    let glowRadius: CGFloat
     let contourIntensity: CGFloat
 
     var swatchColors: [UIColor] {
@@ -35,6 +36,69 @@ struct MakeupLook: Equatable {
     }
 
     static func == (lhs: MakeupLook, rhs: MakeupLook) -> Bool { lhs.id == rhs.id }
+}
+
+struct SavedMakeupLook: Codable {
+    let lipstickIndex: Int
+    let blushIndex: Int
+    let eyesIndex: Int
+    let glowIndex: Int
+    let contourIndex: Int
+    let lipstickFinishRawValue: Int
+    let lipstickIntensity: Double
+    let blushIntensity: Double
+    let blushSize: Double
+    let blushPosition: Double
+    let eyesIntensity: Double
+    let glowIntensity: Double
+    let glowRadius: Double
+    let contourIntensity: Double
+
+    init(state: MakeupSettingsState) {
+        lipstickIndex = state.selectedLipstickPresetIndex
+        blushIndex = state.selectedBlushPresetIndex
+        eyesIndex = state.selectedEyeshadowPresetIndex
+        glowIndex = state.selectedGlowPresetIndex
+        contourIndex = state.selectedContourPresetIndex
+        lipstickFinishRawValue = state.lipstickFinish.rawValue
+        lipstickIntensity = Double(state.lipstickIntensityValue)
+        blushIntensity = Double(state.blushSettings.intensity)
+        blushSize = Double(state.blushSettings.size)
+        blushPosition = Double(state.blushSettings.position)
+        eyesIntensity = Double(state.eyeshadowSettings.intensity)
+        glowIntensity = Double(state.glowSettings.intensity)
+        glowRadius = Double(state.glowSettings.radius)
+        contourIntensity = Double(state.contourSettings.intensity)
+    }
+
+    func makeLook(factory: MakeupLook) -> MakeupLook? {
+        guard LipstickSettings.presets.indices.contains(lipstickIndex),
+              BlushSettings.presets.indices.contains(blushIndex),
+              EyeshadowSettings.presets.indices.contains(eyesIndex),
+              GlowSettings.presets.indices.contains(glowIndex),
+              ContourSettings.presets.indices.contains(contourIndex) else {
+            return nil
+        }
+
+        return MakeupLook(
+            id: factory.id,
+            titleKey: factory.titleKey,
+            lipstick: LipstickSettings.presets[lipstickIndex],
+            blush: BlushSettings.presets[blushIndex],
+            eyes: EyeshadowSettings.presets[eyesIndex],
+            glow: GlowSettings.presets[glowIndex],
+            contour: ContourSettings.presets[contourIndex],
+            lipstickFinish: LipstickFinish(rawValue: lipstickFinishRawValue) ?? factory.lipstickFinish,
+            lipstickIntensity: CGFloat(lipstickIntensity),
+            blushIntensity: CGFloat(blushIntensity),
+            blushSize: CGFloat(blushSize),
+            blushPosition: CGFloat(blushPosition),
+            eyesIntensity: CGFloat(eyesIntensity),
+            glowIntensity: CGFloat(glowIntensity),
+            glowRadius: CGFloat(glowRadius),
+            contourIntensity: CGFloat(contourIntensity)
+        )
+    }
 }
 
 enum MakeupLooks {
@@ -54,6 +118,7 @@ enum MakeupLooks {
             blushPosition: 0.55,
             eyesIntensity: 0.45,
             glowIntensity: 0.24,
+            glowRadius: 1.00,
             contourIntensity: 0.16
         ),
         MakeupLook(
@@ -71,6 +136,7 @@ enum MakeupLooks {
             blushPosition: 0.50,
             eyesIntensity: 0.11,
             glowIntensity: 0.30,
+            glowRadius: 1.02,
             contourIntensity: 0.18
         ),
         MakeupLook(
@@ -88,6 +154,7 @@ enum MakeupLooks {
             blushPosition: 0.48,
             eyesIntensity: 0.78,
             glowIntensity: 0.34,
+            glowRadius: 0.96,
             contourIntensity: 0.23
         ),
         MakeupLook(
@@ -105,6 +172,7 @@ enum MakeupLooks {
             blushPosition: 0.52,
             eyesIntensity: 0.62,
             glowIntensity: 0.32,
+            glowRadius: 1.04,
             contourIntensity: 0.20
         )
     ]

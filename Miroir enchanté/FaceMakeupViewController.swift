@@ -29,9 +29,6 @@ final class FaceMakeupViewController: UIViewController {
     private let beforeAfterButton = UIButton(type: .system)
     private let bugReportButton = UIButton(type: .system)
     private let controlPanel = MakeupControlPanelView()
-    private let sliderValueOverlay = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
-    private let sliderValueTitleLabel = UILabel()
-    private let sliderValueLabel = UILabel()
 
     private var unsupportedDeviceLabel: UILabel?
     private var experienceMode: ExperienceMode = FaceMakeupViewController.initialExperienceMode()
@@ -40,13 +37,13 @@ final class FaceMakeupViewController: UIViewController {
     private var selectedMainCategory: MakeupMainCategory = .looks
     private var selectedFaceSubCategory: FaceSubCategory = .blush
     private var selectedLookID: String?
+    private var savedLookOverrides = FaceMakeupViewController.loadSavedLookOverrides()
     private let selectionFeedback = UISelectionFeedbackGenerator()
     private let lookFeedback = UIImpactFeedbackGenerator(style: .light)
     private var smoothedInspectionTilt: CGFloat = 0
     private var isBeforePreviewActive = false
     private var arFaceFramingScale: CGFloat = 1
     private var arFaceFramingTranslation: CGPoint = .zero
-    private var sliderValueOverlayHideWorkItem: DispatchWorkItem?
     private var makeupRenderers: [MakeupRendering] {
         Self.isDemoFeatureEnabled ? [faceRenderer, demoHeadRenderer] : [faceRenderer]
     }
@@ -67,6 +64,22 @@ final class FaceMakeupViewController: UIViewController {
         return .ar
     }
 
+    private static let savedLookOverridesKey = "FaceMakeupViewController.savedLookOverrides.v1"
+
+    private static func loadSavedLookOverrides() -> [String: SavedMakeupLook] {
+        guard let data = UserDefaults.standard.data(forKey: savedLookOverridesKey),
+              let savedLooks = try? JSONDecoder().decode([String: SavedMakeupLook].self, from: data) else {
+            return [:]
+        }
+
+        return savedLooks
+    }
+
+    private func persistSavedLookOverrides() {
+        guard let data = try? JSONEncoder().encode(savedLookOverrides) else { return }
+        UserDefaults.standard.set(data, forKey: Self.savedLookOverridesKey)
+    }
+
     override func viewDidLoad() {
         super.viewDidLoad()
 
@@ -75,7 +88,6 @@ final class FaceMakeupViewController: UIViewController {
         configureExperienceModeButton()
         configureHairStyleButton()
         configureMakeupControls()
-        configureSliderValueOverlay()
         configureBeforeAfterButton()
         configureBugReportButton()
         configureARAutoFramingButton()
@@ -320,6 +332,9 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.lipstickCollectionView.delegate = self
         controlPanel.looksCollectionView.dataSource = self
         controlPanel.looksCollectionView.delegate = self
+        let lookLongPress = UILongPressGestureRecognizer(target: self, action: #selector(lookPresetLongPressed(_:)))
+        lookLongPress.minimumPressDuration = 0.55
+        controlPanel.looksCollectionView.addGestureRecognizer(lookLongPress)
         controlPanel.controlsSegmentedControl.addTarget(self, action: #selector(mainCategoryChanged), for: .valueChanged)
         controlPanel.faceSegmentedControl.addTarget(self, action: #selector(faceSubCategoryChanged), for: .valueChanged)
         controlPanel.lipstickIntensitySlider.addTarget(self, action: #selector(lipstickIntensityChanged), for: .valueChanged)
@@ -339,7 +354,6 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.lipMeshWidthSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
         controlPanel.lipMeshHeightSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
         controlPanel.lipMeshVerticalSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
-        installSliderValueOverlayFeedback()
         controlPanel.hideHeadSwitch.addTarget(self, action: #selector(hideHeadSwitchChanged), for: .valueChanged)
         controlPanel.hideHairSwitch.addTarget(self, action: #selector(hideHairSwitchChanged), for: .valueChanged)
         controlPanel.blushPresetButtons.forEach {
@@ -371,162 +385,7 @@ final class FaceMakeupViewController: UIViewController {
         applySelectedEyeshadowPreset(animated: false)
         applySelectedGlowPreset(animated: false)
         applySelectedContourPreset(animated: false)
-    }
-
-    private func configureSliderValueOverlay() {
-        sliderValueOverlay.translatesAutoresizingMaskIntoConstraints = false
-        sliderValueOverlay.alpha = 0
-        sliderValueOverlay.isHidden = true
-        sliderValueOverlay.isUserInteractionEnabled = false
-        sliderValueOverlay.layer.cornerRadius = 22
-        sliderValueOverlay.clipsToBounds = true
-        sliderValueOverlay.layer.borderWidth = 0.8
-        sliderValueOverlay.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor
-
-        sliderValueTitleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
-        sliderValueTitleLabel.textAlignment = .center
-        sliderValueTitleLabel.textColor = UIColor.white.withAlphaComponent(0.76)
-
-        sliderValueLabel.font = .monospacedDigitSystemFont(ofSize: 52, weight: .bold)
-        sliderValueLabel.textAlignment = .center
-        sliderValueLabel.textColor = .white
-        sliderValueLabel.adjustsFontSizeToFitWidth = true
-        sliderValueLabel.minimumScaleFactor = 0.68
-
-        let stack = UIStackView(arrangedSubviews: [sliderValueTitleLabel, sliderValueLabel])
-        stack.translatesAutoresizingMaskIntoConstraints = false
-        stack.axis = .vertical
-        stack.alignment = .fill
-        stack.spacing = 2
-
-        sliderValueOverlay.contentView.addSubview(stack)
-        view.addSubview(sliderValueOverlay)
-
-        NSLayoutConstraint.activate([
-            sliderValueOverlay.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
-            sliderValueOverlay.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 76),
-            sliderValueOverlay.widthAnchor.constraint(greaterThanOrEqualToConstant: 168),
-            sliderValueOverlay.widthAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.widthAnchor, multiplier: 0.62),
-            sliderValueOverlay.heightAnchor.constraint(equalToConstant: 112),
-            stack.leadingAnchor.constraint(equalTo: sliderValueOverlay.contentView.leadingAnchor, constant: 18),
-            stack.trailingAnchor.constraint(equalTo: sliderValueOverlay.contentView.trailingAnchor, constant: -18),
-            stack.centerYAnchor.constraint(equalTo: sliderValueOverlay.contentView.centerYAnchor)
-        ])
-    }
-
-    private func installSliderValueOverlayFeedback() {
-        [
-            controlPanel.lipstickIntensitySlider,
-            controlPanel.lipMeshHeightSlider,
-            controlPanel.blushIntensitySlider,
-            controlPanel.blushSizeSlider,
-            controlPanel.blushPositionSlider,
-            controlPanel.eyeshadowIntensitySlider,
-            controlPanel.glowIntensitySlider,
-            controlPanel.glowRadiusSlider,
-            controlPanel.contourIntensitySlider,
-            controlPanel.hairHueSlider,
-            controlPanel.hairStrengthSlider,
-            controlPanel.hairOffsetYSlider,
-            controlPanel.hairOffsetZSlider,
-            controlPanel.hairScaleSlider,
-            controlPanel.lipMeshWidthSlider,
-            controlPanel.lipMeshVerticalSlider
-        ].forEach { slider in
-            slider.addTarget(self, action: #selector(sliderValueTouchStarted(_:)), for: .touchDown)
-            slider.addTarget(self, action: #selector(sliderValueChanged(_:)), for: .valueChanged)
-            slider.addTarget(
-                self,
-                action: #selector(sliderValueTouchEnded(_:)),
-                for: [.touchUpInside, .touchUpOutside, .touchCancel]
-            )
-        }
-    }
-
-    @objc private func sliderValueTouchStarted(_ sender: UISlider) {
-        updateSliderValueOverlay(for: sender)
-        showSliderValueOverlay()
-    }
-
-    @objc private func sliderValueChanged(_ sender: UISlider) {
-        updateSliderValueOverlay(for: sender)
-        showSliderValueOverlay()
-    }
-
-    @objc private func sliderValueTouchEnded(_ sender: UISlider) {
-        updateSliderValueOverlay(for: sender)
-        scheduleSliderValueOverlayHide()
-    }
-
-    private func updateSliderValueOverlay(for slider: UISlider) {
-        sliderValueTitleLabel.text = titleForSliderValueOverlay(slider)
-        sliderValueLabel.text = formattedValueForSlider(slider)
-    }
-
-    private func showSliderValueOverlay() {
-        sliderValueOverlayHideWorkItem?.cancel()
-        sliderValueOverlay.isHidden = false
-        UIView.animate(withDuration: 0.12, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: {
-            self.sliderValueOverlay.alpha = 1
-            self.sliderValueOverlay.transform = .identity
-        })
-    }
-
-    private func scheduleSliderValueOverlayHide() {
-        sliderValueOverlayHideWorkItem?.cancel()
-        let workItem = DispatchWorkItem { [weak self] in
-            self?.hideSliderValueOverlay()
-        }
-        sliderValueOverlayHideWorkItem = workItem
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55, execute: workItem)
-    }
-
-    private func hideSliderValueOverlay() {
-        UIView.animate(withDuration: 0.20, delay: 0, options: [.allowUserInteraction, .curveEaseIn], animations: {
-            self.sliderValueOverlay.alpha = 0
-            self.sliderValueOverlay.transform = CGAffineTransform(scaleX: 0.94, y: 0.94)
-        }, completion: { _ in
-            self.sliderValueOverlay.isHidden = true
-            self.sliderValueOverlay.transform = .identity
-        })
-    }
-
-    private func titleForSliderValueOverlay(_ slider: UISlider) -> String {
-        switch slider {
-        case controlPanel.lipstickIntensitySlider,
-             controlPanel.blushIntensitySlider,
-             controlPanel.eyeshadowIntensitySlider,
-             controlPanel.glowIntensitySlider,
-             controlPanel.contourIntensitySlider,
-             controlPanel.hairStrengthSlider:
-            return L10n.text("control.intensity")
-        case controlPanel.blushSizeSlider,
-             controlPanel.glowRadiusSlider,
-             controlPanel.hairScaleSlider,
-             controlPanel.lipMeshHeightSlider:
-            return L10n.text("control.size")
-        case controlPanel.blushPositionSlider:
-            return L10n.text("control.position")
-        case controlPanel.hairHueSlider:
-            return "H"
-        case controlPanel.hairOffsetYSlider,
-             controlPanel.lipMeshVerticalSlider:
-            return "Y"
-        case controlPanel.hairOffsetZSlider:
-            return "Z"
-        case controlPanel.lipMeshWidthSlider:
-            return "W"
-        default:
-            return ""
-        }
-    }
-
-    private func formattedValueForSlider(_ slider: UISlider) -> String {
-        if slider === controlPanel.lipMeshVerticalSlider {
-            return String(format: "%.3f", slider.value)
-        }
-
-        return String(format: "%.2f", slider.value)
+        updateLooksHint()
     }
 
     @objc private func toggleRenderMode() {
@@ -534,6 +393,22 @@ final class FaceMakeupViewController: UIViewController {
         faceRenderer.setRenderMode(nextMode)
         updateModeButtonAppearance()
         controlPanel.setDebugControlsVisible(false)
+    }
+
+    @objc private func lookPresetLongPressed(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+
+        let point = gesture.location(in: controlPanel.looksCollectionView)
+        guard let indexPath = controlPanel.looksCollectionView.indexPathForItem(at: point),
+              MakeupLooks.all.indices.contains(indexPath.item) else { return }
+
+        let factoryLook = MakeupLooks.all[indexPath.item]
+        savedLookOverrides[factoryLook.id] = nil
+        persistSavedLookOverrides()
+        selectionFeedback.selectionChanged()
+        applyLook(factoryLook, animated: true)
+        refreshLooksSelection(animated: true)
+        controlPanel.setLooksHintText(L10n.text("look.hint_reset"))
     }
 
     @objc private func toggleARAutoFraming() {
@@ -1188,6 +1063,24 @@ final class FaceMakeupViewController: UIViewController {
         }
     }
 
+    private func lookToDisplay(at index: Int) -> MakeupLook {
+        let factoryLook = MakeupLooks.all[index]
+        return savedLookOverrides[factoryLook.id]?.makeLook(factory: factoryLook) ?? factoryLook
+    }
+
+    private func rememberCurrentSettingsForSelectedLook() {
+        guard let selectedLookID else { return }
+
+        savedLookOverrides[selectedLookID] = SavedMakeupLook(state: settingsState)
+        persistSavedLookOverrides()
+        refreshLooksSelection(animated: true)
+        controlPanel.setLooksHintText(L10n.text("look.hint_saved"))
+    }
+
+    private func updateLooksHint() {
+        controlPanel.setLooksHintText(L10n.text("look.hint"))
+    }
+
     func applyLook(_ look: MakeupLook, animated: Bool) {
         guard let lipIndex = look.lipstickIndex(),
               let blushIndex = look.blushIndex(),
@@ -1213,13 +1106,14 @@ final class FaceMakeupViewController: UIViewController {
         settingsState.blushSettings.position = look.blushPosition
         settingsState.eyeshadowSettings.intensity = look.eyesIntensity
         settingsState.glowSettings.intensity = look.glowIntensity
-        settingsState.glowSettings.radius = look.glow.map { CGFloat($0.radius) } ?? GlowSettings.default.radius
+        settingsState.glowSettings.radius = look.glowRadius
         settingsState.contourSettings.intensity = look.contourIntensity
         settingsState.rebuildLipstickSettings()
         settingsState.rebuildBlushSettings()
         settingsState.rebuildEyeshadowSettings()
         if let glow = look.glow {
             settingsState.applyGlowPreset(glow, intensity: look.glowIntensity)
+            settingsState.glowSettings.radius = look.glowRadius
         } else {
             settingsState.rebuildGlowSettings()
         }
@@ -1232,6 +1126,7 @@ final class FaceMakeupViewController: UIViewController {
         syncControlPanelToState()
 
         selectedLookID = look.id
+        updateLooksHint()
         refreshLooksSelection(animated: animated)
 
         let duration = animated ? 0.25 : 0.0
@@ -1270,15 +1165,22 @@ final class FaceMakeupViewController: UIViewController {
         let collectionView = controlPanel.looksCollectionView
         for case let cell as MakeupLookCell in collectionView.visibleCells {
             guard let indexPath = collectionView.indexPath(for: cell) else { continue }
-            let look = MakeupLooks.all[indexPath.item]
-            cell.configure(look: look, isSelected: look.id == selectedLookID, animated: animated)
+            let factoryLook = MakeupLooks.all[indexPath.item]
+            let look = lookToDisplay(at: indexPath.item)
+            cell.configure(
+                look: look,
+                isSelected: factoryLook.id == selectedLookID,
+                isCustomized: savedLookOverrides[factoryLook.id] != nil,
+                animated: animated
+            )
         }
     }
 
     private func clearLookSelection() {
         guard selectedLookID != nil else { return }
-        selectedLookID = nil
-        refreshLooksSelection(animated: true)
+        DispatchQueue.main.async { [weak self] in
+            self?.rememberCurrentSettingsForSelectedLook()
+        }
     }
 
     private func configureUnsupportedDeviceMessageIfNeeded() {
@@ -1322,8 +1224,14 @@ extension FaceMakeupViewController: UICollectionViewDataSource, UICollectionView
             ) as? MakeupLookCell else {
                 return UICollectionViewCell()
             }
-            let look = MakeupLooks.all[indexPath.item]
-            cell.configure(look: look, isSelected: look.id == selectedLookID, animated: false)
+            let factoryLook = MakeupLooks.all[indexPath.item]
+            let look = lookToDisplay(at: indexPath.item)
+            cell.configure(
+                look: look,
+                isSelected: factoryLook.id == selectedLookID,
+                isCustomized: savedLookOverrides[factoryLook.id] != nil,
+                animated: false
+            )
             return cell
         }
 
@@ -1341,7 +1249,7 @@ extension FaceMakeupViewController: UICollectionViewDataSource, UICollectionView
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         if collectionView === controlPanel.looksCollectionView {
-            applyLook(MakeupLooks.all[indexPath.item], animated: true)
+            applyLook(lookToDisplay(at: indexPath.item), animated: true)
             return
         }
         selectLipstickPreset(at: indexPath.item, animated: true)

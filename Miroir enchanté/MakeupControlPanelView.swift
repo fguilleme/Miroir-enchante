@@ -70,6 +70,7 @@ final class MakeupControlPanelView: UIStackView {
     let hideHeadSwitch = UISwitch()
     let hideHairSwitch = UISwitch()
 
+    private let looksHintLabel = UILabel()
     private let hairOffsetYValueLabel = UILabel()
     private let hairOffsetZValueLabel = UILabel()
     private let hairScaleValueLabel = UILabel()
@@ -173,6 +174,10 @@ final class MakeupControlPanelView: UIStackView {
 
     func setDebugControlsVisible(_ visible: Bool) {
         debugControlRows.forEach { $0.isHidden = !visible }
+    }
+
+    func setLooksHintText(_ text: String) {
+        looksHintLabel.text = text
     }
 
     func updateBlushPresetSelection(selectedIndex: Int, animated: Bool) {
@@ -451,13 +456,28 @@ final class MakeupControlPanelView: UIStackView {
         let container = UIView()
         container.translatesAutoresizingMaskIntoConstraints = false
         looksCollectionView.translatesAutoresizingMaskIntoConstraints = false
+
+        looksHintLabel.translatesAutoresizingMaskIntoConstraints = false
+        looksHintLabel.text = L10n.text("look.hint")
+        looksHintLabel.font = .preferredFont(forTextStyle: .caption2)
+        looksHintLabel.textColor = UIColor.white.withAlphaComponent(0.52)
+        looksHintLabel.textAlignment = .center
+        looksHintLabel.numberOfLines = 1
+        looksHintLabel.adjustsFontSizeToFitWidth = true
+        looksHintLabel.minimumScaleFactor = 0.72
+
         container.addSubview(looksCollectionView)
+        container.addSubview(looksHintLabel)
         NSLayoutConstraint.activate([
             looksCollectionView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             looksCollectionView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             looksCollectionView.topAnchor.constraint(equalTo: container.topAnchor),
-            looksCollectionView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-            container.heightAnchor.constraint(equalToConstant: 84)
+            looksCollectionView.heightAnchor.constraint(equalToConstant: 84),
+            looksHintLabel.leadingAnchor.constraint(equalTo: container.leadingAnchor, constant: 4),
+            looksHintLabel.trailingAnchor.constraint(equalTo: container.trailingAnchor, constant: -4),
+            looksHintLabel.topAnchor.constraint(equalTo: looksCollectionView.bottomAnchor, constant: 3),
+            looksHintLabel.bottomAnchor.constraint(equalTo: container.bottomAnchor),
+            container.heightAnchor.constraint(equalToConstant: 104)
         ])
         return container
     }
@@ -991,6 +1011,7 @@ final class MakeupLookCell: UICollectionViewCell {
     private let titleLabel = UILabel()
     private let sketchView = MakeupZoneFaceIconView()
     private let swatchStack = UIStackView()
+    private let savedBadgeView = UIView()
     private let swatchViews: [UIView] = (0..<5).map { _ in UIView() }
 
     override init(frame: CGRect) {
@@ -1026,9 +1047,17 @@ final class MakeupLookCell: UICollectionViewCell {
         titleLabel.adjustsFontSizeToFitWidth = true
         titleLabel.minimumScaleFactor = 0.7
 
+        savedBadgeView.translatesAutoresizingMaskIntoConstraints = false
+        savedBadgeView.backgroundColor = CosmeticTheme.softGold
+        savedBadgeView.layer.cornerRadius = 4
+        savedBadgeView.layer.borderWidth = 1
+        savedBadgeView.layer.borderColor = UIColor.black.withAlphaComponent(0.22).cgColor
+        savedBadgeView.isHidden = true
+
         contentView.addSubview(titleLabel)
         contentView.addSubview(sketchView)
         contentView.addSubview(swatchStack)
+        contentView.addSubview(savedBadgeView)
 
         NSLayoutConstraint.activate([
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 4),
@@ -1039,7 +1068,11 @@ final class MakeupLookCell: UICollectionViewCell {
             sketchView.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 2),
             sketchView.bottomAnchor.constraint(equalTo: swatchStack.topAnchor, constant: -1),
             swatchStack.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-            swatchStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4)
+            swatchStack.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
+            savedBadgeView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 5),
+            savedBadgeView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -5),
+            savedBadgeView.widthAnchor.constraint(equalToConstant: 8),
+            savedBadgeView.heightAnchor.constraint(equalToConstant: 8)
         ])
     }
 
@@ -1047,9 +1080,10 @@ final class MakeupLookCell: UICollectionViewCell {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func configure(look: MakeupLook, isSelected: Bool, animated: Bool) {
+    func configure(look: MakeupLook, isSelected: Bool, isCustomized: Bool, animated: Bool) {
         titleLabel.text = L10n.text(look.titleKey)
         sketchView.configure(look: look)
+        savedBadgeView.isHidden = !isCustomized
         for (view, color) in zip(swatchViews, look.swatchColors) {
             view.backgroundColor = color
         }

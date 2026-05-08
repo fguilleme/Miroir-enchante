@@ -43,6 +43,9 @@
 "look.soft_rose" = "Rose doux";
 "look.evening_glam" = "Soirée";
 "look.bold_red" = "Audace";
+"look.hint" = "Tap : derniers réglages. Appui long : valeurs factory.";
+"look.hint_saved" = "Réglages mémorisés pour ce look.";
+"look.hint_reset" = "Look réinitialisé aux valeurs factory.";
 "control.before_after" = "Avant / Après";
 "error.truedepth_required" = "Le suivi du visage nécessite un iPhone avec une caméra TrueDepth.";
 "tab.looks" = "Looks";
