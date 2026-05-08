@@ -29,6 +29,9 @@ final class FaceMakeupViewController: UIViewController {
     private let beforeAfterButton = UIButton(type: .system)
     private let bugReportButton = UIButton(type: .system)
     private let controlPanel = MakeupControlPanelView()
+    private let sliderValueOverlay = UIVisualEffectView(effect: UIBlurEffect(style: .systemUltraThinMaterialDark))
+    private let sliderValueTitleLabel = UILabel()
+    private let sliderValueLabel = UILabel()
 
     private var unsupportedDeviceLabel: UILabel?
     private var experienceMode: ExperienceMode = FaceMakeupViewController.initialExperienceMode()
@@ -43,6 +46,7 @@ final class FaceMakeupViewController: UIViewController {
     private var isBeforePreviewActive = false
     private var arFaceFramingScale: CGFloat = 1
     private var arFaceFramingTranslation: CGPoint = .zero
+    private var sliderValueOverlayHideWorkItem: DispatchWorkItem?
     private var makeupRenderers: [MakeupRendering] {
         Self.isDemoFeatureEnabled ? [faceRenderer, demoHeadRenderer] : [faceRenderer]
     }
@@ -71,6 +75,7 @@ final class FaceMakeupViewController: UIViewController {
         configureExperienceModeButton()
         configureHairStyleButton()
         configureMakeupControls()
+        configureSliderValueOverlay()
         configureBeforeAfterButton()
         configureBugReportButton()
         configureARAutoFramingButton()
@@ -334,6 +339,7 @@ final class FaceMakeupViewController: UIViewController {
         controlPanel.lipMeshWidthSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
         controlPanel.lipMeshHeightSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
         controlPanel.lipMeshVerticalSlider.addTarget(self, action: #selector(lipMeshCalibrationSliderChanged), for: .valueChanged)
+        installSliderValueOverlayFeedback()
         controlPanel.hideHeadSwitch.addTarget(self, action: #selector(hideHeadSwitchChanged), for: .valueChanged)
         controlPanel.hideHairSwitch.addTarget(self, action: #selector(hideHairSwitchChanged), for: .valueChanged)
         controlPanel.blushPresetButtons.forEach {
@@ -365,6 +371,162 @@ final class FaceMakeupViewController: UIViewController {
         applySelectedEyeshadowPreset(animated: false)
         applySelectedGlowPreset(animated: false)
         applySelectedContourPreset(animated: false)
+    }
+
+    private func configureSliderValueOverlay() {
+        sliderValueOverlay.translatesAutoresizingMaskIntoConstraints = false
+        sliderValueOverlay.alpha = 0
+        sliderValueOverlay.isHidden = true
+        sliderValueOverlay.isUserInteractionEnabled = false
+        sliderValueOverlay.layer.cornerRadius = 22
+        sliderValueOverlay.clipsToBounds = true
+        sliderValueOverlay.layer.borderWidth = 0.8
+        sliderValueOverlay.layer.borderColor = UIColor.white.withAlphaComponent(0.12).cgColor
+
+        sliderValueTitleLabel.font = .systemFont(ofSize: 16, weight: .semibold)
+        sliderValueTitleLabel.textAlignment = .center
+        sliderValueTitleLabel.textColor = UIColor.white.withAlphaComponent(0.76)
+
+        sliderValueLabel.font = .monospacedDigitSystemFont(ofSize: 52, weight: .bold)
+        sliderValueLabel.textAlignment = .center
+        sliderValueLabel.textColor = .white
+        sliderValueLabel.adjustsFontSizeToFitWidth = true
+        sliderValueLabel.minimumScaleFactor = 0.68
+
+        let stack = UIStackView(arrangedSubviews: [sliderValueTitleLabel, sliderValueLabel])
+        stack.translatesAutoresizingMaskIntoConstraints = false
+        stack.axis = .vertical
+        stack.alignment = .fill
+        stack.spacing = 2
+
+        sliderValueOverlay.contentView.addSubview(stack)
+        view.addSubview(sliderValueOverlay)
+
+        NSLayoutConstraint.activate([
+            sliderValueOverlay.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor),
+            sliderValueOverlay.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 76),
+            sliderValueOverlay.widthAnchor.constraint(greaterThanOrEqualToConstant: 168),
+            sliderValueOverlay.widthAnchor.constraint(lessThanOrEqualTo: view.safeAreaLayoutGuide.widthAnchor, multiplier: 0.62),
+            sliderValueOverlay.heightAnchor.constraint(equalToConstant: 112),
+            stack.leadingAnchor.constraint(equalTo: sliderValueOverlay.contentView.leadingAnchor, constant: 18),
+            stack.trailingAnchor.constraint(equalTo: sliderValueOverlay.contentView.trailingAnchor, constant: -18),
+            stack.centerYAnchor.constraint(equalTo: sliderValueOverlay.contentView.centerYAnchor)
+        ])
+    }
+
+    private func installSliderValueOverlayFeedback() {
+        [
+            controlPanel.lipstickIntensitySlider,
+            controlPanel.lipMeshHeightSlider,
+            controlPanel.blushIntensitySlider,
+            controlPanel.blushSizeSlider,
+            controlPanel.blushPositionSlider,
+            controlPanel.eyeshadowIntensitySlider,
+            controlPanel.glowIntensitySlider,
+            controlPanel.glowRadiusSlider,
+            controlPanel.contourIntensitySlider,
+            controlPanel.hairHueSlider,
+            controlPanel.hairStrengthSlider,
+            controlPanel.hairOffsetYSlider,
+            controlPanel.hairOffsetZSlider,
+            controlPanel.hairScaleSlider,
+            controlPanel.lipMeshWidthSlider,
+            controlPanel.lipMeshVerticalSlider
+        ].forEach { slider in
+            slider.addTarget(self, action: #selector(sliderValueTouchStarted(_:)), for: .touchDown)
+            slider.addTarget(self, action: #selector(sliderValueChanged(_:)), for: .valueChanged)
+            slider.addTarget(
+                self,
+                action: #selector(sliderValueTouchEnded(_:)),
+                for: [.touchUpInside, .touchUpOutside, .touchCancel]
+            )
+        }
+    }
+
+    @objc private func sliderValueTouchStarted(_ sender: UISlider) {
+        updateSliderValueOverlay(for: sender)
+        showSliderValueOverlay()
+    }
+
+    @objc private func sliderValueChanged(_ sender: UISlider) {
+        updateSliderValueOverlay(for: sender)
+        showSliderValueOverlay()
+    }
+
+    @objc private func sliderValueTouchEnded(_ sender: UISlider) {
+        updateSliderValueOverlay(for: sender)
+        scheduleSliderValueOverlayHide()
+    }
+
+    private func updateSliderValueOverlay(for slider: UISlider) {
+        sliderValueTitleLabel.text = titleForSliderValueOverlay(slider)
+        sliderValueLabel.text = formattedValueForSlider(slider)
+    }
+
+    private func showSliderValueOverlay() {
+        sliderValueOverlayHideWorkItem?.cancel()
+        sliderValueOverlay.isHidden = false
+        UIView.animate(withDuration: 0.12, delay: 0, options: [.allowUserInteraction, .curveEaseOut], animations: {
+            self.sliderValueOverlay.alpha = 1
+            self.sliderValueOverlay.transform = .identity
+        })
+    }
+
+    private func scheduleSliderValueOverlayHide() {
+        sliderValueOverlayHideWorkItem?.cancel()
+        let workItem = DispatchWorkItem { [weak self] in
+            self?.hideSliderValueOverlay()
+        }
+        sliderValueOverlayHideWorkItem = workItem
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.55, execute: workItem)
+    }
+
+    private func hideSliderValueOverlay() {
+        UIView.animate(withDuration: 0.20, delay: 0, options: [.allowUserInteraction, .curveEaseIn], animations: {
+            self.sliderValueOverlay.alpha = 0
+            self.sliderValueOverlay.transform = CGAffineTransform(scaleX: 0.94, y: 0.94)
+        }, completion: { _ in
+            self.sliderValueOverlay.isHidden = true
+            self.sliderValueOverlay.transform = .identity
+        })
+    }
+
+    private func titleForSliderValueOverlay(_ slider: UISlider) -> String {
+        switch slider {
+        case controlPanel.lipstickIntensitySlider,
+             controlPanel.blushIntensitySlider,
+             controlPanel.eyeshadowIntensitySlider,
+             controlPanel.glowIntensitySlider,
+             controlPanel.contourIntensitySlider,
+             controlPanel.hairStrengthSlider:
+            return L10n.text("control.intensity")
+        case controlPanel.blushSizeSlider,
+             controlPanel.glowRadiusSlider,
+             controlPanel.hairScaleSlider,
+             controlPanel.lipMeshHeightSlider:
+            return L10n.text("control.size")
+        case controlPanel.blushPositionSlider:
+            return L10n.text("control.position")
+        case controlPanel.hairHueSlider:
+            return "H"
+        case controlPanel.hairOffsetYSlider,
+             controlPanel.lipMeshVerticalSlider:
+            return "Y"
+        case controlPanel.hairOffsetZSlider:
+            return "Z"
+        case controlPanel.lipMeshWidthSlider:
+            return "W"
+        default:
+            return ""
+        }
+    }
+
+    private func formattedValueForSlider(_ slider: UISlider) -> String {
+        if slider === controlPanel.lipMeshVerticalSlider {
+            return String(format: "%.3f", slider.value)
+        }
+
+        return String(format: "%.2f", slider.value)
     }
 
     @objc private func toggleRenderMode() {

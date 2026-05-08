@@ -234,7 +234,8 @@ enum MakeupMaterialFactory {
     static func configureAREyeshadowMaterial(_ material: SCNMaterial, settings: EyeshadowSettings = .default) {
         let intensity = settings.intensity.clamped(to: 0...1)
         let visibleIntensity = pow(intensity, 0.60)
-        let opacity = (settings.opacity * (0.24 + visibleIntensity * 1.45)).clamped(to: 0...0.72)
+        let opacityScale = settings.color.makeupPerceptualOpacityScale()
+        let opacity = (settings.opacity * (0.24 + visibleIntensity * 1.45) * opacityScale).clamped(to: 0...0.72)
         let color = settings.color.withIntensity(0.88 + visibleIntensity * 0.34)
 
         material.lightingModel = .constant
@@ -276,7 +277,8 @@ enum MakeupMaterialFactory {
     static func configureARBlushMaterial(_ material: SCNMaterial, settings: BlushSettings = .default) {
         let intensity = min(settings.intensity * 2.0, 1.0).clamped(to: 0...1)
         let visibleIntensity = pow(intensity, 0.75)
-        let opacity = (settings.opacity * visibleIntensity * 1.70).clamped(to: 0...0.68)
+        let opacityScale = settings.color.makeupPerceptualOpacityScale()
+        let opacity = (settings.opacity * visibleIntensity * 1.70 * opacityScale).clamped(to: 0...0.68)
         let color = settings.color.withIntensity(0.84 + visibleIntensity * 0.34)
 
         // Keep the AR overlay explicitly colored and alpha-blended. Some
@@ -375,6 +377,20 @@ private extension UIColor {
             blue: min(blue * clampedIntensity, 1.0),
             alpha: alpha
         )
+    }
+
+    func makeupPerceptualOpacityScale() -> CGFloat {
+        var hue: CGFloat = 0
+        var saturation: CGFloat = 0
+        var brightness: CGFloat = 0
+        var alpha: CGFloat = 0
+
+        guard getHue(&hue, saturation: &saturation, brightness: &brightness, alpha: &alpha) else {
+            return 0.50
+        }
+
+        let perceptualStrength = saturation * (0.45 + brightness * 0.55)
+        return (0.68 - perceptualStrength * 0.26).clamped(to: 0.38...0.62)
     }
 }
 
